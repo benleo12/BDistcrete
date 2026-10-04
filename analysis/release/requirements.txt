@@ -1,0 +1,10 @@
+# The shipped library imports numpy and nothing else outside the standard library. Verified by
+# tracing every import in gentune/, examples/ and head_direction_response.py: the only others are
+# os, sys, json, glob, gzip and argparse.
+#
+# The floor is 1.20 because the loader uses np.load with allow_pickle left off and the
+# broadcasting and linear algebra here are long-stable. It is a floor, not a pin.
+numpy>=1.20
+
+# Tested on Python 3.13.2 with numpy 2.2.4. examples/parameter_scan.py and
+# examples/reweight_own_events.py need nothing further.

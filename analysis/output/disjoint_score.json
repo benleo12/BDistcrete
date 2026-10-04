@@ -1,0 +1,7 @@
+{
+ "r_disjoint_singles": 0.89190147207263,
+ "r_shared_singles": 0.607,
+ "n_eval": 6000,
+ "steps": 36000,
+ "note": "each model trained on a disjoint half of every training run"
+}

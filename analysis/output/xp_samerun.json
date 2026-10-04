@@ -1,0 +1,161 @@
+{
+ "bins": "XP_BINS = linspace(0, 0.35, 22), 21 bins, MIN_EFF=5",
+ "estimator": "xp_closure.width_xp (pooled q from Kish-effective event counts, sqrt(chi2/ndf) about zero, ndf = kept-1)",
+ "construction": "each held Stage C run (80k events, the same full runs the x_p closure used) split into two disjoint halves; half 1 = prediction with uniform weights, half 2 = target",
+ "split_seeds": [
+  0,
+  1,
+  2
+ ],
+ "per_run": {
+  "6900": {
+   "theta": [
+    0.116,
+    0.38,
+    1.0
+   ],
+   "n_events": 80000,
+   "widths": {
+    "split_0": {
+     "width": 0.7525207048508213,
+     "nbins": 21
+    },
+    "split_1": {
+     "width": 1.0066298185785505,
+     "nbins": 21
+    },
+    "split_2": {
+     "width": 0.7117831046556884,
+     "nbins": 21
+    }
+   }
+  },
+  "6901": {
+   "theta": [
+    0.124,
+    0.55,
+    1.5
+   ],
+   "n_events": 80000,
+   "widths": {
+    "split_0": {
+     "width": 0.8043636249925148,
+     "nbins": 21
+    },
+    "split_1": {
+     "width": 1.03849724079668,
+     "nbins": 21
+    },
+    "split_2": {
+     "width": 0.8437600508676405,
+     "nbins": 21
+    }
+   }
+  },
+  "6902": {
+   "theta": [
+    0.12,
+    0.46,
+    1.21
+   ],
+   "n_events": 80000,
+   "widths": {
+    "split_0": {
+     "width": 0.8672387206740131,
+     "nbins": 21
+    },
+    "split_1": {
+     "width": 0.8806673742884924,
+     "nbins": 21
+    },
+    "split_2": {
+     "width": 0.7647472988938431,
+     "nbins": 21
+    }
+   }
+  },
+  "6903": {
+   "theta": [
+    0.114,
+    0.6,
+    0.95
+   ],
+   "n_events": 80000,
+   "widths": {
+    "split_0": {
+     "width": 0.7839589146065393,
+     "nbins": 21
+    },
+    "split_1": {
+     "width": 0.869417036085718,
+     "nbins": 21
+    },
+    "split_2": {
+     "width": 1.1093901644216668,
+     "nbins": 21
+    }
+   }
+  },
+  "6904": {
+   "theta": [
+    0.126,
+    0.35,
+    1.6
+   ],
+   "n_events": 80000,
+   "widths": {
+    "split_0": {
+     "width": 1.072289240448256,
+     "nbins": 21
+    },
+    "split_1": {
+     "width": 1.0366060364965883,
+     "nbins": 21
+    },
+    "split_2": {
+     "width": 0.904607797045836,
+     "nbins": 21
+    }
+   }
+  }
+ },
+ "per_seed_summary": {
+  "split_0": {
+   "mean": 0.856074241114429,
+   "sd": 0.12793701042945801,
+   "values": [
+    0.7525207048508213,
+    0.8043636249925148,
+    0.8672387206740131,
+    0.7839589146065393,
+    1.072289240448256
+   ]
+  },
+  "split_1": {
+   "mean": 0.9663635012492058,
+   "sd": 0.08441135843906342,
+   "values": [
+    1.0066298185785505,
+    1.03849724079668,
+    0.8806673742884924,
+    0.869417036085718,
+    1.0366060364965883
+   ]
+  },
+  "split_2": {
+   "mean": 0.866857683176935,
+   "sd": 0.15431723142290327,
+   "values": [
+    0.7117831046556884,
+    0.8437600508676405,
+    0.7647472988938431,
+    1.1093901644216668,
+    0.904607797045836
+   ]
+  }
+ },
+ "pooled_all_splits": {
+  "mean": 0.8964318085135232,
+  "sd": 0.12710987228831197
+ }
+}

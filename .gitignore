@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.DS_Store
+.ipynb_checkpoints/
+
+# event samples, network exports and caches live outside git (docs/DATA.md)
+analysis/data_*/
+analysis/output/models/
+analysis/mmap_*/
+analysis/logs/
+*.hepmc
+*.hepmc.gz
+*.tar
+*.tar.part*

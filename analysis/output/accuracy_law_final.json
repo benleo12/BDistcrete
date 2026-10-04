@@ -1,0 +1,54 @@
+{
+ "centre": {
+  "predicted": {
+   "k80": 1.064,
+   "k800": 1.232
+  },
+  "measured": {
+   "k80": 1.067,
+   "k800": 1.217
+  }
+ },
+ "naive_prediction_800k": {
+  "centre": 1.643,
+  "off-centre": 1.636
+ },
+ "epsilon_rms_pct": {
+  "centre": 0.79,
+  "off-centre": 0.76
+ },
+ "off-centre": {
+  "predicted": {
+   "k80": 1.064,
+   "k800": 1.231
+  },
+  "measured": {
+   "k80": 1.075,
+   "k800": 1.22
+  }
+ },
+ "convention": {
+  "observables": [
+   "1_minus_thrust",
+   "mult_total",
+   "B_total",
+   "rho_heavy"
+  ],
+  "bins": "make_bins(reference + 800k target), shared by both statistics",
+  "targets": {
+   "centre": {
+    "k80": 6902,
+    "k800": 6970
+   },
+   "off-centre": {
+    "k80": 6901,
+    "k800": 6971
+   }
+  },
+  "measured": "pooled sqrt(sum pulls^2 / (total bins - 1)), full runs, r2_ladder.pulls",
+  "eps_extraction": "eps2 = ((qa-qb)^2 - qhat^2(1-qhat)(1/na + 1/(800k qhat)))/qb^2, unclipped",
+  "prediction": "E[pull^2](N) = 1 + eps2 qa^2 / [qhatN^2(1-qhatN)(1/na + 1/(N qb))], qhatN = (Na qa + N qb)/(Na+N); width = sqrt(mean over kept bins)",
+  "naive": "same with the reference term 1/na dropped from v(N)",
+  "status": "measured exact vs archived file; predicted within +-0.001; paper naive 2.4 not reproduced (this convention gives 2.20/2.23)"
+ }
+}

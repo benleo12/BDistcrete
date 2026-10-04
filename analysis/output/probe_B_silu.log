@@ -1,0 +1,17 @@
+[B] feature norm mu=[-0.08 -0.   -4.84 -2.45 -1.84  0.   -0.  ] sd=[0.84 1.8  1.97 2.06 1.18 0.2  0.66]
+[B] ref 336000, C=7, 28 train, 5 held
+[B] step 3000: stop-width=1.709 (|w-1|=0.709)
+[B] step 6000: stop-width=2.350 (|w-1|=1.350)
+[B] step 9000: stop-width=1.446 (|w-1|=0.446)
+[B] step 12000: stop-width=1.368 (|w-1|=0.368)
+[B] step 15000: stop-width=1.380 (|w-1|=0.380)
+[B] step 18000: stop-width=1.372 (|w-1|=0.372)
+[B] step 21000: stop-width=1.232 (|w-1|=0.232)
+[B] step 24000: stop-width=1.214 (|w-1|=0.214)
+[B] selected step 24000 with stop-width 1.214; reporting on disjoint split
+[B] temperature T=1.0 (fit on stop split); raw report width=1.254
+[B] RESULT width=1.254 (null 1.0)  calib={'1_minus_thrust': 1.04, 'mult_total': 0.97, 'B_total': 1.03, 'rho_heavy': 1.11, 'nbaryon': 1.08}
+[B]   per_obs={'1_minus_thrust': 1.11, 'mult_total': 0.98, 'B_total': 1.15, 'rho_heavy': 1.22, 'nbaryon': 1.81}
+[B]   uniform-weight control={'1_minus_thrust': 2.57, 'mult_total': 1.67, 'B_total': 2.74, 'rho_heavy': 2.79, 'nbaryon': 21.14}  (>1 means the model helps)
+[B]   N_eff={'(0.1175, 0.1)': 302246, '(0.1225, 0.3)': 310409, '(0.115, 0.2)': 319023, '(0.128, 0.3)': 306262, '(0.12, 0.15)': 327424} of 336000
+R2 LADDER DONE: {'B': 1.25}

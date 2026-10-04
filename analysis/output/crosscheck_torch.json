@@ -1,0 +1,18 @@
+{
+ "impl": "ours_pytorch_CondPFN_K1",
+ "auc": 0.5102612138290955,
+ "n_train": 96000,
+ "n_test": 24000,
+ "Phi_sizes": [
+  100,
+  100,
+  256
+ ],
+ "F_sizes": [
+  100,
+  100,
+  100
+ ],
+ "epochs": 20,
+ "batch_size": 500
+}

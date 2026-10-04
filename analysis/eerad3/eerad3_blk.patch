@@ -1,0 +1,39 @@
+Binary files eerad3-1.0/eerad3_combine and eerad3-1.0-blk/eerad3_combine differ
+diff -ruN '--exclude=*.o' '--exclude=*.mod' '--exclude=eerad3' '--exclude=*.a' '--exclude=*.log' '--exclude=*.out' eerad3-1.0/src/eerad3.f eerad3-1.0-blk/src/eerad3.f
+--- eerad3-1.0/src/eerad3.f	2014-02-17 14:52:54.000000000 -0800
++++ eerad3-1.0-blk/src/eerad3.f	2026-08-21 15:17:38.000000000 -0700
+@@ -125,21 +125,28 @@
+             ilen = len(froot)
+          endif
+       enddo
+-      if (inum.lt.0.or.inum.gt.99) inum = 0
++      if (inum.lt.0.or.inum.gt.699) inum = 0
++c --- seed blocks of 100: jnum indexes the table, iblk offsets it
++      iblk = inum/100
++      jnum = mod(inum,100)
+       irlen = 0
+       do i=1,ilen
+          if (ichar(froot(i:i)).eq.32.and.irlen.eq.0) then
+             irlen = i-1
+          endif
+       enddo
+-      i1 = iseeds(1,inum)
+-      i2 = iseeds(2,inum)
+-      if (inum.lt.10) then  
++      i1 = iseeds(1,jnum) + 3000*iblk
++      i2 = iseeds(2,jnum) + 3000*iblk
++      if (jnum.lt.10) then
+          fname='E0'
+-         write(fname(3:3),'(I1)') inum
++         write(fname(3:3),'(I1)') jnum
+       else
+          fname='E'
+-         write(fname(2:3),'(I2)') inum
++         write(fname(2:3),'(I2)') jnum
++      endif
++      fname(1:1) = char(ichar('E')+iblk)
++      write(*,*) '* seed block',iblk,' seeds',i1,i2,' ',fname(1:3)
++      if (.false.) then
+       endif
+       open(9,file=froot)
+       read(9,*) y0

@@ -1,0 +1,72 @@
+{
+ "units": {
+  "displacement": "how far the target mean sits from the pooled reference mean, in units of the held run statistical error on that mean",
+  "error": "relative difference between the reweighted mean and the generator mean, percent"
+ },
+ "form": "error_percent = floor + slope_per_sigma * displacement",
+ "stages": {
+  "E": {
+   "n_points": 32,
+   "floor_percent": 0.2366062034071378,
+   "slope_percent_per_sigma": 0.006149608686112526,
+   "robust_scatter_percent": 0.21810175832672504,
+   "displacement_range": [
+    1.0303422609391415,
+    33.12358874120312
+   ],
+   "expected_at": {
+    "0": 0.2366062034071378,
+    "10": 0.29810229026826307,
+    "20": 0.35959837712938836,
+    "30": 0.4210944639905136,
+    "50": 0.5440866377127641
+   },
+   "outliers": []
+  },
+  "F": {
+   "n_points": 32,
+   "floor_percent": 0.39217121541098887,
+   "slope_percent_per_sigma": 0.002834086088997961,
+   "robust_scatter_percent": 0.2921582625654151,
+   "displacement_range": [
+    5.76416187293195,
+    85.05142952194826
+   ],
+   "expected_at": {
+    "0": 0.39217121541098887,
+    "10": 0.4205120763009685,
+    "20": 0.4488529371909481,
+    "30": 0.4771937980809277,
+    "50": 0.5338755198608869
+   },
+   "outliers": []
+  },
+  "MIX17": {
+   "n_points": 40,
+   "floor_percent": 0.2786800098297838,
+   "slope_percent_per_sigma": -0.0022121800647426967,
+   "robust_scatter_percent": 0.15055420663849134,
+   "displacement_range": [
+    1.948056360848804,
+    29.04429517237683
+   ],
+   "expected_at": {
+    "0": 0.2786800098297838,
+    "10": 0.25655820918235683,
+    "20": 0.23443640853492986,
+    "30": 0.2123146078875029,
+    "50": 0.16807100659264895
+   },
+   "outliers": [
+    {
+     "run": 9934,
+     "observable": "mult_total",
+     "displacement_sigma": 22.95784604636915,
+     "error_percent": 1.1487946780290896,
+     "predicted_percent": 0.22789312047657403,
+     "excess_scatter_units": 6.116744115717547
+    }
+   ]
+  }
+ }
+}

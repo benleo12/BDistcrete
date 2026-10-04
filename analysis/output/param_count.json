@@ -1,0 +1,187 @@
+{
+ "K1": {
+  "K": 1,
+  "input_dim": 4,
+  "phi_sizes": [
+   100,
+   100,
+   256
+  ],
+  "f_sizes": [
+   100,
+   100,
+   100
+  ],
+  "layers": [
+   {
+    "layer": "Phi.Linear0",
+    "shape": [
+     100,
+     4
+    ],
+    "weights": 400,
+    "biases": 100,
+    "params": 500
+   },
+   {
+    "layer": "Phi.Linear1",
+    "shape": [
+     100,
+     100
+    ],
+    "weights": 10000,
+    "biases": 100,
+    "params": 10100
+   },
+   {
+    "layer": "Phi.Linear2",
+    "shape": [
+     256,
+     100
+    ],
+    "weights": 25600,
+    "biases": 256,
+    "params": 25856
+   },
+   {
+    "layer": "F.Linear0",
+    "shape": [
+     100,
+     256
+    ],
+    "weights": 25600,
+    "biases": 100,
+    "params": 25700
+   },
+   {
+    "layer": "F.Linear1",
+    "shape": [
+     100,
+     100
+    ],
+    "weights": 10000,
+    "biases": 100,
+    "params": 10100
+   },
+   {
+    "layer": "F.Linear2",
+    "shape": [
+     100,
+     100
+    ],
+    "weights": 10000,
+    "biases": 100,
+    "params": 10100
+   },
+   {
+    "layer": "F.Linear3",
+    "shape": [
+     1,
+     100
+    ],
+    "weights": 100,
+    "biases": 1,
+    "params": 101
+   }
+  ],
+  "per_particle_Phi": 36456,
+  "event_head_F": 46001,
+  "event_side_total": 82457,
+  "theta_side_B_excluded": 20501,
+  "full_model_incl_B": 102958
+ },
+ "K24": {
+  "K": 24,
+  "input_dim": 4,
+  "phi_sizes": [
+   100,
+   100,
+   256
+  ],
+  "f_sizes": [
+   100,
+   100,
+   100
+  ],
+  "layers": [
+   {
+    "layer": "Phi.Linear0",
+    "shape": [
+     100,
+     4
+    ],
+    "weights": 400,
+    "biases": 100,
+    "params": 500
+   },
+   {
+    "layer": "Phi.Linear1",
+    "shape": [
+     100,
+     100
+    ],
+    "weights": 10000,
+    "biases": 100,
+    "params": 10100
+   },
+   {
+    "layer": "Phi.Linear2",
+    "shape": [
+     256,
+     100
+    ],
+    "weights": 25600,
+    "biases": 256,
+    "params": 25856
+   },
+   {
+    "layer": "F.Linear0",
+    "shape": [
+     100,
+     256
+    ],
+    "weights": 25600,
+    "biases": 100,
+    "params": 25700
+   },
+   {
+    "layer": "F.Linear1",
+    "shape": [
+     100,
+     100
+    ],
+    "weights": 10000,
+    "biases": 100,
+    "params": 10100
+   },
+   {
+    "layer": "F.Linear2",
+    "shape": [
+     100,
+     100
+    ],
+    "weights": 10000,
+    "biases": 100,
+    "params": 10100
+   },
+   {
+    "layer": "F.Linear3",
+    "shape": [
+     24,
+     100
+    ],
+    "weights": 2400,
+    "biases": 24,
+    "params": 2424
+   }
+  ],
+  "per_particle_Phi": 36456,
+  "event_head_F": 48324,
+  "event_side_total": 84780,
+  "theta_side_B_excluded": 22824,
+  "full_model_incl_B": 107604
+ },
+ "published": 82457,
+ "published_matches": "K1",
+ "note": "the published 82457 is the event side at K=1, the matched crosscheck configuration (equal to the energyflow PFN with output_dim=1: Phi 36456 + F 45900 + output 101); the K=24 production event side holds 84780 (one 100->24 head layer instead of 100->1)"
+}

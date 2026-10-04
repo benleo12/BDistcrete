@@ -1,0 +1,45 @@
+{
+ "device": "cpu",
+ "threads": 32,
+ "reps": 1,
+ "host": "nid004377",
+ "n_events": 1149888,
+ "n_particles": 47998800,
+ "prep_seconds": 12.675545191043057,
+ "weights_per_network": {
+  "early": 84457,
+  "late": 84457
+ },
+ "one_time_seconds": {
+  "factorized": 42.16817472700495,
+  "late": 37.1048325720476,
+  "early": 0.0
+ },
+ "cache_GB": {
+  "factorized": 0.883113984,
+  "late": 4.709941248,
+  "early_particles": 1.7279568,
+  "padded_particle_array": 3.2196864
+ },
+ "a_weights_seconds": {
+  "factorized": 0.12097747798543423,
+  "late": 2.051181986927986
+ },
+ "a_all": {
+  "factorized": [
+   0.12097747798543423
+  ],
+  "late": [
+   2.051181986927986
+  ]
+ },
+ "n_network_step_seconds": {
+  "factorized": 0.23492136900313199,
+  "late": 12.748975933995098
+ },
+ "b_fit_step_seconds": {
+  "factorized": 0.5933773119468242,
+  "late": 14.281371025950648
+ },
+ "b_tilt_and_chi2_seconds": 0.365326980012469
+}

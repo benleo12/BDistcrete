@@ -1,0 +1,48 @@
+{
+ "task": "Sherpa wide scan, shower coupling 0.08 (run 9000) against 0.14 (run 9010), 60k events per class, 20 epochs, batch 500, Adam 1e-3, same architecture (100,100,256)/(100,100,100)",
+ "runs": {
+  "ef": [
+   0.7984819878483074,
+   0.7944121933198361,
+   0.8015288391562045,
+   0.8004414714736039,
+   0.8005469460415822
+  ],
+  "torchplain": [
+   0.7999179185403655,
+   0.8001727202047002,
+   0.7979932620458186,
+   0.798943897906091,
+   0.7994889881675683
+  ],
+  "torchK1": [
+   0.8064705655773237,
+   0.8089483931722405,
+   0.8036099243008403,
+   0.8103191111124446,
+   0.8055463495805215
+  ]
+ },
+ "summary": {
+  "ef": {
+   "label": "energyflow PFN (TensorFlow)",
+   "n": 5,
+   "mean": 0.7990822875679069,
+   "sd": 0.0028349761924675405
+  },
+  "torchplain": {
+   "label": "PyTorch PFN, energyflow architecture",
+   "n": 5,
+   "mean": 0.7993033573729088,
+   "sd": 0.0008679713169397824
+  },
+  "torchK1": {
+   "label": "PyTorch conditional PFN collapsed to K=1",
+   "n": 5,
+   "mean": 0.8069788687486741,
+   "sd": 0.0026784564340992783
+  }
+ },
+ "difference_plain_minus_ef": 0.00022106980500191664,
+ "difference_K1_minus_ef": 0.007896581180767193
+}

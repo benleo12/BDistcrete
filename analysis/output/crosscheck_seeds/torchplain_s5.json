@@ -1,0 +1,20 @@
+{
+ "impl": "ours_pytorch_plainPFN",
+ "auc": 0.7994889881675683,
+ "n_train": 96000,
+ "n_test": 24000,
+ "Phi_sizes": [
+  100,
+  100,
+  256
+ ],
+ "F_sizes": [
+  100,
+  100,
+  100
+ ],
+ "epochs": 20,
+ "batch_size": 500,
+ "seed": 5,
+ "device": "mps"
+}

@@ -119,7 +119,12 @@ def early_logit(u):
         return sum(m.head(early_pooled(m, u)).squeeze(-1) for m in early)/ENS/T
 
 def early_vjp(u, g, nets=None):
-    """d/du of sum_e g_e logit_e, chunked over particles so no graph over all particles is kept"""
+    """d/du of sum_e g_e logit_e, chunked over particles so no graph over all particles is kept.
+    Gradients are switched on explicitly: called from EarlyLogits.backward, autograd is off."""
+    with torch.enable_grad():
+        return _early_vjp(u, g, nets)
+
+def _early_vjp(u, g, nets=None):
     gu = torch.zeros(NT, dtype=f32, device=DEV)
     for m in (early if nets is None else nets):
         with torch.no_grad():

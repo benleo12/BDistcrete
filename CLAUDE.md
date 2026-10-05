@@ -1,9 +1,12 @@
 # Guide for Claude Code
 
 This repository holds the code and results of *Beyond Discrete Variations: Continuous Generator
-Uncertainties Anchored to Precision QCD* (B. Assi and J. Thaler). The paper's text is not in the
-repository. Ask the user for the PDF when a question needs it. Section, figure and table numbers
-below follow the paper. Run every command from `analysis/`.
+Uncertainties Anchored to Precision QCD* (B. Assi and J. Thaler). The paper's LaTeX source is in
+the private repository github.com/benleo12/Reweighting-generator-parameters, synced from Overleaf.
+To check the text against the code, clone it next to this one,
+`git clone https://github.com/benleo12/Reweighting-generator-parameters paper`, and read
+`paper/main.tex`. Section, figure and table numbers below follow the paper. Run every command from
+`analysis/`.
 
 ## What the paper does
 

@@ -1,7 +1,8 @@
 # BDistcrete
 
 Code for *Beyond Discrete Variations: Continuous Generator Uncertainties Anchored to Precision QCD*
-(B. Assi and J. Thaler).
+(B. Assi and J. Thaler). The LaTeX source of the paper is kept in a separate repository synced from Overleaf
+(benleo12/Reweighting-generator-parameters, private until publication).
 
 A classifier conditioned on the generator parameters reweights one stored event sample to any point
 of a parameter box, so the generator becomes a continuous, differentiable function of its

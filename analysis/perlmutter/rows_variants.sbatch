@@ -5,14 +5,14 @@
 #SBATCH -t 02:30:00
 #SBATCH -N 2
 #SBATCH -J rows_var2
-#SBATCH -o $SCRATCH/BDistcrete/analysis/logs/rows_variants_%j.out
-#SBATCH -e $SCRATCH/BDistcrete/analysis/logs/rows_variants_%j.err
+#SBATCH -o logs/rows_variants_%j.out
+#SBATCH -e logs/rows_variants_%j.err
 # The central rows of the two variant fits (product mixture, window bins only), one node each, a pass
 # and two polish passes, written as *_rows_sep.json so they cannot collide with stage 4 of rows_main.
 set -uo pipefail
-cd $SCRATCH/maxent_code
+cd $SCRATCH/BDistcrete/analysis
 module load pytorch/2.6.0
-export RIVET_REF=$SCRATCH/maxent_code/rivet_ref OMP_NUM_THREADS=4 TORCH_THREADS=4
+export RIVET_REF=rivet_ref OMP_NUM_THREADS=4 TORCH_THREADS=4
 export TARGETS_GRID=output/thrust_targets_grid_ext.npz AE_DTYPE=float32 ROW_STEP=0.001 ROWS_TAG=_sep
 stage_v() {   # stage_v <fit>: one pass and two polish passes on one node
   local F=$1 S=${1%.json} T=$(basename ${1%.json})

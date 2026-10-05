@@ -6,7 +6,7 @@
 # This script writes all cards + sbatch files and launches the MEPS integration
 # (nohup, login node). Submit the arrays with:  bash ~/anchor1M_submit.sh
 set -uo pipefail
-ACCT=<your-account>
+ACCT=${NERSC_ACCOUNT:?set to your NERSC project}
 BASE=$SCRATCH/anchor1M
 mkdir -p $BASE/meps/integrate $BASE/ref $BASE/logs
 
@@ -80,7 +80,7 @@ cat > $BASE/meps/meps_array.sbatch <<EOS
 #SBATCH -c 2
 #SBATCH --mem=8G
 #SBATCH --array=1-50
-#SBATCH -o $BASE/logs/meps_%a.out
+#SBATCH -o logs/meps_%a.out
 module load gcc-native/13 2>/dev/null || module load gcc-native/12
 d=$BASE/meps/task_\$(printf '%02d' \$SLURM_ARRAY_TASK_ID)
 cd \$d
@@ -143,7 +143,7 @@ cat > $BASE/ref/ref_array.sbatch <<EOS
 #SBATCH -c 2
 #SBATCH --mem=8G
 #SBATCH --array=1-$n
-#SBATCH -o $BASE/logs/ref_%a.out
+#SBATCH -o logs/ref_%a.out
 module load gcc-native/13 2>/dev/null || module load gcc-native/12
 d=\$(sed -n "\${SLURM_ARRAY_TASK_ID}p" $BASE/ref/runlist.txt)
 cd \$d

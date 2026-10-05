@@ -9,12 +9,12 @@
 #SBATCH -G 1
 #SBATCH -c 32
 #SBATCH -J rank
-#SBATCH -o $SCRATCH/BDistcrete/analysis/logs/rank_%x_%A_%a.out
-#SBATCH -e $SCRATCH/BDistcrete/analysis/logs/rank_%x_%A_%a.err
+#SBATCH -o logs/rank_%x_%A_%a.out
+#SBATCH -e logs/rank_%x_%A_%a.err
 set -e
 STAGE=${STAGE:?set STAGE=E or F}
 KLIST=${KLIST:?set KLIST as a comma separated list, one entry per array index}
-cd $SCRATCH/maxent_code; mkdir -p logs output
+cd $SCRATCH/BDistcrete/analysis; mkdir -p logs output
 # Split with bash rather than cut. `cut -d, -fN` prints the WHOLE line when the line holds no
 # delimiter, so a list that arrived truncated to one entry silently handed every array task the
 # same rank instead of failing. Note also that KLIST must NOT be passed inside --export, whose

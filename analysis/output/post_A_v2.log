@@ -1,0 +1,21 @@
+replay check 1_minus_thrust : max |rebuilt - stored| = 0.00e+00
+replay check B_total        : max |rebuilt - stored| = 0.00e+00
+replay check rho_heavy      : max |rebuilt - stored| = 0.00e+00
+1_minus_thrust  stored mean 0.06908  exact mean 0.06842  (+0.97%)
+B_total         stored mean 0.11038  exact mean 0.11030  (+0.07%)
+rho_heavy       stored mean 0.05462  exact mean 0.05393  (+1.29%)
+tau_parton mean 0.06151; wrote output/models/A_ref_v2.npz
+=== A widths, v1:
+A on data_stageA_full with A_ref.npz, T=1.0: report-split width 0.953 (uniform control 3.09), N_eff/N 0.93 to 0.99
+   1_minus_thrust   width 0.981   uniform 3.56
+   mult_total       width 0.918   uniform 2.17
+   B_total          width 0.928   uniform 3.73
+   rho_heavy        width 0.984   uniform 2.88
+=== A widths, v2:
+A on data_stageA_v2 with A_ref_v2.npz, T=1.0: report-split width 0.974 (uniform control 3.09), N_eff/N 0.93 to 0.99
+   1_minus_thrust   width 0.989   uniform 3.55
+   mult_total       width 0.918   uniform 2.17
+   B_total          width 1.008   uniform 3.75
+   rho_heavy        width 0.980   uniform 2.87
+POST AB DONE
+exit 0

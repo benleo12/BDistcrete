@@ -25,8 +25,12 @@ from r2_ladder import (STAGES, build_feats, fit_feature_norm, apply_feature_norm
                        PHI_SIZES, F_SIZES, _mlp, EMB_CHUNK)
 DEV = ('cuda' if torch.cuda.is_available() else
        'mps' if torch.backends.mps.is_available() else 'cpu')
-ENS, STEPS, LR = 4, 36000, 1e-3
-CKPTS = [6000, 12000, 18000, 24000, 30000, 36000]
+# CONCAT_STEPS shortens a smoke run and CONCAT_SEED_OFFSET trains other seeds of the same recipe,
+# with the reference subsample and the stop/report split held fixed so that only the training
+# randomness changes. Unset, both reproduce the published runs bit for bit.
+ENS, STEPS, LR = 4, int(os.environ.get('CONCAT_STEPS', '36000')), 1e-3
+CKPTS = [STEPS*i//6 for i in range(1, 7)]
+SEED_OFFSET = int(os.environ.get('CONCAT_SEED_OFFSET', '0'))
 
 
 class ConcatPFN(nn.Module):
@@ -116,12 +120,55 @@ class LatePFN(nn.Module):
         return np.concatenate(out)
 
 
+class MixtureOf(nn.Module):
+    """The exact mixture head of MixturePFN (r2_ladder.py) on a concatenation or late-fusion network,
+    the control for the seventeen-parameter result of Table 4. theta = (theta_S, theta_H, f) as in
+    stage_mixture.py. One network g serves both generators: it sees that generator's parameters,
+    zero-padded to the larger block, and a one-hot generator label, and
+        f_total = log[(1-f) e^{g(Phi; theta_S, S)} + f e^{g(Phi; theta_H, H)}],
+    so, as in the factorized head, nothing is learned in f and d/dtheta_H vanishes at f = 0. In late
+    fusion both generators share the pooled features, as the factorized head shares a(Phi)."""
+    def __init__(s, base, C, ntheta):
+        super().__init__()
+        env = os.environ.get('LADDER_MIX_SPLIT', '')
+        nS, nH = (int(x) for x in env.split(',')) if env else ((ntheta - 1)//2, (ntheta - 1)//2)
+        assert nS + nH + 1 == ntheta, f'mixture blocks {nS} + {nH} + 1 do not make {ntheta} parameters'
+        s.nS, s.nH, s.npad, s.ntheta = nS, nH, max(nS, nH), ntheta
+        s.g = base(C, s.npad + 2)
+
+    def _arg(s, t, k):
+        lab = t.new_zeros(t.shape[0], 2); lab[:, k] = 1.0
+        return torch.cat([t, t.new_zeros(t.shape[0], s.npad - t.shape[1]), lab], dim=1)
+
+    def forward(s, f, m, th):
+        aS, aH = s._arg(th[:, :s.nS], 0), s._arg(th[:, s.nS:s.nS + s.nH], 1)
+        if hasattr(s.g, 'pooled'):
+            E = s.g.pooled(f, m); lS, lH = s.g.head_on(E, aS), s.g.head_on(E, aH)
+        else:
+            lS, lH = s.g(f, m, aS), s.g(f, m, aH)
+        fr = (0.5 + 0.5*th[:, -1]).clamp(0.0, 1.0)
+        return torch.logaddexp(torch.log1p(-fr) + lS, torch.log(fr) + lH)
+
+    @torch.no_grad()
+    def logit_on(s, f, m, th_row, chunk=EMB_CHUNK):
+        out = []
+        for i in range(0, len(f), chunk):
+            fb = f[i:i+chunk]; mb = m[i:i+chunk]
+            out.append(s.forward(fb, mb, th_row.expand(len(fb), s.ntheta)).cpu().numpy())
+        return np.concatenate(out)
+
+
 MODE = os.environ.get('CONCAT_MODE', 'early')     # early: theta on every particle (DCTR); late: after the sum
-Net = LatePFN if MODE == 'late' else ConcatPFN
-SUFFIX = '_late' if MODE == 'late' else ''
+HEAD = os.environ.get('CONCAT_HEAD', 'plain')      # plain: one generic output (published); mixture: MixtureOf
+Base = LatePFN if MODE == 'late' else ConcatPFN
+Net = (lambda C, d: MixtureOf(Base, C, d)) if HEAD == 'mixture' else Base
+SUFFIX = (('_late' if MODE == 'late' else '') + ('_mixhead' if HEAD == 'mixture' else '')
+          + (f'_s{SEED_OFFSET}' if SEED_OFFSET else ''))
 
 
 def run_stage(tag):
+    if HEAD == 'mixture' and tag != 'MIX':
+        raise SystemExit('CONCAT_HEAD=mixture needs the mixture stage MIX')
     if tag == 'MIX':
         # the seventeen-parameter mixture: its design comes from the data set's own meta.json
         from mixture_cfg import mixture_cfg
@@ -170,10 +217,10 @@ def run_stage(tag):
 
     models, opts, schs, gens = [], [], [], []
     for sd in range(ENS):
-        torch.manual_seed(sd); m = Net(C, d).to(DEV); models.append(m)
+        torch.manual_seed(sd + SEED_OFFSET); m = Net(C, d).to(DEV); models.append(m)
         opts.append(torch.optim.Adam(m.parameters(), LR))
         schs.append(torch.optim.lr_scheduler.CosineAnnealingLR(opts[-1], STEPS, eta_min=LR/100))
-        gens.append(torch.Generator().manual_seed(sd))
+        gens.append(torch.Generator().manual_seed(sd + SEED_OFFSET))
     bce = nn.BCEWithLogitsLoss(); lab = torch.cat([torch.zeros(1024), torch.ones(1024)]).to(DEV)
     rids = list(cfg['train'])
 
@@ -216,6 +263,10 @@ def run_stage(tag):
     for m, st in zip(models, best[3]): m.load_state_dict(st)
     os.makedirs('output/models', exist_ok=True)
     torch.save([m.state_dict() for m in models], f'output/models/concat_{tag}{SUFFIX}.pt')
+    # the pooled-feature scale is fixed at the first training step and is not part of the state dict,
+    # so it is stored beside the weights: without it a reloaded network is not the trained function
+    json.dump([float(getattr(m, 'g', m).emb_scale) for m in models],
+              open(f'output/models/concat_{tag}{SUFFIX}_embscale.json', 'w'))
     # Intrinsic rank of the learned f(Phi,theta): SVD of the event x theta matrix on 5000 reference
     # events and 48 thetas uniform in the normalized training box (same protocol as
     # ab_analysis.svd_spectrum for the bilinear head, so the two spectra are comparable).
@@ -237,6 +288,8 @@ def run_stage(tag):
                per_obs_T1={o: float(np.mean([rep1[rid][o] for rid in cfg['held']])) for o in OBS},
                n_reference=int(Nref), n_held=len(cfg['held']),
                head='late_fusion' if MODE == 'late' else 'concat_mlp_dctr', phi_sizes=list(PHI_SIZES), f_sizes=list(F_SIZES), svd=(sv/sv[0]).tolist(), svd_theta_cloud=U.tolist())
+    if HEAD != 'plain' or SEED_OFFSET:
+        res.update(head_kind=HEAD, seed_offset=SEED_OFFSET)
     print(f"[{tag}] CONCAT RESULT width={res['master']:.3f} (T={T})  per_obs={ {o: round(v,2) for o,v in per_obs.items()} }")
     return res
 

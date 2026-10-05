@@ -5,15 +5,15 @@
 #SBATCH -t 03:00:00
 #SBATCH -N 2
 #SBATCH -J bands
-#SBATCH -o $SCRATCH/BDistcrete/analysis/logs/bands_%j.out
-#SBATCH -e $SCRATCH/BDistcrete/analysis/logs/bands_%j.err
+#SBATCH -o logs/bands_%j.out
+#SBATCH -e logs/bands_%j.err
 # Exact nuisance bands at the fitted point (bands_exact.py): the nuisance parameters minimized once at
 # the point of *_rows.json, every band end a constrained minimization split over both nodes, then the
 # merge into *_exchange.json and *_exchange_dist.npz.
 set -uo pipefail
-cd $SCRATCH/maxent_code
+cd $SCRATCH/BDistcrete/analysis
 module load pytorch/2.6.0
-export RIVET_REF=$SCRATCH/maxent_code/rivet_ref OMP_NUM_THREADS=4 TORCH_THREADS=4
+export RIVET_REF=rivet_ref OMP_NUM_THREADS=4 TORCH_THREADS=4
 export TARGETS_GRID=output/thrust_targets_grid_ext.npz AE_DTYPE=float64 FIG_EXPS=${FIG_EXPS:-delphi}
 FIT=${FIT:?}; NP=$((SLURM_NNODES*32)); stem=${FIT%.json}; tag=$(basename $stem)
 rm -f ${stem}_bands_part*.json

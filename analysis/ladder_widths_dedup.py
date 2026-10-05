@@ -34,7 +34,7 @@ if tag == 'MIXSTAGE':
     export = os.environ['EXPORT']; h = MixtureHead(export)
 else:
     cfg = R.STAGES[tag]; DATA = cfg['data']; OBS = cfg['obs'] + cfg['flav_obs']
-    export = f'output/models/{tag}_cond.npz'; h = Head(export)
+    export = os.environ.get('EXPORT', f'output/models/{tag}_cond.npz'); h = Head(export)
 drop = {int(x) for x in os.environ.get('DROP', str(DUPLICATES.get(tag, ''))).split(',') if x}
 held = {rid: th for rid, th in cfg['held'].items() if rid not in drop}
 A = h.pack(np.asarray(np.load(export, mmap_mode='r')['AE']))

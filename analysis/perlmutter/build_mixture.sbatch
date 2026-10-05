@@ -9,10 +9,10 @@
 #SBATCH -N 1
 #SBATCH -c 16
 #SBATCH -J mixdata
-#SBATCH -o $SCRATCH/BDistcrete/analysis/logs/mixdata_%j.out
-#SBATCH -e $SCRATCH/BDistcrete/analysis/logs/mixdata_%j.err
+#SBATCH -o logs/mixdata_%j.out
+#SBATCH -e logs/mixdata_%j.err
 set -e
-cd $SCRATCH/maxent_code
+cd $SCRATCH/BDistcrete/analysis
 mkdir -p logs output
 module load python >/dev/null 2>&1 || module load pytorch/2.6.0
 export S_SRC=${S_SRC:-data_stageE} H_SRC=${H_SRC:-data_stageF}
@@ -29,7 +29,7 @@ rc=$?
 # inside it rather than replacing it, which is how a stray directory here once shadowed the
 # real data set. Refuse if a non-symlink directory holds a finished build.
 # The symlink name must track DM_DST, or a second mixture build silently shadows the first.
-LINK=$SCRATCH/maxent_code/${DM_LINK:-data_stageDM17}
+LINK=$SCRATCH/BDistcrete/analysis/${DM_LINK:-data_stageDM17}
 if [ -d "$LINK" ] && [ ! -L "$LINK" ]; then
   if [ -f "$LINK/meta.json" ]; then
     echo "REFUSING to replace $LINK: it is a real directory holding a finished build"; exit 3

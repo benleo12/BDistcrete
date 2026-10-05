@@ -13,7 +13,7 @@ minimizer, the profile and the error convention. It does not test the theory, si
 are the theory.
 
     PSEUDO_SET=0 python pseudo_rows.py output/profile_MIX17ext_central.json
-    python pseudo_rows.py summary output/pseudo_rows_MIX17ext_set*.json
+    python pseudo_rows.py summary output/pseudo_rows_sets/pseudo_rows_profile_MIX17ext_central_set*.json
 """
 import os, sys, json, time, re
 import numpy as np

@@ -23,6 +23,7 @@ Ranges below inflate the replica intervals, which are fit spread rather than mod
 ALPHA_G and BETA_L are HELD, but measured rather than assumed: a one-at-a-time scan of each is
 generated so the paper can show they are weak instead of asserting it.
 """
+import os
 import numpy as np, pandas as pd
 from scipy.stats import qmc
 
@@ -73,6 +74,7 @@ rid = 7400
 for v in (0.02, 0.10, 0.18, 0.28, 0.40):
     r = dict(mid); r.update(run_id=rid, role='scan_beta_l', beta_l=v); rows.append(r); rid += 1
 df = pd.DataFrame(rows)[['run_id','role']+[a[0] for a in AXES]]
+os.makedirs('configs', exist_ok=True)
 df.to_csv('configs/stageE_design.csv', index=False)
 print(f'\nwrote configs/stageE_design.csv: {len(df)} runs')
 print(df.groupby('role').size().to_string())

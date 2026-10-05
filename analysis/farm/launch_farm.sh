@@ -23,7 +23,7 @@ for attempt in $(seq 1 40); do
     fi
     s0=$(cat $BASE/logs/farm_start_epoch.txt 2>/dev/null || echo 0)
     echo "=== salloc attempt $attempt $(date)" >> "$LOG"
-    salloc -N 1 -C gpu -q interactive -t 04:00:00 -A <your-gpu-account> --gpus 4 \
+    salloc -N 1 -C gpu -q interactive -t 04:00:00 -A ${NERSC_ACCOUNT:?set to your NERSC project}_g --gpus 4 \
         srun -N 1 -n 1 --gpus 4 --cpu-bind=none bash $BASE/code/farm_driver.sh >> "$LOG" 2>&1
     rc=$?
     s1=$(cat $BASE/logs/farm_start_epoch.txt 2>/dev/null || echo 0)

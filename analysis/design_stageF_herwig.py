@@ -30,6 +30,7 @@ NOT VARIED, and documented as traps in the release: ClusterFissioner:FissionPwtS
 unless Fission is set to 'new'; PartonSplitter:SplitPwtSquark 0.824135 was tuned to 7 TeV pp
 minimum bias, never to e+e-.
 """
+import os
 import numpy as np, pandas as pd
 from scipy.stats import qmc
 
@@ -94,6 +95,7 @@ rid = 8300
 for v in (0.40, 0.60, 0.78, 1.00, 1.20):       # ClSmrLight has never been tuned: scan it explicitly
     r = dict(mid); r.update(run_id=rid, role='scan_clsmr', clsmr=v); rows.append(r); rid += 1
 df = pd.DataFrame(rows)[['run_id','role','alpha_fsr','ptmin','clmax','clpow','psplit','pwtsquark','pwtdiquark','clsmr']]
+os.makedirs('configs', exist_ok=True)
 df.to_csv('configs/stageF_design.csv', index=False)
 print(f'\nwrote configs/stageF_design.csv: {len(df)} runs'); print(df.groupby('role').size().to_string())
 print('\nrealised ranges (training set):')

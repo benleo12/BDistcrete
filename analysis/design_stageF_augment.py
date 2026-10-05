@@ -30,6 +30,7 @@ coupling floor of 0.10 that killed 35 runs of an earlier campaign is below the b
 
 Writes stageF_augment_design.csv with run ids from 8100, clear of the existing 8000 block.
 """
+import os
 import numpy as np
 import pandas as pd
 
@@ -49,7 +50,11 @@ def stats(Z):
 
 
 def main():
-    d = pd.read_csv('stageF_design.csv')
+    # the 64-point design sits in ./ in the research tree and in release/generators/ in the repo
+    src = 'stageF_design.csv'
+    if not os.path.exists(src):
+        src = 'release/generators/stageF_design.csv'
+    d = pd.read_csv(src)
     lo, hi = d[AX].min().values, d[AX].max().values
     mid, half = (lo + hi)/2, (hi - lo)/2
     Z0 = (d[d.role == 'train'][AX].values - mid)/half

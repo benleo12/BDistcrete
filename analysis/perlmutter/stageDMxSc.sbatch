@@ -2,6 +2,10 @@
 #SBATCH -A <your-gpu-account> -C gpu -q regular -N 1 -G 1 -c 32 -t 03:00:00 -J sDMxSc
 #SBATCH -o logs/stageDMx_%j.log
 module load pytorch
-cd $SCRATCH/maxent_code
-export DM_DATA=data_stageDM2 LADDER_ACT=silu LADDER_EMB_SCALE=auto LADDER_LR=1e-3 LADDER_LOWMEM=1 LADDER_MMAP=1 LADDER_DEAD=report LADDER_REVIVE=1 LADDER_STEPS=72000 LADDER_K=24 LADDER_HEAD_KIND=mixture LADDER_SEED_OFFSET=0 LADDER_SUFFIX=DMXSc0 LADDER_MMAP_DIR=$SCRATCH/maxent_code/mmap_stageDMxSc STAGED_OUT=output/stageDMxSc.json
+cd $SCRATCH/BDistcrete/analysis
+# A FRESH mmap dir per submission: reusing one has hung Lustre.
+export DM_DATA=data_stageDM2 LADDER_ACT=silu LADDER_EMB_SCALE=auto LADDER_LR=1e-3 LADDER_LOWMEM=1 LADDER_MMAP=1 LADDER_DEAD=report LADDER_REVIVE=1 LADDER_STEPS=72000 LADDER_K=24 LADDER_HEAD_KIND=mixture LADDER_SEED_OFFSET=0 LADDER_SUFFIX=DMXSc0 LADDER_MMAP_DIR=$SCRATCH/mmap_${SLURM_JOB_ID} STAGED_OUT=output/stageDMxSc.json
 python -u stageDM.py
+rc=$?
+rm -rf $LADDER_MMAP_DIR
+exit $rc

@@ -6,7 +6,7 @@
 #SBATCH -G 1
 #SBATCH -c 32
 #SBATCH -t 02:30:00
-#SBATCH -o $SCRATCH/BDistcrete/analysis/logs/concat_%x_%j.log
+#SBATCH -o logs/concat_%x_%j.log
 # The unfactorized (concatenation) baseline under the production recipe, for the comparison with
 # the factorized network at three, eight and seventeen parameters. The recipe settings are exported
 # explicitly: without them r2_ladder falls back to ReLU and no embedding scale.

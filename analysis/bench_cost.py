@@ -17,13 +17,20 @@ Timed, as the median over BENCH_REPS repeats after one warm-up:
   (n) the network part of (b) alone: the logits and their gradient for a given cotangent, which is
       what changes between the designs (also on the GPU, BENCH_DEVICE=cuda);
   (c) the one-time pass that fills each design's cache, and the memory each design keeps.
+  (g) a gradient check: for each design, the directional derivative of g . logits from its timed
+      gradient code against central finite differences, and as a positive control the concatenation
+      gradient with one network left out, which the check must reject (BENCH_GRADCHECK, on by
+      default on the GPU and at 32 CPU threads).
 For the early design the particles are packed (padded slots skipped), its fastest form; the network
 weights are the trained ones where available (output/models/concat_MIX.pt, concat_MIX_late.pt), and
-cost does not depend on them. Writes output/bench_cost_<device>_<threads>.json.
+cost does not depend on them. Writes output/bench_cost_<device>_<threads>.json after every section,
+so a run that hits its time limit keeps what it measured.
 
     BENCH_DEVICE=cpu BENCH_THREADS=4 python bench_cost.py output/profile_MIX17ext_central.json
 """
 import os, sys, json, time
+# time the networks with the activation they were trained with (r2_ladder defaults to ReLU)
+os.environ.setdefault('LADDER_ACT', 'silu')
 import numpy as np, torch
 sys.path.insert(0, '.')
 from directlib import Model                       # sets the default dtype to float64, as in the fit
@@ -31,19 +38,32 @@ from r2_ladder import build_feats, CondPFN
 from concat_baseline import ConcatPFN, LatePFN
 
 DEV = os.environ.get('BENCH_DEVICE', 'cpu'); THREADS = int(os.environ.get('BENCH_THREADS', '4'))
-REPS = int(os.environ.get('BENCH_REPS', '3')); CHUNK = int(os.environ.get('BENCH_CHUNK', '2000000'))
+REPS = int(os.environ.get('BENCH_REPS', '5')); CHUNK = int(os.environ.get('BENCH_CHUNK', '2000000'))
 SKIP = set(os.environ.get('BENCH_SKIP', '').split(','))
 torch.set_num_threads(THREADS)
 f32 = torch.float32
 src = sys.argv[1]; fit = json.load(open(src))
 OUT = os.environ.get('BENCH_OUT', f'output/bench_cost_{DEV}_{THREADS}.json')
-res = dict(device=DEV, threads=THREADS, reps=REPS, host=os.uname().nodename)
+GRADCHECK = os.environ.get('BENCH_GRADCHECK', '1' if (DEV == 'cuda' or THREADS == 32) else '0') == '1'
+res = dict(device=DEV, threads=THREADS, reps=REPS, host=os.uname().nodename,
+           early_reps=None, early_warmup=None, skip=sorted(x for x in SKIP if x))
 if DEV == 'cuda':
     res['gpu'] = torch.cuda.get_device_name(0)
+def save():
+    json.dump(res, open(OUT, 'w'), indent=1)
 
-def timed(fn, reps=REPS, sync=DEV == 'cuda'):
-    """median wall time of fn() over reps calls after one warm-up call"""
-    fn()
+# The concatenation network takes minutes to hours per call on a CPU node, so its repeats and its
+# warm-up call can be set separately (BENCH_EARLY_REPS, BENCH_EARLY_WARMUP=0), and BENCH_SKIP=b_early
+# leaves out its full fit step, which equals its network step (n) plus the design-independent tilt
+# and chi^2 time measured below.
+EARLY_REPS = int(os.environ.get('BENCH_EARLY_REPS', str(max(1, REPS - 2) if DEV == 'cpu' else REPS)))
+EARLY_WARM = os.environ.get('BENCH_EARLY_WARMUP', '1') == '1'
+res.update(early_reps=EARLY_REPS, early_warmup=EARLY_WARM)
+
+def timed(fn, reps=REPS, sync=DEV == 'cuda', warm=True):
+    """median wall time of fn() over reps calls, after one warm-up call unless warm is False"""
+    if warm:
+        fn()
     if sync: torch.cuda.synchronize()
     ts = []
     for _ in range(reps):
@@ -98,10 +118,10 @@ def early_logit(u):
     with torch.no_grad():
         return sum(m.head(early_pooled(m, u)).squeeze(-1) for m in early)/ENS/T
 
-def early_vjp(u, g):
+def early_vjp(u, g, nets=None):
     """d/du of sum_e g_e logit_e, chunked over particles so no graph over all particles is kept"""
     gu = torch.zeros(NT, dtype=f32, device=DEV)
-    for m in early:
+    for m in (early if nets is None else nets):
         with torch.no_grad():
             E = early_pooled(m, u)
         E.requires_grad_(True)
@@ -164,6 +184,7 @@ P = cache.get('P') or [pooled_once(m) for m in late]
 res['cache_GB'] = dict(factorized=gb(M.AE), late=sum(gb(p) for p in P),
                        early_particles=gb(FP) + gb(EV), padded_particle_array=N*100*7*4/1e9)
 print('one-time and memory:', res.get('one_time_seconds'), res['cache_GB'], flush=True)
+save()
 
 # ---- (a) the weights at a new parameter point --------------------------------------------------
 rng = np.random.default_rng(1)
@@ -177,9 +198,10 @@ a['factorized'] = timed(lambda: M.logit(th)) if DEV == 'cpu' else timed(lambda: 
 with torch.no_grad():
     a['late'] = timed(lambda: late_logit_t(u, P))
 if 'early' not in SKIP:
-    a['early'] = timed(lambda: early_logit(u), reps=max(1, REPS - 2) if DEV == 'cpu' else REPS)
+    a['early'] = timed(lambda: early_logit(u), reps=EARLY_REPS, warm=EARLY_WARM)
 res['a_weights_seconds'] = {k: v[0] for k, v in a.items()}; res['a_all'] = {k: v[1] for k, v in a.items()}
 print('(a) weights at a new point [s]:', res['a_weights_seconds'], flush=True)
+save()
 
 # ---- (n) the network part of a fit step: logits and their gradient for a given cotangent -------
 g = torch.tensor(rng.normal(size=N), dtype=f32, device=DEV)
@@ -191,9 +213,47 @@ def n_early():
     early_logit(u); early_vjp(u, g)
 n = {'factorized': timed(n_fact), 'late': timed(n_late)}
 if 'early' not in SKIP:
-    n['early'] = timed(n_early, reps=max(1, REPS - 2) if DEV == 'cpu' else REPS)
-res['n_network_step_seconds'] = {k: v[0] for k, v in n.items()}
+    n['early'] = timed(n_early, reps=EARLY_REPS, warm=EARLY_WARM)
+res['n_network_step_seconds'] = {k: v[0] for k, v in n.items()}; res['n_all'] = {k: v[1] for k, v in n.items()}
 print('(n) logits and gradient [s]:', res['n_network_step_seconds'], flush=True)
+save()
+
+# ---- (g) gradient check: each design's gradient code against central finite differences --------
+def gradcheck():
+    v = torch.tensor(rng.normal(size=NT), dtype=torch.float64); v /= v.norm(); EPS = 1e-2
+    gd = g.double()
+    th_of = lambda uu: M.CEN + M.HW*uu.double()
+    u64 = u.double().cpu()
+    def fd(F):
+        with torch.no_grad():
+            return float((F(u64 + EPS*v) - F(u64 - EPS*v))/(2*EPS))
+    chk = {}
+    F_fact = lambda uu: fact_logit_t(th_of(uu).to(DEV)).double() @ gd
+    F_late = lambda uu: late_logit_t(uu.to(f32).to(DEV), P).double() @ gd
+    F_early = lambda uu: early_logit(uu.to(f32).to(DEV)).double() @ gd
+    t = th_of(u64).to(DEV).clone().requires_grad_(True)
+    (fact_logit_t(t).double() @ gd).backward()
+    chk['factorized'] = (float(t.grad.cpu() @ (M.HW*v)), fd(F_fact))
+    uu = u.clone().requires_grad_(True)
+    (late_logit_t(uu, P).double() @ gd).backward()
+    chk['late'] = (float(uu.grad.double().cpu() @ v), fd(F_late))
+    if 'early' not in SKIP:
+        fd_early = fd(F_early)
+        chk['early'] = (float(early_vjp(u, g).double().cpu() @ v), fd_early)
+        chk['control_early_one_network_left_out'] = (float(early_vjp(u, g, nets=early[:-1]).double().cpu() @ v), fd_early)
+    res['gradcheck'] = {k: dict(gradient=x, finite_difference=y, rel_diff=abs(x - y)/max(abs(y), 1e-12),
+                                passes=abs(x - y)/max(abs(y), 1e-12) < 1e-3) for k, (x, y) in chk.items()}
+    ctrl = res['gradcheck'].get('control_early_one_network_left_out')
+    res['gradcheck_ok'] = (all(r['passes'] for k, r in res['gradcheck'].items() if not k.startswith('control'))
+                           and (ctrl is None or not ctrl['passes']))
+    print('(g) gradient check:', {k: round(r['rel_diff'], 6) for k, r in res['gradcheck'].items()},
+          'OK' if res['gradcheck_ok'] else 'FAILED', flush=True)
+    save()
+if GRADCHECK:
+    try:                                       # a failure here must not cost the fit-step timing below
+        gradcheck()
+    except Exception as e:
+        res['gradcheck_error'] = repr(e); save(); print('(g) gradient check raised', repr(e), flush=True)
 
 # ---- (b) one fit step through directlib, CPU only: chi^2 and gradient with the tilt solved again
 if DEV == 'cpu' and 'b' not in SKIP:
@@ -204,14 +264,15 @@ if DEV == 'cpu' and 'b' not in SKIP:
     def with_logit(fn):
         orig = M.logit; M.logit = fn
         try:
+            early = fn is EarlyLogits.apply
             return timed(lambda: M.chi2_at(u0, ia, jj, None, grad=True),
-                         reps=max(1, REPS - 2) if fn is EarlyLogits.apply else REPS)
+                         reps=EARLY_REPS if early else REPS, warm=EARLY_WARM if early else True)
         finally:
             M.logit = orig
     b['late'] = with_logit(lambda theta: late_logit_t(((theta - M.CEN)/M.HW).to(f32), Pc).double())
-    if 'early' not in SKIP:
+    if 'early' not in SKIP and 'b_early' not in SKIP:
         b['early'] = with_logit(EarlyLogits.apply)
-    res['b_fit_step_seconds'] = {k: v[0] for k, v in b.items()}
+    res['b_fit_step_seconds'] = {k: v[0] for k, v in b.items()}; res['b_all'] = {k: v[1] for k, v in b.items()}
     # the design-independent part: the tilt and chi^2 given the logits
     lg0 = fact_logit_t(torch.tensor(M.CEN.numpy() + M.HW.numpy()*u0)).detach().double()
     def rest():
@@ -223,4 +284,4 @@ if DEV == 'cpu' and 'b' not in SKIP:
     res['b_tilt_and_chi2_seconds'] = timed(rest)[0]
     print('(b) fit step [s]:', res['b_fit_step_seconds'], ' tilt and chi2 alone:', res['b_tilt_and_chi2_seconds'], flush=True)
 
-json.dump(res, open(OUT, 'w'), indent=1); print('wrote', OUT)
+save(); print('wrote', OUT)

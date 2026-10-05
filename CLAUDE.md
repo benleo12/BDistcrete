@@ -64,7 +64,7 @@ any estimator, DCTR included.
   products costs little accuracy.
 - It is not an advantage over DCTR.
 
-**What the factorized form buys**, which is where it differs from DCTR in practice:
+**What the factorized form gives**, which is where it differs from DCTR in practice:
 - **Cost.** a(Φ) is computed once per event and stored. The weights at a new θ, and their
   derivatives in θ, then cost one K-term inner product per event.
   - Early fusion reruns the per-particle network on every particle of every event at each new θ.
@@ -130,21 +130,51 @@ strange fraction. The code is `ladder_widths_dedup.py`, `ladder_widths_big.py` a
 
 ## Re-running
 
-- `docs/REPRODUCE.md` maps every figure, table and number to its command.
-- `docs/DATA.md` lists the event samples and network exports, which are too large for git, and
-  where to download them.
+- `docs/REPRODUCE.md` maps every figure, table and number to its command, and names the data
+  archives each section needs.
+- `docs/DATA.md` lists the event samples and network exports, which are too large for git, as
+  archives of the GitHub release `data-v1` (A0, B1 to B13, C1 to C9) and says what each holds.
+  `tools/get_data.sh <group or archive>` (at the repository root, so `../tools/get_data.sh` from
+  `analysis/`) downloads them, checks their SHA256 and unpacks them into `analysis/`. The groups
+  follow the paper, for example `sec6`, `table1`, `appA` and `train-E`, and `--list` shows them
+  all. The script also links the reference names the scripts open to the slim reference files.
+  The README has a table of which archives each cross-check needs.
 - From the repository alone you can redo:
-  - every figure made by code except Fig. 5;
-  - every number of Sec. 6 from the stored results;
-  - the thrust calculation's fit to ALEPH;
-  - `dctr_rank.py`.
+  - every figure made by code except Fig. 5
+  - every number of Sec. 6 from the stored results
+  - the thrust calculation's fit to ALEPH
+  - `dctr_rank.py`
 - The closure tests, the fit itself and the cost benchmark need the exports.
-- Retraining needs the event samples and a GPU.
+- Retraining needs the event samples and a GPU. It overwrites the exports in `output/models/`. Run
+  `../tools/get_data.sh --unlink` first, so that training does not write through the reference
+  links into the slim files.
+- The figures need a LaTeX installation, which `environment.yml` does not provide.
+
+## Checks in progress
+
+These were queued on Perlmutter after the paper's numbers were fixed. Their result files are not
+in `output/` yet, so do not quote them as results. `docs/REPRODUCE.md` (Sec. 5.8) has the commands.
+- **Seed spreads for Table 4.** `perlmutter/seedstudy.sbatch` retrains the factorized, early-fusion
+  and late-fusion networks with other training seeds, so that each closure width of Table 4 gets a
+  spread over seeds. Results go to `output/seedstudy/`. A seed n trains the four networks with
+  seeds n to n + 3, so only multiples of 4 give members independent of the published seeds 0 to 3 (100 to 103 for
+  the factorized Stage B).
+- **The mixture-head control.** The same script with the designs `mixe` and `mixl` trains early
+  and late fusion with the exact mixture head (`CONCAT_HEAD=mixture`) on the seventeen-parameter
+  mixture. It tests whether the gap there, 1.09 against 1.38, comes from the factorized form or
+  from the mixture head.
+- **Late-fusion accuracy.** `perlmutter/concat_late.sbatch` for Stage C and the mixture, writing
+  `output/concat_baseline_{C,MIX}_late.json`.
+- **Cost on CPU and GPU.** `perlmutter/bench_cpu.sbatch` (4 and 128 threads) and
+  `perlmutter/bench_gpu.sbatch`, writing `output/bench_cost_cpu_4.json`, `bench_cost_cpu_128.json`
+  and `bench_cost_cuda_32.json`. The 0.59 s and 14.3 s above come from a 32-thread run without the
+  early design.
 
 ## Things to know
 
 - The closure tests of Secs. 5.2 to 5.6 used an earlier thrust-axis finder,
-  `compute_efps_old_axis.py`. Everything else uses the exact one. The network inputs are the same.
+  `compute_efps_old_axis.py`, and so did the temperature fits of App. B. Everything else uses the
+  exact one. The network inputs are the same.
 - Four Stage B runs lost their seeds and cannot be regenerated bit for bit.
 - External codes are not included: Sherpa, Herwig, Rivet, ARES and EERAD3. The README lists the
   versions, and the patches are in `ares_recovered/` and `eerad3/`.

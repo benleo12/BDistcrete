@@ -1,0 +1,61 @@
+The three edits to ARES behind ares_recovered/ARES_sym
+=====================================================
+
+Upstream: https://github.com/lcarpino/ARES, commit e75c88c (2022-04-18). ARES_sym/ is a copy of
+that commit with the three edits below, all inside ARES_sym/ARES/. LICENSE and README.org are
+unchanged. The table drivers (ares_prod.wls, ares_prod_asgrid.wls, ares_prod_asgrid_ext.wls,
+ares_smoke.wls) put ARES_sym on $Path and load ARES` from there, so they need these edits.
+
+The drivers call Resum with "refalphas" -> aS, where aS is a Mathematica symbol, and then take
+Series[sym, {aS, 0, 3}] to get the coefficients c0..c3 of the alpha_s expansion. Upstream ARES only
+accepts numbers for the coupling and for the quantities built from it, so edits 1 and 2 let the
+symbol pass through. Edit 3 is a physics change for thrust.
+
+1. Accept symbolic scalar arguments.
+   Remove the _?NumericQ test from every pattern named lambda, alphas, alphaS, AlphaS, RpNLL,
+   RsNNLL, logV or as, in every *.wl file. All other _?NumericQ tests (a, b, xq, xqb, xmuR,
+   logXV) and the VectorQ[eventConfig, NumericQ] condition on Resum stay as they are.
+   Count: 163 patterns (lambda 49, RpNLL 39, AlphaS 30, logV 20, alphaS 18, as 3, alphas 2,
+   RsNNLL 2) in 14 files:
+     Driver/Expansion.wl, Driver/Resummation.wl, HardConstants/CollinearConstant.wl,
+     MultipleEmission/AdditiveInterface.wl, MultipleEmission/GenericInterface.wl,
+     Observables/{CParameter,DParameter,Thrust}/SoftCollinearCorrections.wl,
+     Radiator/DerivativeRadiator.wl, Radiator/HardCollinearRadiator.wl, Radiator/SoftRadiator.wl,
+     Resum/Resum.wl, Resum/ResumEPAThreeJet.wl, Resum/ResumEPATwoJet.wl.
+   Without it the functions stay unevaluated for a symbolic aS and Series returns nothing useful.
+
+2. Make the Landau-pole guards safe for a symbolic lambda.
+   Replace  If[lambda > a/2  by  If[NumericQ[lambda] && lambda > a/2  (16 places, in
+   Radiator/DerivativeRadiator.wl 3, Radiator/HardCollinearRadiator.wl 2,
+   Radiator/SoftRadiator.wl 2, Resum/ResumEPAThreeJet.wl 6, Resum/ResumEPATwoJet.wl 3).
+   lambda = alpha_s beta0 L is symbolic once aS is, and the bare comparison then neither returns
+   True nor False, so the guard breaks the expression. With the edit the guard only acts on
+   numbers, as before, and is skipped while Series expands in aS. Numerical results with a
+   number for the coupling are unchanged.
+
+3. Thrust endpoint in the modified logarithm.
+   In Logarithms/LogarithmPT.wl change  vmax = 1;  to  vmax = 1/2;  (and the comment above it).
+   vmax is the kinematic endpoint of the observable. For tau = 1-T it is 1/2, so the modified log
+   L = Log[1 + xV/tau - xV/vmax] - Log[xV] vanishes at tau = 1/2 as it should. Upstream sets 1,
+   which is right for most other event shapes. This edit changes every tabulated number, not
+   only the symbolic path.
+
+Rebuilding ARES_sym from upstream (checked to reproduce ARES_sym/ARES byte for byte):
+
+  git clone https://github.com/lcarpino/ARES ARES_sym && cd ARES_sym && git checkout e75c88c
+  find ARES -name '*.wl' -exec perl -pi -e 's/\b(lambda|alphas|alphaS|AlphaS|RpNLL|RsNNLL|logV|as)_\?NumericQ/$1_/g' {} +
+  find ARES -name '*.wl' -exec perl -pi -e 's/If\[lambda > a\/2/If[NumericQ[lambda] && lambda > a\/2/g' {} +
+  perl -pi -e 's/^    \(\* Standard for most event shapes \*\)$/    (* vmax is the KINEMATIC endpoint of the observable; for thrust tau = 1-T it is 1\/2. *)/; s/^    vmax = 1;$/    vmax = 1\/2;/' ARES/Logarithms/LogarithmPT.wl
+  rm -rf .git
+
+Check that the edits are in (ares_smoke.wls, about 15 s):
+The O(alpha_s) coefficient c1 at tau = 0.05 must be -1.6374405 at muR0 = 1, X0 = 1 (the same at
+muR0 = 2) and -1.5880675 at X0 = 2. This is -(CF/pi) L^2 + (3 CF/(2 pi)) L + 0.16761534 with the
+modified log L above. With vmax = 1 left in, c1 comes out wrong. Note that the plain-log formula
+(L = Log[1/tau]) gives -1.7341, which is not the right target once vmax = 1/2 is in. If edits 1
+or 2 are missing, Series does not return numerical coefficients.
+
+Driver settings that matter: "refscale" -> mu MZ (refscale follows muR, so aS is alpha_s(muR)).
+With "refscale" -> MZ and muR0 = 2 the running coupling becomes a nested symbolic expression and
+Series runs for hours. Run with wolframscript -file <driver>.wls. Cost is about 3 s per tau point
+(7 s at X0 = 2), so the 900-point table takes about an hour.

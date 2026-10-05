@@ -5,8 +5,8 @@
 #SBATCH -t 06:00:00
 #SBATCH -N 1
 #SBATCH -J stageE_gen
-#SBATCH -o $SCRATCH/stageE/logs/stageE_%j.out
-#SBATCH -e $SCRATCH/stageE/logs/stageE_%j.err
+#SBATCH -o logs/stageE_%j.out
+#SBATCH -e logs/stageE_%j.err
 BASE=$SCRATCH/stageE
 mkdir -p $BASE/logs $BASE/runs $BASE/data
 cd $BASE

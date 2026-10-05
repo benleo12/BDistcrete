@@ -1,6 +1,6 @@
 {
  "impl": "ours_pytorch_CondPFN_K1",
- "auc": 0.5102612138290955,
+ "auc": 0.8108141119797718,
  "n_train": 96000,
  "n_test": 24000,
  "Phi_sizes": [

@@ -11,8 +11,8 @@
 #SBATCH -t 02:00:00
 #SBATCH -N 1
 #SBATCH -J stageFaug
-#SBATCH -o $SCRATCH/stageF/logs/stageFaug_%j.out
-#SBATCH -e $SCRATCH/stageF/logs/stageFaug_%j.err
+#SBATCH -o logs/stageFaug_%j.out
+#SBATCH -e logs/stageFaug_%j.err
 BASE=$SCRATCH/stageF
 CSV=$BASE/code/stageF_augment_design.csv
 EVENTS=${EVENTS:-80000}

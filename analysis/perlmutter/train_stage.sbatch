@@ -10,11 +10,11 @@
 #SBATCH -G 1
 #SBATCH -c 32
 #SBATCH -J train_stage
-#SBATCH -o $SCRATCH/BDistcrete/analysis/logs/train_%x_%j.out
-#SBATCH -e $SCRATCH/BDistcrete/analysis/logs/train_%x_%j.err
+#SBATCH -o logs/train_%x_%j.out
+#SBATCH -e logs/train_%x_%j.err
 set -e
 STAGE=${STAGE:?set STAGE=E or F}
-cd $SCRATCH/maxent_code; mkdir -p logs output
+cd $SCRATCH/BDistcrete/analysis; mkdir -p logs output
 module load pytorch/2.6.0
 # MANDATORY on Perlmutter: every earlier training here silently ran with the r2_ladder defaults,
 # i.e. ReLU and no embedding autoscale, which is not the published configuration.

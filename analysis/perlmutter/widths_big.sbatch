@@ -5,8 +5,8 @@
 #SBATCH -t 00:30:00
 #SBATCH -N 1
 #SBATCH -J widthsv2
-#SBATCH -o $SCRATCH/BDistcrete/analysis/logs/widthsv2_%j.out
-#SBATCH -e $SCRATCH/BDistcrete/analysis/logs/widthsv2_%j.err
+#SBATCH -o logs/widthsv2_%j.out
+#SBATCH -e logs/widthsv2_%j.err
 # Binned closure widths of the E, F (augmented) and MIX17 stages on the corrected shapes.
 set -u
 cd $SCRATCH/BDistcrete/analysis

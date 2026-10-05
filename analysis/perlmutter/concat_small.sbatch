@@ -6,7 +6,7 @@
 #SBATCH -G 1
 #SBATCH -c 32
 #SBATCH -t 01:30:00
-#SBATCH -o $SCRATCH/BDistcrete/analysis/logs/concat_%x_%j.log
+#SBATCH -o logs/concat_%x_%j.log
 # The unfactorized (concatenation) baseline at Stages A, B and C under the production recipe of
 # the factorized ladder (SiLU, automatic embedding scale, lr 1e-3), without the held-out runs that
 # duplicate training runs (Stage B 6704, Stage C 6902).

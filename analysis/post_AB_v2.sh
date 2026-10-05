@@ -2,7 +2,11 @@
 # After gen_stageA_v2.sh and gen_stageB_v2.sh: rebuild the ladder A and B reference bundles
 # in training order from the corrected shapes, then the tab:ladder widths on v1 and v2 data.
 set -u
-source ~/miniconda3/etc/profile.d/conda.sh && conda activate env_ba
+# Use the active Python environment. With none active (or only conda base), fall back to
+# env_ba, the author's environment, when it exists.
+if [ -z "${VIRTUAL_ENV:-}" ] && [ "${CONDA_DEFAULT_ENV:-base}" = base ] && [ -f ~/miniconda3/etc/profile.d/conda.sh ]; then
+  source ~/miniconda3/etc/profile.d/conda.sh; conda activate env_ba 2>/dev/null
+fi
 export OMP_NUM_THREADS=2
 cd .
 for S in ${STAGES_TO_DO:-A B}; do

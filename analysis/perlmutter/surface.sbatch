@@ -5,14 +5,14 @@
 #SBATCH -t 03:00:00
 #SBATCH -N 1
 #SBATCH -J surface
-#SBATCH -o $SCRATCH/BDistcrete/analysis/logs/surface_%j.out
-#SBATCH -e $SCRATCH/BDistcrete/analysis/logs/surface_%j.err
+#SBATCH -o logs/surface_%j.out
+#SBATCH -e logs/surface_%j.err
 # The two-parameter chi^2 surface of the fit (surface_rows.py) for the confidence regions of
 # Fig. anchored_fit (c): one pass over the coupling rows, then two polish passes over the points.
 set -uo pipefail
-cd $SCRATCH/maxent_code
+cd $SCRATCH/BDistcrete/analysis
 module load pytorch/2.6.0
-export RIVET_REF=$SCRATCH/maxent_code/rivet_ref OMP_NUM_THREADS=4 TORCH_THREADS=4
+export RIVET_REF=rivet_ref OMP_NUM_THREADS=4 TORCH_THREADS=4
 export TARGETS_GRID=output/thrust_targets_grid_ext.npz AE_DTYPE=float32
 export SURF_AS=${SURF_AS:-0.108,0.132,0.001} SURF_A0=${SURF_A0:-0.30,0.60,0.01}
 FIT=${FIT:?}; stem=${FIT%.json}; tag=$(basename $stem); NP=32

@@ -5,8 +5,8 @@
 #SBATCH -t 06:00:00
 #SBATCH -N 1
 #SBATCH -J stageF
-#SBATCH -o $SCRATCH/stageF/logs/stageF_%j.out
-#SBATCH -e $SCRATCH/stageF/logs/stageF_%j.err
+#SBATCH -o logs/stageF_%j.out
+#SBATCH -e logs/stageF_%j.err
 BASE=$SCRATCH/stageF
 mkdir -p $BASE/logs $BASE/runs $BASE/data $BASE/shim
 ln -sf /lib64/libreadline.so.7 $BASE/shim/libreadline.so.8 2>/dev/null

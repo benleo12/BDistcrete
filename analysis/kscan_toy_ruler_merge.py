@@ -6,7 +6,12 @@ import numpy as np
 KS = [1, 2, 4, 8, 16, 32]
 D = './output/_kruler'
 out = {}
-old = json.load(open('./output/kscan_toy.json'))
+# the published column comes from the older kscan_toy.json. It reads nan when that file is
+# missing or empty (it is 0 bytes in the release). The merge itself does not need it.
+try:
+    old = json.load(open('./output/kscan_toy.json'))
+except (FileNotFoundError, json.JSONDecodeError):
+    old = {}
 rows = []
 for K in KS:
     fs = sorted(glob.glob(f'{D}/K{K}_s*.json'))
@@ -44,7 +49,7 @@ for K in KS:
                seeds=[int(s) for r in recs for s in r['seeds']],
                n_seeds=len(recs))
     out[str(K)] = rec
-    pub = old[str(K)]['chi2']**0.5
+    pub = old[str(K)]['chi2']**0.5 if str(K) in old else float('nan')
     rows.append((K, pub, rec['old_width'], rec['width'], rec['width_spread'], rec['width_r3agg'],
                  rec['width_mean_square'], rec['width_per_particle'], rec['width_per_particle_particle_units'],
                  rec['neff_min'], rec['nbins_mean_square'], rec['nbins_per_particle']))

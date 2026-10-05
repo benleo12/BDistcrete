@@ -2,7 +2,12 @@
 # profile_rows.py on this machine: one pass and two polish passes, with NP processes.
 # usage: run_rows_local.sh FIT [NP]     (COLS, COL_STEP, ROW_STEP, AE_DTYPE pass through)
 cd .
-source ~/miniconda3/etc/profile.d/conda.sh; conda activate env_ba
+# Use the active Python environment. With none active (or only conda base), fall back to
+# env_ba, the author's environment, when it exists.
+if [ -z "${VIRTUAL_ENV:-}" ] && [ "${CONDA_DEFAULT_ENV:-base}" = base ] && [ -f ~/miniconda3/etc/profile.d/conda.sh ]; then
+  source ~/miniconda3/etc/profile.d/conda.sh; conda activate env_ba 2>/dev/null
+fi
+mkdir -p logs
 FIT=$1; NP=${2:-4}; S=${FIT%.json}; tag=$(basename $S)
 export TARGETS_GRID=output/thrust_targets_grid_ext.npz TORCH_THREADS=${TORCH_THREADS:-3}
 run() {

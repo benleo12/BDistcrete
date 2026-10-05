@@ -26,10 +26,22 @@ def fit_Nstar(N, y):
            (1 - ss_res / ss_tot if ss_tot > 0 else float('nan'))
 
 
+def load_published(path, empty):
+    """The published JSON for the before/after columns, or a nan-filled stand-in of the same
+    shape when it is missing. The merge itself does not depend on it."""
+    try:
+        return json.load(open(path))
+    except (FileNotFoundError, json.JSONDecodeError):
+        print(f'{path} not found: the published column reads nan')
+        return empty
+
+
+NAN = float('nan')
 out = {}
 
 # ---------------------------------------------------------------- dense coverage
-pub = json.load(open('output/split_scan.json'))
+pub = load_published('output/split_scan.json',
+                     {f'{M}x{E}': dict(chi2=NAN, spread=NAN) for M, E in SPLITS})
 out['split'] = {}
 print('DENSE COVERAGE  (chi2/ndf, fixed total M*E = 60000 training events)')
 print(f'{"split":>12} | {"published":>9} {"spread":>6} | {"reprod(old)":>11} | '
@@ -61,7 +73,12 @@ for sd in (0, 1, 2):
     except FileNotFoundError:
         pass
 if laws:
-    pubL = json.load(open('output/budget_law.json'))
+    pubL = load_published('output/budget_law.json',
+                          dict(clean=dict(Nstar=NAN, R2_linearity=NAN, Nstar_sd_over_seeds=NAN,
+                                          chi2=[NAN] * len(N_CLEAN)),
+                               control=dict(chi2=[NAN] * len(N_CTRL),
+                                            implied_Nstar_per_point=[None] * len(N_CTRL)),
+                               per_seed_Nstar=[]))
     clean_paper = {N: [v for L in laws for v in L['clean'][str(N)]['chi2_paper_reps']] for N in N_CLEAN}
     clean_old = {N: [v for L in laws for v in L['clean'][str(N)]['chi2_old_reps']] for N in N_CLEAN}
     cl_p = [float(np.mean(clean_paper[N])) for N in N_CLEAN]

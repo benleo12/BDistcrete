@@ -5,8 +5,8 @@
 #SBATCH -t 05:00:00
 #SBATCH -N 2
 #SBATCH -J rows
-#SBATCH -o $SCRATCH/BDistcrete/analysis/logs/rows_%j.out
-#SBATCH -e $SCRATCH/BDistcrete/analysis/logs/rows_%j.err
+#SBATCH -o logs/rows_%j.out
+#SBATCH -e logs/rows_%j.err
 # The profiles with the other fit parameter continuous (profile_rows.py), every stage followed by
 # two neighbour-polish passes:
 #   1. the central fit: coupling rows every 0.001 and alpha_0 columns every 0.005
@@ -14,9 +14,9 @@
 #   3. the generator parameters limited to the inner 90 percent of the box
 #   4. the central rows of the two variant fits (product mixture, window bins only)
 set -uo pipefail
-cd $SCRATCH/maxent_code
+cd $SCRATCH/BDistcrete/analysis
 module load pytorch/2.6.0
-export RIVET_REF=$SCRATCH/maxent_code/rivet_ref OMP_NUM_THREADS=4 TORCH_THREADS=4
+export RIVET_REF=rivet_ref OMP_NUM_THREADS=4 TORCH_THREADS=4
 export TARGETS_GRID=output/thrust_targets_grid_ext.npz AE_DTYPE=float32 ROW_STEP=0.001
 NP=$((SLURM_NNODES*32)); F=output/profile_MIX17ext_central.json; S=${F%.json}
 run() {     # run <logtag> <fit>: the part stage over all tasks, with the exported settings

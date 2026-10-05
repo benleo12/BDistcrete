@@ -5,8 +5,8 @@
 #SBATCH -t 05:00:00
 #SBATCH -N 2
 #SBATCH -J profvar
-#SBATCH -o $SCRATCH/BDistcrete/analysis/logs/profvar_%j.out
-#SBATCH -e $SCRATCH/BDistcrete/analysis/logs/profvar_%j.err
+#SBATCH -o logs/profvar_%j.out
+#SBATCH -e logs/profvar_%j.err
 # Direct profile of one fit (or fit variant) on Perlmutter: the alpha_0 columns in parallel, a merge
 # that also takes any seed part files, then the neighbour polish repeated until no node improves by
 # more than TOL.
@@ -17,9 +17,9 @@
 #   STARTS_FIXED    optional, one column file used as extra starts for every new column
 #   MIX_FORM, LAST_BIN, USE_NCH, NSCAN, DCHI_MAX, NEIGH, MAXPASS, TOL pass through
 set -uo pipefail
-cd $SCRATCH/maxent_code
+cd $SCRATCH/BDistcrete/analysis
 module load pytorch/2.6.0
-export RIVET_REF=$SCRATCH/maxent_code/rivet_ref OMP_NUM_THREADS=4 TORCH_THREADS=4
+export RIVET_REF=rivet_ref OMP_NUM_THREADS=4 TORCH_THREADS=4
 export TARGETS_GRID=output/thrust_targets_grid_ext.npz AE_DTYPE=float32
 export EXPORT_PATH=output/models/${MODEL_TAG:?}_cond.npz REF_PATH=output/models/${MODEL_TAG}_ref_v2_slim.npz
 export DCHI_MAX=${DCHI_MAX:-15} NEIGH=${NEIGH:-8} NSCAN=${NSCAN:-96}

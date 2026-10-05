@@ -23,7 +23,7 @@ sys.path.insert(0, '.')
 from extract_particles_full_flavor import full_event_particles
 from compute_efps import compute_hemisphere_shapes
 
-HW = Path('${HERWIG723_PREFIX}'); SHARE = HW/'share'/'Herwig'
+HW = Path(os.environ['HERWIG723_PREFIX']); SHARE = HW/'share'/'Herwig'
 WORK = Path('/tmp/herwig_grid'); WORK.mkdir(exist_ok=True)
 DEF = dict(alphas=0.1186, pwt=0.291717, clmax=3.649, clpow=2.780, psplit=0.899)
 NEUTRINO = {12, 14, 16}

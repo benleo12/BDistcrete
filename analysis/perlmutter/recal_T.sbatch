@@ -7,8 +7,8 @@
 #SBATCH --mem=60G
 #SBATCH -t 02:00:00
 #SBATCH -J recalT
-#SBATCH -o $SCRATCH/BDistcrete/analysis/logs/recalT_%j.out
-#SBATCH -e $SCRATCH/BDistcrete/analysis/logs/recalT_%j.err
+#SBATCH -o logs/recalT_%j.out
+#SBATCH -e logs/recalT_%j.err
 set -u
 cd $SCRATCH/BDistcrete/analysis
 module load pytorch/2.6.0

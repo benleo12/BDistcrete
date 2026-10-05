@@ -13,7 +13,9 @@ import numpy as np
 
 tag = sys.argv[1]
 path = f'output/models/{tag}_cond.npz'
-rec = json.load(open(f'output/recal_T_{tag}.json'))
+# an explicit value needs no recalibration file (the seed-study heads have none)
+rec_path = f'output/recal_T_{tag}.json'
+rec = json.load(open(rec_path)) if (len(sys.argv) <= 2 or os.path.exists(rec_path)) else None
 T_new = float(sys.argv[2]) if len(sys.argv) > 2 else float(rec['best_fine']['T'])
 z = np.load(path, allow_pickle=True)
 T_old = float(z['temperature'])
@@ -26,8 +28,9 @@ if not os.path.exists(bak):
 d = {k: z[k] for k in z.files}
 d['temperature'] = np.array(T_new)
 d['temperature_original'] = np.array(T_old)
-d['temperature_recal_objective'] = np.array(rec['objective'])
-d['temperature_recal_source'] = np.array(f'recal_T_{tag}.json, fine grid, stop width {rec["best_fine"]["width_stop"]:.3f}')
+d['temperature_recal_objective'] = np.array(rec['objective'] if rec else 'explicit value on the command line')
+d['temperature_recal_source'] = np.array(f'recal_T_{tag}.json, fine grid, stop width {rec["best_fine"]["width_stop"]:.3f}'
+                                         if rec else 'explicit value on the command line')
 # np.savez appends .npz to a name that lacks it, so the temporary name must end in .npz
 tmp = path[:-4] + '.tmp.npz'
 np.savez(tmp, **d)

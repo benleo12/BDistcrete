@@ -34,9 +34,10 @@ determines the strong coupling.
 conda env create -f environment.yml && conda activate bdistcrete
 cd analysis
 python make_sec6_numbers.py                                   # every number of Sec. 6, from output/
-python fig_anchored_fit.py output/profile_MIX17ext_central.json   # Fig. 9
-python fig_thrust_vs_aleph.py                                  # Fig. 10 and the fit of App. D
+python fig_anchored_fit.py output/profile_MIX17ext_central.json   # Fig. 10
+python fig_thrust_vs_aleph.py                                  # Fig. 11 and the fit of App. D
 python figs_pro.py toy anymap head widebox                     # Figs. 4, 6, 7 and 8
+python fig_cost.py                                             # Fig. 9, from output/bench/
 python method_figs.py                                          # Fig. 2
 ```
 

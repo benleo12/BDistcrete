@@ -59,8 +59,9 @@ any estimator, DCTR included.
   - At first order there are d + 1 terms, which carry most of the accuracy.
   - At second order there are at most K₂ = 1 + d + d(d+1)/2.
 - This is a property of the log ratio, so any network that learns the ratio inherits it.
-  `python dctr_rank.py` prints the effective rank of the trained DCTR networks: 3, 6, 8, 12 and 19
-  for d = 1, 2, 3, 8 and 17. These follow the same counts, although nothing in those networks
+  `dctr_truncation.py` tests this on the trained DCTR networks: their output, truncated to its r
+  largest singular components, keeps the closure width within 0.02 at r = 3, 5, 5, 9 and 16 for
+  d = 1, 2, 3, 8 and 17 (`output/dctr_truncation_*.json`), although nothing in those networks
   imposes a rank.
 - For the factorized network the expansion does two things. It says how large K must be, which
   is the term-count scan of Sec. 5.4 and Fig. 7. It also explains why restricting the logit to K
@@ -72,17 +73,20 @@ any estimator, DCTR included.
   derivatives in θ, then cost one K-term inner product per event.
   - Early fusion reruns the per-particle network on every particle of every event at each new θ.
   - Late fusion reruns the network after the sum on every event.
-  - `bench_cost.py` measures this on the seventeen-parameter fit. On a Perlmutter CPU node (32
-    threads, 1.15M reference events, four networks), one step of the profile fit takes 0.59 s
-    with the factorized form and 14.3 s with late fusion. The step is χ² and its gradient in the
-    17 nuisance parameters, with the maximum-entropy reweighting re-solved.
-  - The early-fusion and GPU timings are in `output/bench_cost_*.json` once they finish.
+  - `bench_cost.py` measures this on the seventeen-parameter fit (Fig. 9, `fig_cost.py`). On one
+    CPU process with four threads, as in the fits, the network part of one step (the weights of
+    the 1.15M reference events and their derivatives in the 17 parameters) takes 0.20 s for the
+    factorized network, 17 s with late fusion and 20 minutes with early fusion (DCTR). The
+    maximum-entropy reweighting and χ² add 0.50 s for every network. A fit of 6315 steps then takes
+    about 1.2 hours, 1.3 days and 86 days. Results in `output/bench/`.
 - **The exact mixture head.** Closure widths (one means agreement within statistics) for
   factorized against DCTR are in Table 4 and `output/concat_baseline_*.json`.
   - They are comparable up to eight parameters: 0.95 against 0.98, 1.20 against 1.08, 1.03
     against 0.99, and 1.06 against 1.03.
-  - The factorized network is clearly better on the seventeen-parameter mixture, 1.09 against
-    1.38.
+  - On the seventeen-parameter mixture DCTR with θ as plain inputs gives 1.38. With the exact
+    mixture head (`CONCAT_HEAD=mixture`) it gives 1.11 to 1.14 over three trainings, and the
+    factorized network 1.09 to 1.13 over five (`output/seedstudy/`). The gain comes from the mixture
+    head, which any network can use, not from the factorization.
 
 ## The validation statistic (Sec. 4)
 
@@ -153,25 +157,27 @@ strange fraction. The code is `ladder_widths_dedup.py`, `ladder_widths_big.py` a
   links into the slim files.
 - The figures need a LaTeX installation, which `environment.yml` does not provide.
 
+## Names in the paper and in the code
+
+| paper | code |
+|---|---|
+| Stages A, B, C | `A`, `B`, `C` (`r2_ladder.py`) |
+| the mixture stage (seven parameters, Sec. 5.6) | `DMDMXSc` (`stageDMxSc.sbatch`, `MIXSTAGE` in `ladder_widths_dedup.py`) |
+| Stage D (Sherpa, eight parameters) | `E` (`E_cond.npz`, `widths_v2_E.json`, `concat_baseline_E_silu.json`) |
+| Stage E (Herwig, eight parameters) | `F`, trained as `Fauglong` on `stageF_design_aug.csv` |
+| the seventeen-parameter mixture of D and E | `MIX`, `MIX17aug` (`MIX17aug_cond.npz`), fit files `profile_MIX17ext_*` |
+| the three-parameter Sherpa family (all 54 Stage C runs) | `C_1M` (`profile_C_1Mext_*`) |
+| shower coupling $\alpha_s^{\rm sh}$ | `ALPHAS(MZ)` (Sherpa), `AlphaIn` (Herwig) |
+
 ## Checks in progress
 
-These were queued on Perlmutter after the paper's numbers were fixed. Their result files are not
-in `output/` yet, so do not quote them as results. `docs/REPRODUCE.md` (Sec. 5.8) has the commands.
-- **Seed spreads for Table 4.** `perlmutter/seedstudy.sbatch` retrains the factorized, early-fusion
-  and late-fusion networks with other training seeds, so that each closure width of Table 4 gets a
-  spread over seeds. Results go to `output/seedstudy/`. A seed n trains the four networks with
-  seeds n to n + 3, so only multiples of 4 give members independent of the published seeds 0 to 3 (100 to 103 for
-  the factorized Stage B).
-- **The mixture-head control.** The same script with the designs `mixe` and `mixl` trains early
-  and late fusion with the exact mixture head (`CONCAT_HEAD=mixture`) on the seventeen-parameter
-  mixture. It tests whether the gap there, 1.09 against 1.38, comes from the factorized form or
-  from the mixture head.
-- **Late-fusion accuracy.** `perlmutter/concat_late.sbatch` for Stage C and the mixture, writing
-  `output/concat_baseline_{C,MIX}_late.json`.
-- **Cost on CPU and GPU.** `perlmutter/bench_cpu.sbatch` (4 and 128 threads) and
-  `perlmutter/bench_gpu.sbatch`, writing `output/bench_cost_cpu_4.json`, `bench_cost_cpu_128.json`
-  and `bench_cost_cuda_32.json`. The 0.59 s and 14.3 s above come from a 32-thread run without the
-  early design.
+`perlmutter/seedstudy.sbatch` retrains each network of Table 4 with other seeds, so that every
+closure width gets a spread over trainings. A seed n trains the four networks with seeds n to n + 3,
+so only multiples of 4 give members independent of the published seeds 0 to 3 (100 to 103 for the
+factorized Stage B). Done for the seventeen-parameter mixture (`output/seedstudy/*_MIX_*.json`): the
+factorized network gives 1.09 to 1.13 over five trainings, DCTR 1.38 to 1.41 over four, late fusion
+1.26 to 1.29 over three, and with the exact mixture head 1.11 to 1.14 (early) and 1.16 to 1.18
+(late). The other stages are still running, so do not quote spreads for them yet.
 
 ## Things to know
 

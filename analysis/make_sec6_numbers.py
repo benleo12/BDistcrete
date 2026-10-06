@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Every number quoted in Sec. 6 of the paper, computed from the result files in output/ and written
 to output/sec6_numbers.json under the names the text uses (for example AS, AS_EHI, AS_ELO for the
-coupling and its experimental errors). The values are formatted as printed, and where the paper's
+coupling and the Delta chi^2 = 1 interval, AS_EXP for its experimental error). The values are formatted as printed, and where the paper's
 wording depends on a result (for example whether a variant moves the coupling), the chosen wording is
 stored as well, so every statement of Sec. 6 can be traced to the files it comes from.
 
@@ -30,7 +30,21 @@ N = {}
 pa, p0 = rows['variations']['central'], rows['alpha_0_profile']
 N['AS'], N['AS_EHI'], N['AS_ELO'] = f4(pa['value']), f4(pa['err_hi']), f4(pa['err_lo'])
 N['A0'], N['A0_EHI'], N['A0_ELO'] = f3(p0['value']), f3(p0['err_hi']), f3(p0['err_lo'])
-N['RHO'] = f"{rows['rho']:+.2f}"
+N['RHO'] = f"{rows['rho']:+.2f}"          # correlation of the Delta chi^2 = 1 profiles, not quoted
+# the experimental errors of Eq. (alphasfit): the scatter and correlation of the fits to the forty
+# pseudo-data sets generated at the fitted point (pseudo_rows_atfit.py); the Delta chi^2 = 1 interval
+# of the real fit (AS_EHI, AS_ELO) is narrower, and Sec. 6.3 explains why
+import glob
+AT = [json.load(open(f)) for f in sorted(glob.glob(O + 'pseudo_atfit_sets/pseudo_atfit_profile_MIX17ext_central_set[0-9][0-9][0-9].json'))]
+assert len(AT) == 40, f'expected forty pseudo-data sets at the fitted point, found {len(AT)}'
+pa_at = np.array([r['alpha_s'] for r in AT]); p0_at = np.array([r['alpha_0_at_min'] for r in AT])
+N['AS_EXP'], N['A0_EXP'] = f4(pa_at.std(ddof=1)), f3(p0_at.std(ddof=1))
+N['RHO_EXP'] = f"{np.corrcoef(pa_at, p0_at)[0, 1]:+.2f}"
+flat = np.array([r['edge'] for r in AT])
+N['AT_NFLAT'], N['AT_SCATTER_TWOSIDED'] = str(int(flat.sum())), f4(pa_at[~flat].std(ddof=1))
+N['AT_NARROWEST'] = f4(min((r['err_lo'] + r['err_hi'])/2 for r, fl in zip(AT, flat) if not fl))
+N['AT_BIAS'] = f4(pa_at.mean() - AT[0]['truth']['alpha_s'])
+EXP = pa_at.std(ddof=1)
 N['CHI2'] = f1(pa['chi2min'])
 s = var['summary']
 N['AS_PHI'] = f4(max(0.0, s['pert_env_alpha_s'][1])); N['AS_PLO'] = f4(max(0.0, -s['pert_env_alpha_s'][0]))
@@ -71,18 +85,18 @@ lst = lambda L: L[0] if len(L) == 1 else ', '.join(L[:-1]) + ' and ' + L[-1]
 N['EDGE_LIST'] = 'namely ' + ' and '.join(x for x in ([f'{lst(eS)} for Sherpa'] if eS else []) + ([f'{lst(eH)} for Herwig'] if eH else []))
 N['SHRINK_PCT'] = f"{100*shr['shrink']:.0f}"
 d = shr['variations']['central']['value'] - pa['value']; N['SHRINK_DAS'] = f'{d:+.4f}'
-N['SHRINK_CMP'] = ('well inside the experimental error' if abs(d) < 0.5*min(pa['err_hi'], pa['err_lo'])
+N['SHRINK_CMP'] = ('well inside the experimental error' if abs(d) < 0.5*EXP
                    else 'comparable to the experimental error')
 N['NP_DA0'] = f"${s['np_d_alpha_0'][0]:+.2f}$ and ${s['np_d_alpha_0'][1]:+.2f}$"   # Milan factor up and down
 N['NP_DAS'] = f"{max(abs(x) for x in s['np_env_alpha_s']):.4f}"
 w = win['variations']['central']
 N['WIN_AS'], N['WIN_EHI'], N['WIN_ELO'] = f4(w['value']), f4(w['err_hi']), f4(w['err_lo'])
-dw = w['value'] - pa['value']; nsd = abs(dw)/(pa['err_lo'] if dw < 0 else pa['err_hi'])
+dw = w['value'] - pa['value']; nsd = abs(dw)/EXP
 N['WIN_CLAUSE'] = (', so the coupling is determined by the shape of the distribution inside the window.' if nsd < 0.5 else
-                   f", {'lower' if dw < 0 else 'higher'} by ${abs(dw):.4f}$, about {('one' if nsd < 1.5 else WORD.get(int(round(nsd)), f'{nsd:.0f}'))} "
-                   f"experimental standard deviation{'' if nsd < 1.5 else 's'} of \\Eq{{alphasfit}}. The bins above the window and the "
-                   "multiplicity constrain the generator parameters, which still shape the distribution inside the window within "
-                   "the theory uncertainty of the anchored moments, so they also affect the fitted coupling. The multiplicity "
+                   f", {'lower' if dw < 0 else 'higher'} by ${abs(dw):.4f}$, about ${nsd:.1f}$ "
+                   f"experimental standard deviations of \\Eq{{alphasfit}}. The bins above the window and the "
+                   "multiplicity constrain the generator parameters, which still shape the distribution inside the window "
+                   "beyond the imposed moments, so they also affect the fitted coupling. The multiplicity "
                    "enters with the L3 error alone, although the reweighting reproduces mean multiplicities only to between a few "
                    "tenths of a percent and one percent (Secs.~\\ref{sec:anypoint} and~\\ref{sec:bigboxes}), and this fit also "
                    "covers the extreme case in which the multiplicity has no weight at all.")

@@ -31,7 +31,7 @@ def _hist_u(vals, bins):
 
 
 def _steps(ax, bins, y, **kw):
-    ax.stairs(y, bins, **kw)
+    ax.stairs(y, bins, baseline=None, **kw)
 
 
 def hero():
@@ -44,12 +44,12 @@ def hero():
 
     PANELS = [
         ('1_minus_thrust', r'$1-T$', r'$1/\sigma\,\mathrm{d}\sigma/\mathrm{d}(1-T)$', True),
-        ('mult_total', r'multiplicity $N$', r'$P(N)$', False),
-        ('nbaryon', r'baryon count $N_{\mathrm{baryon}}$', r'$P(N_{\mathrm{baryon}})$', True),
+        ('mult_total', r'multiplicity $N$', r'$1/\sigma\,\mathrm{d}\sigma/\mathrm{d}N$', False),
+        ('nbaryon', r'baryon count $N_{\mathrm{baryon}}$', r'$1/\sigma\,\mathrm{d}\sigma/\mathrm{d}N_{\mathrm{baryon}}$', True),
         ('x_p', r'$E_i/E_{\mathrm{vis}}$', r'$(1/n)\,\mathrm{d}n/\mathrm{d}(E_i/E_{\mathrm{vis}})$', True),
     ]
     fig = plt.figure(figsize=(11.2, 4.6))
-    gs = GridSpec(2, 4, height_ratios=[2.6, 1.0], hspace=0.06, wspace=0.30,
+    gs = GridSpec(2, 4, height_ratios=[2.6, 1.0], hspace=0.06, wspace=0.38,
                   left=0.06, right=0.99, top=0.91, bottom=0.12)
     TITLES = ['(a) thrust', '(b) multiplicity',
               '(c) baryon count', '(d) energy fraction']
@@ -118,14 +118,14 @@ def hero():
         ru = np.where(ok, du/np.where(ok, dt, 1), np.nan)
         rte = np.where(ok, et/np.where(ok, dt, 1), np.nan)
         axp.axhline(1, color=MUTED, lw=0.7)
-        axp.fill_between(ctr[ok], 1-rte[ok], 1+rte[ok], color=GREY, alpha=0.3, lw=0,
-                         step='mid')
-        axp.plot(ctr[ok], ru[ok], color=GREY, lw=1.2, ls='--', drawstyle='steps-mid')
-        axp.plot(ctr[ok], rw[ok], color=BLUE, lw=1.6, drawstyle='steps-mid')
-        axp.fill_between(ctr[ok], rw[ok]-rwe[ok], rw[ok]+rwe[ok], color=BLUE, alpha=0.25,
-                         lw=0, step='mid')
+        # every curve and band on the true bin edges, bins without fresh-run events left empty
+        nan = lambda v: np.where(ok, v, np.nan)
+        axp.stairs(nan(1+rte), bins, baseline=nan(1-rte), fill=True, color=GREY, alpha=0.3, lw=0)
+        axp.stairs(nan(ru), bins, baseline=None, color=GREY, lw=1.2, ls='--')
+        axp.stairs(nan(rw+rwe), bins, baseline=nan(rw-rwe), fill=True, color=BLUE, alpha=0.25, lw=0)
+        axp.stairs(nan(rw), bins, baseline=None, color=BLUE, lw=1.6)
         span = np.nanmax(np.abs(np.r_[ru[ok], rw[ok]]-1))
-        lim = 0.14 if span < 0.12 else min(1.15*span, 0.6)
+        lim = 0.14 if span < 0.12 else min(1.15*span, 0.8)
         axp.set_ylim(1-lim, 1+lim)
         if obs == 'mult_total':
             axp.set_xlim(0, 92)
@@ -159,7 +159,7 @@ def head():
         KK = sorted(int(k) for k in sc); yy = [sc[str(k)]['width'] for k in KK]
         ee = [sc[str(k)].get('spread', 0) for k in KK]
         ax.errorbar(KK, yy, yerr=ee, marker=mk, ms=5.0, color=col, lw=1.6, capsize=2,
-                    label=(rf'Stage {st}, $d={dd}$' if st != 'E' else rf'Sherpa, $d={dd}$'))
+                    label=(rf'Stage {st}, $d={dd}$' if st != 'E' else rf'Stage D, $d={dd}$'))
         K2 = 1 + dd + dd*(dd+1)//2
         ax.axvline(K2, color=col, ls=(0, (5, 3)), lw=0.9, alpha=0.5, zorder=1,
                    ymax=0.55)
@@ -237,8 +237,8 @@ def anymap():
     # seed was set for the ladder runs), so it is not a held-out test and is left out
     anc = {int(k): v for k, v in d.items() if k != 'summary' and v.get('kind') == 'anchor' and int(k) != 6902}
     OBS = [('1_minus_thrust', r'thrust'), ('B_total', r'$B_{\rm tot}$'),
-           ('rho_heavy', r'$\rho_H$'), ('mult_total', r'mult.'), ('x_p', r'$E_i/E_{\rm vis}$'),
-           ('strange', r'strange'), ('joint_thrust_mult', r'joint'), ('nbaryon', r'baryons')]
+           ('rho_heavy', r'$\rho_H$'), ('mult_total', 'multi-\nplicity'), ('x_p', r'$E_i/E_{\rm vis}$'),
+           ('strange', 'strange\nhadrons'), ('joint_thrust_mult', r'joint'), ('nbaryon', 'baryon\ncount')]
     fig = plt.figure(figsize=(10.4, 4.0))
     gs = GridSpec(1, 2, width_ratios=[1.55, 1], wspace=0.24, left=0.06, right=0.985,
                   top=0.88, bottom=0.14)
@@ -254,7 +254,7 @@ def anymap():
                    label='held-out ladder points' if i == 0 else None)
         ax.plot([i-0.25, i+0.25], [np.nanmean(va)]*2, color=INK, lw=1.8, zorder=5)
     ideal(ax, 1.0)
-    ax.set_xticks(range(len(OBS))); ax.set_xticklabels([l for _, l in OBS], fontsize=14, rotation=25, ha='right', rotation_mode='anchor')
+    ax.set_xticks(range(len(OBS))); ax.set_xticklabels([l for _, l in OBS], fontsize=13.5, linespacing=0.95)
     ax.set_ylabel(r'closure width $\sqrt{\chi^2/\mathrm{ndf}}$')
     ax.legend(loc='upper left', fontsize=13.5)
     panel_title(ax, '(a) closure width by observable'); trim(ax)
@@ -265,7 +265,7 @@ def anymap():
         zz = [abs(p.get('nbaryon_z', np.nan)) for p in coll.values()]
         ax.scatter(dd, zz, s=24, marker=mk, color=col, edgecolors='none', zorder=3, label=lab)
     ax.axhline(2, color=MUTED, lw=0.8, ls=(0, (4, 3)))
-    ax.set_xlabel(r'distance to box centre (half-widths)')
+    ax.set_xlabel(r'distance (half-widths)')
     ax.set_ylabel(r'$|z|$ of the mean baryon count')
     ax.set_ylim(0, None); ax.legend(loc='upper left', fontsize=13.5)
     panel_title(ax, '(b) mean baryon count'); trim(ax)
@@ -286,8 +286,8 @@ def widebox():
         ax.plot(a, y, marker=mk, color=col, ms=5.5, lw=1.7, label=lab)
     ideal(ax, 1.0, label='statistical expectation')
     ax.axvline(0.14, color=MUTED, lw=0.8, ls=(0, (1, 2)), ymax=0.56)
-    ax.annotate('reference\ncentre', (0.145, 3.1), ha='left', fontsize=13, color=MUTED)
-    ax.set_xlabel(r'held-out $\alpha_s(M_Z)$')
+    ax.annotate('single\nrun', (0.145, 3.1), ha='left', fontsize=13, color=MUTED)
+    ax.set_xlabel(r'held-out shower coupling $\alpha_s^{\rm sh}$')
     ax.set_ylabel(r'closure width $\sqrt{\chi^2/\mathrm{ndf}}$')
     ax.legend(loc='upper right', fontsize=13.5, frameon=True, facecolor='white',
               framealpha=0.95, edgecolor='none')
@@ -307,7 +307,7 @@ def widebox():
                   label=(rf'{lab}, $N_{{\rm eff}}={neff:.0f}$' if neff < 1e3 else
                          rf'{lab}, $N_{{\rm eff}}={neff/1e3:.1f}$k'))
     ax.axvline(np.log10(7), color=BLUE, lw=0.9, ls=(0, (2, 2)),
-               label=r'mixture bound $w\le M$')
+               label=r'bound $w\le M$')
     ax.set_yscale('log')
     ax.set_xlim(-2.9, 3.2)
     ax.set_ylim(top=300)
@@ -315,7 +315,7 @@ def widebox():
     ax.set_ylabel(r'fraction of reference events')
     ax.legend(loc='upper left', fontsize=13, frameon=True, facecolor='white',
               framealpha=0.9, edgecolor='none')
-    panel_title(ax, r'(b) weights at $\alpha_s=0.083$'); trim(ax)
+    panel_title(ax, r'(b) weights at $\alpha_s^{\rm sh}=0.083$'); trim(ax)
     save(fig, 'output/fig_p_widebox.pdf')
 
 

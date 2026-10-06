@@ -136,12 +136,12 @@ and `data_stageF/` (the archives carry them there) or in `analysis/`. Copies are
 | concatenation (early fusion), Stages A to C | `for S in A B C; do STAGE=$S sbatch perlmutter/concat_small.sbatch; done` (needs `C1_train_A` to `C3_train_C` and the held runs of `B2_held_ABC`) | `concat_baseline_{A,B,C}_prod.json` |
 | concatenation, Sherpa 8 and mixture 17 | `STAGE=E sbatch perlmutter/concat_big.sbatch` and `STAGE=MIX sbatch perlmutter/concat_big.sbatch` (needs `C7a` to `C7d_train_E`, `C9a` and `C9b_train_MIX17`, and `B10_held_8param`) | `concat_baseline_{E,MIX}_silu.json` |
 | factorized columns | as Tables 1 and 3 | |
-| DCTR effective rank: 3, 6, 8, 12, 19 terms for d = 1, 2, 3, 8, 17 | `python dctr_rank.py` (threshold 3 percent) or `python dctr_rank.py 0.01`. The singular values are stored by `concat_baseline.py` as `svd` in each file | `concat_baseline_*_prod.json`, `concat_baseline_{E,MIX}_silu.json` |
-| late fusion, Stage C and mixture 17 **(in progress)** | `STAGE=C sbatch perlmutter/concat_late.sbatch` and `STAGE=MIX sbatch perlmutter/concat_late.sbatch` (`concat_baseline.py` with `CONCAT_MODE=late`). The jobs had not run when this was written | `concat_baseline_{C,MIX}_late.json`, not yet in `output/` |
-| cost of the three designs **(in progress)** | `sbatch perlmutter/bench_cpu.sbatch` (4 and 128 threads) and `sbatch perlmutter/bench_gpu.sbatch` (`bench_cost.py`, needs `B6_sec6_MIX17` and `B11_bench`, group `cost`). The quoted 0.59 s and 14.3 s per fit step come from a 32-thread run without the early design (`BENCH_SKIP=early BENCH_REPS=1`, `bench_cost_smoke.json`). The full jobs had not run when this was written | `bench_cost_cpu_4.json`, `bench_cost_cpu_128.json`, `bench_cost_cuda_32.json`, not yet in `output/` |
-| training-seed spreads and the mixture-head control **(in progress)** | `TASKS="design:stage:seed ..." sbatch perlmutter/seedstudy.sbatch`, at most four tasks per job, one per GPU. Designs: `fact` (factorized, stages A, B, C, E, MIX), `concat`, `late`, and for MIX only `mixe` and `mixl` (early and late fusion with the exact mixture head, `CONCAT_HEAD=mixture`). Example: `TASKS="mixe:MIX:0 mixl:MIX:0"`. A seed n trains the four networks with seeds n to n + 3, so seeds that are multiples of 4 give members independent of the published ones (0 to 3, and 100 to 103 for the factorized Stage B, which `fact:B:0` uses). `SMOKE=1` runs tiny budgets for timing. No published file is touched | `output/seedstudy/<design>_<stage>_s<seed>.json`, factorized closures in `ladder_dedup_<S>_<S>_seed<n>_ref.json` and `widths_v2_{E,MIX17aug}_seed<n>.json` |
+| truncation test: the concatenation output keeps its closure within 0.02 at r = 3, 5, 5, 9, 16 singular components for d = 1, 2, 3, 8, 17 | `sbatch perlmutter/dctr_truncation.sbatch` (`dctr_truncation.py <tag> <weights>`, which reloads the trained concatenation networks and recomputes the closure from the truncated output with the published evaluation) | `dctr_truncation_{A,B,C,E,MIX}_concat_*.json` |
+| late fusion (θ after the sum), Stage C and mixture 17: 0.98 and 1.26 | `STAGE=C sbatch perlmutter/concat_late.sbatch` and `STAGE=MIX sbatch perlmutter/concat_late.sbatch` (`concat_baseline.py` with `CONCAT_MODE=late`) | `concat_baseline_{C,MIX}_late.json` |
+| Fig. 9, the cost of the three networks: 0.20 s, 17 s and 20 min per step on one CPU process with four threads, 0.50 s for the reweighting and χ², memory 0.9, 4.7 and 1.7 GB | `sbatch perlmutter/bench_cpu.sbatch` and `sbatch perlmutter/bench_gpu.sbatch` (`bench_cost.py`, needs `B6_sec6_MIX17` and `B11_bench`, group `cost`), then `python fig_cost.py` | `output/bench/bench_cost_{cpu_4,cpu_6,cpu_32,cpu_32_full,cpu_128,cuda_32}.json` |
+| training-seed spreads and the mixture-head control. Done for the seventeen-parameter mixture: factorized 1.09 to 1.13 over five trainings, concatenation with the mixture form 1.11 to 1.14 over three; the other stages are still running | `TASKS="design:stage:seed ..." sbatch perlmutter/seedstudy.sbatch`, at most four tasks per job, one per GPU. Designs: `fact` (factorized, stages A, B, C, E, MIX), `concat`, `late`, and for MIX only `mixe` and `mixl` (early and late fusion with the exact mixture head, `CONCAT_HEAD=mixture`). Example: `TASKS="mixe:MIX:0 mixl:MIX:0"`. A seed n trains the four networks with seeds n to n + 3, so seeds that are multiples of 4 give members independent of the published ones (0 to 3, and 100 to 103 for the factorized Stage B, which `fact:B:0` uses). `SMOKE=1` runs tiny budgets for timing. No published file is touched | `output/seedstudy/<design>_<stage>_s<seed>.json`, factorized closures in `ladder_dedup_<S>_<S>_seed<n>_ref.json` and `widths_v2_{E,MIX17aug}_seed<n>.json` |
 
-## Section 6, anchoring and the fit (Table 5, Fig. 9)
+## Section 6, anchoring and the fit (Table 5, Fig. 10)
 
 Needs `B6_sec6_MIX17` for the MIX17 rows (group `sec6`) and `B7_C1M` for the three-parameter
 family (group `family`). The three-parameter fit reads `output/models/C_1M_ref_v2.npz`, which
@@ -161,16 +161,17 @@ calculation-only fits and `make_sec6_numbers.py` need no archives. The grid prof
 | three-parameter family | `COLS=1 COL_STEP=0.005 ROW_STEP=0.001 ./run_rows_local.sh output/profile_C_1Mext_central.json 4` | `profile_C_1Mext_central_rows.json` |
 | pseudo-data closure, 40 sets | `FIT=output/profile_MIX17ext_central.json sbatch perlmutter/closure_rows.sbatch` (`pseudo_rows.py`). Sets 2 and 22 again with longer rows: `SETS='2 22' sbatch perlmutter/closure_wide.sbatch`. Both scripts write the sets to `output/pseudo_rows_sets/`, run `pseudo_rows.py summary` on them and copy the summary to `output/`. In the summary a wide set replaces the original one. Without the two wide sets `make_sec6_numbers.py` stops | `pseudo_rows_sets/`, `pseudo_rows_*_summary.json` |
 | χ² per experiment, residuals, edges, fraction | `python fit_summary_direct.py output/profile_MIX17ext_central.json` | `profile_MIX17ext_central_summary.json` |
-| Table 5 and the bands of Fig. 9 | `FIT=output/profile_MIX17ext_central.json sbatch perlmutter/bands_exact.sbatch` (`bands_exact.py point`, `part`, `merge`). Rerun the point mode whenever the rows change | `*_exchange.json`, `*_exchange_dist.npz`, `*_bands_point.json` |
-| Fig. 9 (c), the two-parameter regions | `FIT=output/profile_MIX17ext_central.json sbatch perlmutter/surface.sbatch` (`surface_rows.py`) | `profile_MIX17ext_central_surface.json` |
-| Fig. 9 | `python fig_anchored_fit.py output/profile_MIX17ext_central.json` | the files above |
+| pseudo-data at the fitted point, 40 sets: the experimental errors 0.0052 and 0.062 with correlation +0.92 | `FIT=output/profile_MIX17ext_central.json sbatch perlmutter/closure_atfit.sbatch` (`pseudo_rows_atfit.py`, every truth at the fitted point) | `output/pseudo_atfit_sets/` |
+| Table 5 and the bands of Fig. 10 | `FIT=output/profile_MIX17ext_central.json sbatch perlmutter/bands_exact.sbatch` (`bands_exact.py point`, `part`, `merge`). Rerun the point mode whenever the rows change | `*_exchange.json`, `*_exchange_dist.npz`, `*_bands_point.json` |
+| Fig. 10 (c), the contour where the χ² of the fit rises by one | `FIT=output/profile_MIX17ext_central.json sbatch perlmutter/surface.sbatch` (`surface_rows.py`) | `profile_MIX17ext_central_surface.json` |
+| Fig. 10 | `python fig_anchored_fit.py output/profile_MIX17ext_central.json` | the files above and `output/pseudo_atfit_sets/` |
 | fraction below τ = 0.05 | `python peak_fraction.py output/profile_MIX17ext_central.json` | `profile_MIX17ext_central_peak.json` |
 | calculation-only window fits (Sec. 6.4) | `python calc_window_fits.py` | `calc_window_fits.json` |
 | band at the ALEPH pair, 0.8 percent | `python band_refit_compare.py` | `band_refit_compare.json` |
 | parton-level check (Sec. 6.6) | `python parton_direct.py output/profile_MIX17ext_central.json` | `profile_MIX17ext_central_check.json` |
 | **every number of Sec. 6** | `python make_sec6_numbers.py` | all of the above |
 
-## Appendix D, the thrust calculation (Fig. 10)
+## Appendix D, the thrust calculation (Fig. 11)
 
 | item | produced by | from |
 |---|---|---|
@@ -180,7 +181,7 @@ calculation-only fits and `make_sec6_numbers.py` need no archives. The grid prof
 | χ² at the fitted pair, 13.7, and the refitted χ² range | `python calc_window_fits.py` (ALEPH, own normalization) | `calc_window_fits.json` |
 | cross-check with y0 = 1e-7 | `python eerad_y7_check.py`. The cumulant it compares with is rebuilt by `python eerad_cumulant_combine.py --dirs logs/eerad_NNLO_y7 --trim 0.10 --out output/eerad_NNLO_ranktrim_y7.npy` | `eerad_NNLO_cum.npy`, `eerad_NNLO_ranktrim_y7.npy` |
 | clipping of the cumulant, third-order subtraction | `python appD_checks.py`, `NP_SUB_ORDER=3 python appD_checks.py`, both with `ARES_EXT` unset | `appD_checks*.json` |
-| Fig. 10 and the deviations from ALEPH | `python fig_thrust_vs_aleph.py` | the files above |
+| Fig. 11 and the deviations from ALEPH | `python fig_thrust_vs_aleph.py` | the files above |
 
 ## Appendix E
 

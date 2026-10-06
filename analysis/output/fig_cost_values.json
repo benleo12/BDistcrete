@@ -1,0 +1,89 @@
+{
+ "128": {
+  "n_network_step_seconds": {
+   "factorized": 0.35665645403787494,
+   "late": 18.652969372924417,
+   "early": 1291.1493287258781
+  },
+  "b_fit_step_seconds": {
+   "factorized": 0.6633773429784924,
+   "late": 20.099944087909535,
+   "early": 1289.7541651900392
+  },
+  "cache_GB": {
+   "factorized": 0.883113984,
+   "late": 4.709941248,
+   "early_particles": 1.7279568,
+   "padded_particle_array": 3.2196864
+  },
+  "tilt": 0.39183841412886977
+ },
+ "32": {
+  "n_network_step_seconds": {
+   "factorized": 0.22980408102739602,
+   "late": 13.096237782971002,
+   "early": 888.1882745550247
+  },
+  "b_fit_step_seconds": {
+   "factorized": 0.7392915049567819,
+   "late": 13.524092469946481,
+   "early": 857.5327635579742
+  },
+  "cache_GB": {
+   "factorized": 0.883113984,
+   "late": 4.709941248,
+   "early_particles": 1.7279568,
+   "padded_particle_array": 3.2196864
+  },
+  "tilt": 0.4152656360529363
+ },
+ "4": {
+  "n_network_step_seconds": {
+   "factorized": 0.19703886122442782,
+   "late": 16.734658471075818,
+   "early": 1178.7498385119252
+  },
+  "b_fit_step_seconds": {
+   "factorized": 0.7288434680085629,
+   "late": 16.724352311110124
+  },
+  "cache_GB": {
+   "factorized": 0.883113984,
+   "late": 4.709941248,
+   "early_particles": 1.7279568,
+   "padded_particle_array": 3.2196864
+  },
+  "tilt": 0.4965248368680477
+ },
+ "6": {
+  "n_network_step_seconds": {
+   "factorized": 0.19161347695626318,
+   "late": 11.378651142818853,
+   "early": 915.5057171070948
+  },
+  "b_fit_step_seconds": {
+   "factorized": 0.6069658428896219,
+   "late": 12.013682543998584
+  },
+  "cache_GB": {
+   "factorized": 0.883113984,
+   "late": 4.709941248,
+   "early_particles": 1.7279568,
+   "padded_particle_array": 3.2196864
+  },
+  "tilt": 0.3852432840503752
+ },
+ "cuda": {
+  "n_network_step_seconds": {
+   "factorized": 0.00949524505995214,
+   "late": 0.16549313894938678,
+   "early": 15.113561876001768
+  },
+  "cache_GB": {
+   "factorized": 0.883113984,
+   "late": 4.709941248,
+   "early_particles": 1.7279568,
+   "padded_particle_array": 3.2196864
+  }
+ }
+}

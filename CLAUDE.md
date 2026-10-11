@@ -10,12 +10,18 @@ To check the text against the code, clone it next to this one,
 
 ## What the paper does
 
-Generator uncertainties (parton shower, hadronization, the choice of generator) are usually
-estimated from a few discrete variations. We make one stored event sample a continuous,
-differentiable function of the generator parameters by reweighting it. A maximum-entropy
-reweighting then fixes the thrust distribution of that sample to an NNLL+NNLO calculation. A fit to
-LEP data treats every generator parameter as a nuisance parameter and determines the strong
-coupling.
+An event-generator prediction has three kinds of uncertainty. What no calculation fixes (the shower
+parameters, hadronization, the choice of generator) is made continuous by reweighting one stored
+event sample with a classifier that takes the generator parameters as an input, with Sherpa and
+Herwig as a multiplicative mixture q_S^(1-xi) q_H^xi. The classifier's own uncertainty, the
+learning uncertainty, comes from fitting the products of its ensemble members' event and parameter
+functions on held-out events (WiFi ensembles, Benevedes and Thaler 2506.00113), which gives the
+central weight and a covariance. What a calculation fixes better than the generator is imposed by a
+maximum-entropy reweighting of the same events to the windowed thrust moments of an NNLL+NLO
+calculation at a fixed point, with its variations propagated. Every prediction then has a generator
+band, a learning band and a theory band. The strong-coupling fit of the earlier draft (Sec. 6 of
+that draft, `make_sec6_numbers.py` and the profile scripts) is kept in the repository but is no
+longer part of the paper.
 
 ## The reweighting and how it relates to DCTR
 

@@ -31,13 +31,13 @@ if tag == 'E':
 elif tag == 'Fauglong':
     data, nper = 'data_stageF', 12000
     d = pd.read_csv(f'{data}/stageF_design_aug.csv'); order = [int(r) for r in d[d.role == 'train'].run_id]
-elif tag == 'MIX17aug':
+else:
+    # any mixture-format data set (MIX17aug, MIXGEO on the pure runs): its reference draws
+    # follow stage_mixture.py, DM_REF_TOTAL events in all, spread equally over the training runs
     data = os.environ['DM_DATA']
     meta = json.load(open(f'{data}/meta.json'))
     order = [int(m['rid']) for m in meta['train']]
-    nper = min(meta['n_train_events'], max(1000, 1150000//len(order)))
-else:
-    raise SystemExit(f'unknown tag {tag}')
+    nper = min(meta['n_train_events'], max(1000, int(os.environ.get('DM_REF_TOTAL', '1150000'))//len(order)))
 
 ref = np.load(f'output/models/{tag}_ref.npz')
 Rp, Rm = ref['particles'], ref['mask']

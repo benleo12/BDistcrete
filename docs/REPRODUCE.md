@@ -29,6 +29,38 @@ group of `tools/get_data.sh` that downloads them, for example `../tools/get_data
 - Batch scripts: set the account placeholders, and check the `#SBATCH -o` and `-e` lines, because
   Slurm does not expand variables there.
 
+## The revision of October 2026: three uncertainties on one sample
+
+The paper now shows a generator band, a learning band and a theory band on the thrust
+distribution and on other observables at a fixed point of an NNLL+NLO calculation, with the
+multiplicative seventeen-parameter mixture of Sherpa and Herwig as the model and the WiFi weights
+of its ensemble as the central estimate. The sections further down describe the earlier draft,
+whose strong-coupling fit is no longer in the paper. All commands run from `analysis/`.
+
+The training needs the Stage D and E event samples (the pure runs of both generators, archives
+`C`-series of `docs/DATA.md` for `data_stageE` and `data_stageF`) and a GPU. The learning
+uncertainty, the bands and the figures need only the model files listed at the end of this
+section, which will be deposited with the paper.
+
+| item | produced by | from |
+|---|---|---|
+| the pure-run data set (208 training runs, 16 held-out points, both generators) | `python make_pure_dataset.py` (links the Stage D and E runs into `data_stagePURE17/` and writes its `meta.json`, which ships with the repository) | `data_stageE/`, `data_stageF/` |
+| the multiplicative mixture, four members (Sec. 3, Table 1 rows "multiplicative") | `./run_mixgeo_local.sh` on one GPU, or `sbatch --export=ALL,ENS=4 -t 03:00:00 perlmutter/train_mixgeo_ens.sbatch`. `stage_mixture.py` now defaults to the geometric head, pure-run targets, a fifth of each run held out and bootstrap members; the earlier additive head is `LADDER_HEAD_KIND=mixture` | `output/models/MIXGEO_{cond.npz,trunk.pt,fitsplit.npz,ref_v2_slim.npz}`, `output/widths_v2_MIXGEO.json`, `output/wifi_MIXGEO_basis.npz` |
+| larger ensembles for the scan of App. B | `sbatch --export=ALL,ENS=8 -t 03:00:00 perlmutter/train_mixgeo_ens.sbatch` (also `ENS=16`, `ENS=32` with longer limits). `LADDER_EMB_STORE=a` keeps the stored event vectors instead of the pooled latent so thirty-two members fit one GPU | `output/models/MIXGEO8_*` and so on |
+| the WiFi fit: basis weights, covariance, closure with both weight rules (Sec. 2.5, App. B) | `python wifi_fit.py output/wifi_MIXGEO_basis.npz output/models/MIXGEO_cond.npz output/models/MIXGEO_ref_v2_slim.npz` | `output/wifi_MIXGEO_fit.{npz,json}` |
+| the loss on the comparison halves for four weight rules (Table 6) | `python wifi_diag.py output/wifi_MIXGEO_basis.npz output/models/MIXGEO_cond.npz output/models/MIXGEO_ref_v2_slim.npz` | `output/wifi_MIXGEO_diag.json` |
+| the ensemble-size scan as LaTeX rows | `python wifi_scan_table.py MIXGEO MIXGEO8 MIXGEO16 MIXGEO32` | the fit and diag files above |
+| the NNLL+NLO calculation fixed on ALEPH (App. D) | `THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python thrust_chain.py`, then `python targets_nlo_point.py` | `output/chain_summary_nlo.json`, `output/moments_joint_nlo.json`, `output/thrust_targets_nlo_point.npz` |
+| Fig. 6 (App. D), the calculation against ALEPH with the fixed-point band | `THRUST_ORDER=2 CHAIN_SUFFIX=_nlo FIXED_POINT=1 python fig_thrust_vs_aleph.py` | `output/fig_thrust_vs_aleph_nlo_fixed.pdf` |
+| the three bands at the default tunes (Sec. 4, Table 2) | `CENTRAL=0.118,0.68,3.9,0.48,0.46,0.17,0.97,0.18,0.102337,0.654714,3.528693,1.849375,0.914156,0.374094,0.33107,0.78,0.5 DM_DATA=data_stagePURE17 NODES=200 OUT=output/three_bands_MIXGEO_w python three_bands.py MIX output/models/MIXGEO_cond.npz output/models/MIXGEO_ref_v2_slim.npz output/thrust_targets_nlo_point.npz output/wifi_MIXGEO_fit.npz` (the WiFi weights are the central estimate; `WIFI_CENTRAL=0` uses the mean of members) | `output/three_bands_MIXGEO_w.{json,npz}` |
+| Figs. 4 and 5 | `python fig_three_bands.py output/three_bands_MIXGEO_w.npz output/three_bands_MIXGEO_w.json output/figs/fig_three_bands.pdf` and `python fig_three_bands_obs.py output/three_bands_MIXGEO_w.json output/figs/fig_three_bands_obs.pdf` | the files above |
+
+Model files of this revision, to be deposited with the paper (not yet in the `data-v1` release):
+`output/models/MIXGEO_cond.npz` (1.6 GB), `MIXGEO_trunk.pt`, `MIXGEO_fitsplit.npz`,
+`MIXGEO_ref_v2_slim.npz`, `output/wifi_MIXGEO_basis.npz` (0.7 GB), and the same for the second
+training (`MIXGEOpm`) and the larger ensembles (`MIXGEO8`, `MIXGEO16`, `MIXGEO32`). The result
+files they produce ship with the repository in `output/`.
+
 ## Section 5.1, the toy model
 
 Needs nothing beyond the repository. The per-job files of the CPU jobs ship with it in

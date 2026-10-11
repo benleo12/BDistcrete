@@ -37,7 +37,19 @@ import sys, os, json
 import numpy as np, torch, torch.nn as nn, pandas as pd
 DEV = ('cuda' if torch.cuda.is_available() else
        'mps' if torch.backends.mps.is_available() else 'cpu')
-ENS, K, STEPS = 4, 24, int(os.environ.get('LADDER_STEPS', '36000'))
+# The ensemble size. Unset LADDER_ENS reproduces the published four members. Larger ensembles
+# are the basis of the wifi fit (M^2 cross terms, wifi_fit.py), so the size is a choice of
+# basis and not of accuracy, and the members train one after another, so the cost is linear.
+ENS = int(os.environ.get('LADDER_ENS', '4'))
+K, STEPS = 24, int(os.environ.get('LADDER_STEPS', '36000'))
+# LADDER_EMB_STORE=a keeps the reference side of every member as its K-vector a(Phi) instead of
+# the 256-wide pooled latent, which the closures at the checkpoints and the export need in
+# full for every member at once. At four members the latent costs 5 GB of GPU memory, at
+# sixteen 19 GB, and at thirty-two more than the card holds, while a(Phi) is a fifth of that.
+# The log ratio is the same inner product either way (f_from_a below); unset reproduces the
+# published path exactly.
+EMB_STORE = os.environ.get('LADDER_EMB_STORE', 'latent')
+assert EMB_STORE in ('latent', 'a'), EMB_STORE
 # LADDER_MMAP=1 (requires LADDER_LOWMEM=1): training-run features are written once as float16
 # memory-mapped files and gathered per batch, so they are not resident. The dense float32
 # tensors (3.2 KB per event, ~21 GB for Stage D) are what took the machine down twice.
@@ -343,7 +355,10 @@ class CondPFN(nn.Module):
         s.emb_auto = False
         return s.emb_scale
     def f_from(s, E, th):
-        a = s.A(E); b = s.B(th)
+        return s.f_from_a(s.A(E), th)
+    def f_from_a(s, a, th):
+        """The log ratio from the event vectors a(Phi) already computed."""
+        b = s.B(th)
         if s.additive:
             # <a, b> + g(Phi) + c(theta), i.e. the augmented vectors [a, g, 1] and [b, 1, c]
             return (a[..., :s.K]*b[..., :s.K]).sum(-1) + a[..., s.K] + b[..., s.K]
@@ -387,19 +402,53 @@ class MixturePFN(CondPFN):
                 nn.init.kaiming_uniform_(mod.weight, nonlinearity='relu'); nn.init.zeros_(mod.bias)
         s.ntheta = ntheta
         s.nS, s.nH = nS, nH
-    def f_from(s, E, th):
-        a = s.A(E)
+    def f_from_a(s, a, th):
         lS = (a*s.B(th[..., :s.nS])).sum(-1)
         lH = (a*s.BH(th[..., s.nS:s.nS + s.nH])).sum(-1)
         f = (0.5 + 0.5*th[..., -1]).clamp(0.0, 1.0)
         return torch.logaddexp(torch.log1p(-f) + lS, torch.log(f) + lH)
 
 
-HEAD_KIND = os.environ.get('LADDER_HEAD_KIND', 'cond')    # 'cond' (published) or 'mixture'
+class GeoMixturePFN(MixturePFN):
+    """MULTIPLICATIVE MIXTURE HEAD: q = q_S^(1-f) q_H^f up to normalization, so the log ratio is
+    linear in the fraction, f_total = (1 - f) l_S + f l_H = <a(Phi), (1-f) b_S + f b_H>. Everything
+    stays an inner product with the stored a(Phi), the derivative in f is l_H - l_S, and at f = 0
+    and f = 1 the head is exactly one generator. No generator produces the interpolation between
+    the ends, so it is trained on pure runs only (LADDER_TARGET_PURE=1)."""
+    def f_from_a(s, a, th):
+        lS = (a*s.B(th[..., :s.nS])).sum(-1)
+        lH = (a*s.BH(th[..., s.nS:s.nS + s.nH])).sum(-1)
+        f = (0.5 + 0.5*th[..., -1]).clamp(0.0, 1.0)
+        return (1.0 - f)*lS + f*lH
+
+
+HEAD_KIND = os.environ.get('LADDER_HEAD_KIND', 'cond')    # 'cond' (published), 'mixture' or 'geometric'
+MIXTURE_KINDS = ('mixture', 'geometric')
+TARGET_PURE = os.environ.get('LADDER_TARGET_PURE', '') == '1'
+FIT_FRAC = float(os.environ.get('LADDER_FIT_FRAC', '0'))
+BOOTSTRAP = os.environ.get('LADDER_BOOTSTRAP', '') == '1'
+
+
+def fit_split(rid, n, ref_idx, frac):
+    """(fit indices, training indices) of one run: the fit set is a fixed fraction of the run's
+    NON-reference events, drawn with the run's own seed, and the training set is everything else
+    (reference events included, as in the published recipe). Shared with wifi_embed.py."""
+    nonref = np.setdiff1d(np.arange(n), ref_idx)
+    perm = np.random.default_rng(70000 + rid).permutation(len(nonref))
+    nfit = int(round(frac*n))
+    fit = np.sort(nonref[perm[:nfit]])
+    return fit, np.setdiff1d(np.arange(n), fit)
+
+
+def bootstrap_idx(member, rid, train_idx):
+    """The bootstrap resample of one run's training events for one ensemble member."""
+    g = np.random.default_rng(80000 + 100000*member + rid)
+    return np.sort(g.choice(train_idx, len(train_idx), replace=True))
 
 
 def make_model(C, ntheta, K):
-    return MixturePFN(C, ntheta, K=K) if HEAD_KIND == 'mixture' else CondPFN(C, ntheta, K=K)
+    return (GeoMixturePFN(C, ntheta, K=K) if HEAD_KIND == 'geometric' else
+            MixturePFN(C, ntheta, K=K) if HEAD_KIND == 'mixture' else CondPFN(C, ntheta, K=K))
 
 
 EMB_CHUNK = 10000
@@ -545,7 +594,7 @@ def run_stage(tag):
     _wmu = np.zeros(cfg['ntheta'])
     _wm = np.eye(cfg['ntheta'])
     if WHITEN:
-        assert HEAD_KIND != 'mixture', (
+        assert HEAD_KIND not in MIXTURE_KINDS, (
             'whitening the full theta would mix the two generators of the mixture head, whose '
             'two blocks feed separate networks. It needs a block-diagonal transform, which is '
             'not implemented.')
@@ -572,7 +621,8 @@ def run_stage(tag):
     # deterministic. Off by default so the published stages are bit-for-bit unchanged.
     LOWMEM = os.environ.get('LADDER_LOWMEM', '') == '1'
     P = {}; SH = {}; NB = {}; STR = {}
-    tf = {}; tm = {}; Psub = {}; SUBIDX = {}; HEAD = {}
+    tf = {}; tm = {}; Psub = {}; SUBIDX = {}; HEAD = {}; FITIDX = {}; TRAINIDX = {}
+    assert not (FIT_FRAC > 0 and not LOWMEM), 'the fit split needs LADDER_LOWMEM=1 (per-run reference draws)'
     for rid in list(cfg['train']) + list(cfg['held']):
         d = np.load(f'{DATA}/particles_full_{rid:04d}.npz')
         part, msk = d['particles'], d['mask']
@@ -595,6 +645,8 @@ def run_stage(tag):
             idx = np.random.default_rng(50000 + rid).choice(n, min(NREF_PER, n), replace=False)
             SUBIDX[rid] = idx
             Psub[rid] = (part[idx].copy(), msk[idx].copy())
+            if FIT_FRAC > 0:
+                FITIDX[rid], TRAINIDX[rid] = fit_split(rid, n, idx, FIT_FRAC)
         else:
             P[rid] = (part, msk)
         del part, msk, d
@@ -662,21 +714,47 @@ def run_stage(tag):
         gens.append(torch.Generator().manual_seed(sd))
     bce = nn.BCEWithLogitsLoss(); lab = torch.cat([torch.zeros(1024), torch.ones(1024)]).to(DEV)
     rids = list(cfg['train'])
+    if TARGET_PURE:
+        assert HEAD_KIND in MIXTURE_KINDS, 'LADDER_TARGET_PURE needs a mixture head'
+        rids = [r_ for r_ in rids if abs(float(tn_base(cfg['train'][r_])[-1])) > 0.999]
+        print(f'[{tag}] classifier targets restricted to the {len(rids)} pure runs '
+              f'({sum(tn_base(cfg["train"][r_])[-1] < 0 for r_ in rids)} at f=0, the rest at f=1); '
+              f'the reference pools all {len(cfg["train"])} runs', flush=True)
+    POOL = {}                               # (member, rid) -> index pool for the target draws
+    if FIT_FRAC > 0:
+        for r_ in rids:
+            for mi_ in range(ENS):
+                POOL[(mi_, r_)] = bootstrap_idx(mi_ + SEED_OFFSET, r_, TRAINIDX[r_]) if BOOTSTRAP else TRAINIDX[r_]
+        np.savez_compressed(f'output/models/{tag}{SUF}_fitsplit.npz', fit_frac=FIT_FRAC, bootstrap=int(BOOTSTRAP),
+                            seed_offset=SEED_OFFSET, nref_per=NREF_PER, rids=np.array(rids),
+                            **{f'fit_{r_}': FITIDX[r_] for r_ in rids})
+        print(f'[{tag}] fit set {FIT_FRAC:.0%} of each run held out of training'
+              f'{" and bootstrap resamples per member" if BOOTSTRAP else ""}; '
+              f'written to output/models/{tag}{SUF}_fitsplit.npz', flush=True)
     LABELS = sorted(set(cfg['train'][r] for r in rids)); BY_LABEL = {lab: [r for r in rids if cfg['train'][r] == lab] for lab in LABELS}
 
     def embeddings():
-        """Reference embeddings do not depend on theta, so they are computed once per pass."""
+        """Reference embeddings do not depend on theta, so they are computed once per pass.
+        Under LADDER_EMB_STORE=a they are reduced at once to the K-vectors a(Phi)."""
         Es = []
         for m in models:
-            m.eval(); Es.append(emb_all(m, ref_f, ref_m)); m.train()
+            m.eval(); E = emb_all(m, ref_f, ref_m)
+            if EMB_STORE == 'a':
+                with torch.no_grad():
+                    E = torch.cat([m.A(E[i:i+EMB_CHUNK]) for i in range(0, len(E), EMB_CHUNK)])
+            Es.append(E); m.train()
         return Es
+
+    def fval(m, E, th):
+        """The member's log ratio from what embeddings() stored for it."""
+        return m.f_from_a(E, th) if EMB_STORE == 'a' else m.f_from(E, th)
 
     def logits_at(Es, theta):
         th = torch.tensor(tn(theta), device=DEV).float().expand(Nref, cfg['ntheta'])
         with torch.no_grad():
             # the ensemble is combined as the MEAN OF LOGITS (a geometric mean of density
             # ratios); downstream reloads must use the same rule
-            return np.mean([m.f_from(E, th).cpu().numpy() for m, E in zip(models, Es)], 0)
+            return np.mean([fval(m, E, th).cpu().numpy() for m, E in zip(models, Es)], 0)
 
     def weights_from(f, T=1.0):
         w = np.exp((f - f.max())/T); w /= w.sum()
@@ -763,7 +841,12 @@ def run_stage(tag):
                     rl = BY_LABEL[plab]; j = rl[int(torch.randint(len(rl), (1,), generator=g))]
                 else:
                     j = rids[int(torch.randint(len(rids), (1,), generator=g))]
-                ir = torch.randint(Nref, (1024,), generator=g); it = torch.randint(len(tf[j]), (1024,), generator=g)
+                ir = torch.randint(Nref, (1024,), generator=g)
+                if (mi, j) in POOL:
+                    pool_ = POOL[(mi, j)]
+                    it = torch.from_numpy(pool_[torch.randint(len(pool_), (1024,), generator=g).numpy()])
+                else:
+                    it = torch.randint(len(tf[j]), (1024,), generator=g)
                 _fj, _mj = fetch(j, np.sort(it.numpy()) if MMAP else it)
                 fb = torch.cat([ref_f[ir], _fj.to(DEV)]); mb = torch.cat([ref_m[ir], _mj.to(DEV)])
                 th = torch.tensor(tn(cfg['train'][j]), device=DEV).float().expand(2048, cfg['ntheta'])
@@ -823,7 +906,8 @@ def run_stage(tag):
     # export: cached A-vectors + B nets + the conventions needed to rebuild f, plus a checksum
     Es = embeddings()
     with torch.no_grad():
-        AE = np.stack([np.concatenate([m.A(E[i:i+EMB_CHUNK]).cpu().numpy()
+        AE = np.stack([E.cpu().numpy() if EMB_STORE == 'a' else
+                       np.concatenate([m.A(E[i:i+EMB_CHUNK]).cpu().numpy()
                                        for i in range(0, len(E), EMB_CHUNK)])
                        for m, E in zip(models, Es)])                           # (ENS, Nref, K)
     if ADDITIVE:
@@ -856,14 +940,14 @@ def run_stage(tag):
             Ws[0] = _W0 @ _wm
         for li, (W, b) in enumerate(zip(Ws, bs)):
             exp[f'B{mi}_W{li}'] = W; exp[f'B{mi}_b{li}'] = b
-        if HEAD_KIND == 'mixture':
+        if HEAD_KIND in MIXTURE_KINDS:
             for li, l in enumerate([l for l in m.BH if isinstance(l, nn.Linear)]):
                 exp[f'BH{mi}_W{li}'] = l.weight.detach().cpu().numpy(); exp[f'BH{mi}_b{li}'] = l.bias.detach().cpu().numpy()
     exp['head_kind'] = HEAD_KIND
     chk_theta = list(cfg['held'].values())[0]
     th = torch.tensor(tn(chk_theta), device=DEV).float().expand(Nref, cfg['ntheta'])
     with torch.no_grad():
-        exp['f_checksum'] = np.mean([m.f_from(E, th).cpu().numpy() for m, E in zip(models, Es)], 0)[:256]
+        exp['f_checksum'] = np.mean([fval(m, E, th).cpu().numpy() for m, E in zip(models, Es)], 0)[:256]
     exp['f_checksum_theta'] = np.array(chk_theta, dtype=float)
     # The run ids this head was actually fitted on. Without them nothing downstream can tell
     # which design an export belongs to, and two designs of the same stage can share a box and
@@ -897,7 +981,7 @@ def run_stage(tag):
         # exported arrays reproduces the model, so it must use the reader's convention. With
         # whitening off the two are identical, so this changes nothing for the published path.
         x0 = tn_base(chk_theta).reshape(1, -1).astype(np.float64)
-        if HEAD_KIND == 'mixture':
+        if HEAD_KIND in MIXTURE_KINDS:
             # block sizes from the networks themselves: the old literal 0:3 and 3:6 were the
             # seven-parameter mixture and would silently mis-slice any other one.
             _ns = exp['B0_W0'].shape[1]; _nh = exp['BH0_W0'].shape[1]
@@ -905,8 +989,11 @@ def run_stage(tag):
             lS = exp['AE'][mi, :256] @ _bnet('B', mi, x0[:, :_ns])
             lH = exp['AE'][mi, :256] @ _bnet('BH', mi, x0[:, _ns:_ns+_nh])
             fmix = float(np.clip(0.5 + 0.5*x0[0, -1], 0.0, 1.0))
-            with np.errstate(divide='ignore'):
-                _fr += np.logaddexp(np.log1p(-fmix) + lS, np.log(fmix) + lH)
+            if HEAD_KIND == 'geometric':
+                _fr += (1.0 - fmix)*lS + fmix*lH
+            else:
+                with np.errstate(divide='ignore'):
+                    _fr += np.logaddexp(np.log1p(-fmix) + lS, np.log(fmix) + lH)
         else:
             _fr += exp['AE'][mi, :256] @ _bnet('B', mi, x0)
     _fr /= ENS
@@ -919,7 +1006,7 @@ def run_stage(tag):
     # always recorded, and the artifact is saved before we raise, so nothing is lost.
     with torch.no_grad():
         _th = torch.tensor(tn(chk_theta), device=DEV).float().expand(Nref, cfg['ntheta'])
-        _sds = [float(_m.f_from(_E, _th).cpu().numpy().std()) for _m, _E in zip(models, Es)]
+        _sds = [float(fval(_m, _E, _th).cpu().numpy().std()) for _m, _E in zip(models, Es)]
     exp['member_logit_sd'] = np.array(_sds)
     for _mi, _sd in enumerate(_sds):
         print(f'[{tag}] member {_mi} logit sd = {_sd:.3e}')

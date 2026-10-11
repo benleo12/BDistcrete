@@ -43,6 +43,13 @@ class Model:
         assert mix_form in ('additive', 'geometric'); self.mix_form = mix_form
         c = np.load(self.export)
         self.kind = str(c['head_kind']) if 'head_kind' in c.files else 'cond'
+        if self.kind == 'geometric':
+            # the multiplicative mixture head: the two parameter networks of the mixture kind,
+            # combined linearly in the fraction, which is the geometric form below
+            self.kind = 'mixture'; self.mix_form = 'geometric'
+        # wifi weights (wifi_fit.py): log w = w_0 + sum_ij W_ij <a_i, b_j>; None is the published
+        # network, w_ij = delta_ij/(ENS T)
+        self.wifi = None
         self.ENS, self.K, self.L, self.T = int(c['ens']), int(c['K']), int(c['nlayers']), float(c['temperature'])
         self.NORM = c['norm'].astype(np.float64); self.NT = int(c['ntheta']); self.ACT = str(c['act'])
         assert int(c['additive']) == 0, 'additive heads are not handled here'
@@ -101,24 +108,50 @@ class Model:
             x = (z*torch.sigmoid(z) if self.ACT == 'silu' else torch.relu(z)) if l < len(params) - 1 else z
         return x
 
+    def set_wifi(self, w):
+        """Use wifi weights: w = (w_0, W_11, W_12, ..., W_MM) row-major, a numpy array or a tensor
+        (with requires_grad for the learning band). None restores the published network."""
+        if w is None:
+            self.wifi = None; return
+        w = torch.as_tensor(np.asarray(w, np.float64)) if not torch.is_tensor(w) else w
+        assert len(w) == self.ENS*self.ENS + 1, (len(w), self.ENS)
+        self.wifi = (w[0], w[1:].reshape(self.ENS, self.ENS))
+
     def logit(self, theta):
-        """Ensemble-mean logit per reference event, divided by the temperature. theta physical."""
+        """Log ratio per reference event. The published network: the ensemble-mean logit divided
+        by the temperature. With wifi weights: w_0 + sum_ij W_ij <a_i, b_j>. theta physical."""
         tn = (theta - self.CEN)/self.HW
-        acc = torch.zeros(self.N)
-        for m in range(self.ENS):
-            if self.kind == 'mixture':
+        if self.kind == 'mixture' and self.mix_form == 'additive':
+            assert self.wifi is None, 'wifi weights need an inner-product head (cond or geometric)'
+            acc = torch.zeros(self.N)
+            for m in range(self.ENS):
                 fr = theta[-1]                                   # the fraction enters physical
                 bS = self._mlp(self.NET_S[m], tn[:self.NS]); bH = self._mlp(self.NET_H[m], tn[self.NS:self.NS + self.NH])
                 # two matrix-vector products: a single (N,K)x(K,2) product takes a slow path in torch
                 lS = (self.AE[m] @ bS.to(self.AE.dtype)).double(); lH = (self.AE[m] @ bH.to(self.AE.dtype)).double()
-                if self.mix_form == 'geometric':
-                    acc = acc + (1 - fr)*lS + fr*lH
-                else:
-                    big = torch.maximum(lS, lH)
-                    acc = acc + big + torch.log(torch.clamp((1 - fr)*torch.exp(lS - big) + fr*torch.exp(lH - big), min=1e-300))
+                big = torch.maximum(lS, lH)
+                acc = acc + big + torch.log(torch.clamp((1 - fr)*torch.exp(lS - big) + fr*torch.exp(lH - big), min=1e-300))
+            return acc/self.ENS/self.T
+        bt = []
+        for m in range(self.ENS):
+            if self.kind == 'mixture':                            # geometric: linear in the fraction
+                fr = theta[-1]
+                bS = self._mlp(self.NET_S[m], tn[:self.NS]); bH = self._mlp(self.NET_H[m], tn[self.NS:self.NS + self.NH])
+                bt.append((1 - fr)*bS + fr*bH)
             else:
-                acc = acc + (self.AE[m] @ self._mlp(self.NET_S[m], tn).to(self.AE.dtype)).double()
-        return acc/self.ENS/self.T
+                bt.append(self._mlp(self.NET_S[m], tn))
+        if self.wifi is None:
+            acc = torch.zeros(self.N)
+            for m in range(self.ENS):
+                acc = acc + (self.AE[m] @ bt[m].to(self.AE.dtype)).double()
+            return acc/self.ENS/self.T
+        w0, W = self.wifi
+        acc = torch.zeros(self.N, dtype=torch.float64) + w0
+        # sum_ij W_ij <a_i, b_j> = sum_i <a_i, sum_j W_ij b_j>: M products instead of M^2
+        for i in range(self.ENS):
+            bi = sum(W[i, j]*bt[j] for j in range(self.ENS))
+            acc = acc + (self.AE[i] @ bi.to(self.AE.dtype)).double()
+        return acc
 
     def theta(self, u):
         """Physical parameters from standardized ones on [-1, 1]."""

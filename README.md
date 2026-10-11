@@ -1,15 +1,35 @@
 # BDistcrete
 
-Code for *Beyond Discrete Variations: Continuous Generator Uncertainties Anchored to Precision QCD*
-(B. Assi and J. Thaler). The LaTeX source of the paper is kept in a separate repository synced from Overleaf
+Code for *Combined Uncertainties from Event Generators and Precision QCD* (B. Assi and J. Thaler),
+earlier circulated as *Beyond Discrete Variations: Continuous Generator Uncertainties Anchored to
+Precision QCD*. The LaTeX source of the paper is kept in a separate repository synced from Overleaf
 (benleo12/Reweighting-generator-parameters, private until publication).
 
-A classifier conditioned on the generator parameters reweights one stored event sample to any point
-of a parameter box, so the generator becomes a continuous, differentiable function of its
-hadronization and shower parameters, including the choice between Sherpa and Herwig through a
-mixing fraction. A maximum-entropy reweighting then anchors the sample to windowed thrust moments of
-an NNLL+NNLO calculation, and a fit to LEP data with the generator parameters as nuisance parameters
-determines the strong coupling.
+An event-generator prediction has three kinds of uncertainty, and this code puts all three on one
+stored event sample. A classifier conditioned on the generator parameters reweights the sample to
+any point of a parameter box, so the generator becomes a continuous, differentiable function of its
+hadronization and shower parameters, including the choice between Sherpa and Herwig as the fraction
+of a multiplicative mixture (the generator uncertainty). A fit of the classifier's own ensemble of
+trainings on held-out events, following Benevedes and Thaler (arXiv:2506.00113), gives the central
+weight and its covariance (the learning uncertainty). A maximum-entropy reweighting then imposes
+the windowed thrust moments of an NNLL+NLO calculation on the same events and propagates its scale
+and scheme variations (the theory uncertainty). The demonstration of the paper shows the three
+bands of the thrust distribution and of other observables, separately and combined, against LEP
+data. The sections below marked "earlier draft" document the strong-coupling fit of the earlier
+version, whose code remains in the repository.
+
+## The revision of October 2026 in short
+
+| what | where |
+|---|---|
+| the multiplicative mixture head and the ensemble-size switch | `analysis/r2_ladder.py` (`GeoMixturePFN`, `LADDER_ENS`, `LADDER_EMB_STORE`), `analysis/stage_mixture.py` (geometric head is the default) |
+| the pure-run sample of both generators | `analysis/make_pure_dataset.py`, `analysis/data_stagePURE17/meta.json` |
+| the learning uncertainty: basis, fit, covariance, diagnostics, ensemble-size scan | `analysis/wifi_embed.py`, `wifi_fit.py`, `wifi_diag.py`, `wifi_scan_table.py` |
+| the NNLL+NLO calculation at a fixed point | `THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python thrust_chain.py`, `analysis/targets_nlo_point.py` |
+| the three bands and their figures | `analysis/three_bands.py`, `fig_three_bands.py`, `fig_three_bands_obs.py`, results in `analysis/output/three_bands_*.json` |
+| the training jobs | `analysis/perlmutter/train_mixgeo_ens.sbatch` (any ensemble size), `analysis/run_mixgeo_local.sh` (one laptop GPU) |
+
+`docs/REPRODUCE.md` opens with the commands of this revision.
 
 ## Contents
 

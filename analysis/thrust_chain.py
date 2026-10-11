@@ -36,11 +36,18 @@ def fo_total(cA, cB, cC):
     if FO_NORM == 'born':
         return cA, cB, cC
     return cA, cB - 2*cA, cC - 2*cB + (4 - 4*K2_R)*cA
+# THRUST_ORDER=2 is the NNLL+NLO chain: no third-order fixed-order coefficient, matching at
+# order two, and no +-5% variation of that coefficient. CHAIN_SUFFIX names its output files.
+ORDER = int(os.environ.get('THRUST_ORDER', '3')); SFX = os.environ.get('CHAIN_SUFFIX', '')
+if ORDER == 2:
+    cumC = np.zeros_like(cumA)
 VARS = [(1.0,1.0,'logR',1.0),(2.0,1.0,'logR',1.0),(0.5,1.0,'logR',1.0),
         (1.0,2.0,'logR',1.0),(1.0,0.5,'logR',1.0),
         (1.0,1.0,'modR',1.0),(2.0,1.0,'modR',1.0),(0.5,1.0,'modR',1.0),
         (1.0,2.0,'modR',1.0),(1.0,0.5,'modR',1.0),
         (1.0,1.0,'logR',1.05),(1.0,1.0,'logR',0.95)]
+if ORDER == 2:
+    VARS = [v for v in VARS if v[3] == 1.0]
 A0GRID = np.arange(0.20, 0.90, 0.0025)
 
 def build(mu, xv, scheme, asmz, cfac=1.0):
@@ -49,7 +56,7 @@ def build(mu, xv, scheme, asmz, cfac=1.0):
     Ash, Bsh, Csh = fo_shift(*fo_total(cumA[sl], cumB[sl], cumC[sl]*cfac), np.log(mu**2))
     asmu = N.alpha_s(mu*MZ, asmz); ab = asmu/(2*np.pi)
     S = [ab*Ash, ab**2*Bsh, ab**3*Csh]; R = [c[:, 1]*asmu, c[:, 2]*asmu**2, c[:, 3]*asmu**3]
-    return tau, (logR(sig, R, S, 3) if scheme == 'logR' else modR(tau, sig, R, S, 3))
+    return tau, (logR(sig, R, S, ORDER) if scheme == 'logR' else modR(tau, sig, R, S, ORDER))
 
 def chi2_of(tau, S, mu, asmz, a0):
     t = tau + N.shift(mu, a0, asmz=asmz)
@@ -127,7 +134,7 @@ def main():
     asr = [v[0] for v in fits.values()]; a0r = [v[1] for v in fits.values()]
     print(f'alpha_s range over variations: {min(asr):.4f}-{max(asr):.4f};  alpha_0 range: {min(a0r):.4f}-{max(a0r):.4f}')
     json.dump(dict(fits={str(k): v for k, v in fits.items()}, moments=out, moments_with_exp=outx),
-              open('output/moments_joint.json', 'w'), indent=1)
+              open(f'output/moments_joint{SFX}.json', 'w'), indent=1)
     # anchor targets
     keys = list(N.G); central = np.array([cen[k] for k in keys]); vecs = []; labels = []
     for k, (asm, a0, c2) in fits.items():
@@ -136,7 +143,7 @@ def main():
         vecs.append(np.array([mo[kk] for kk in keys])); labels.append(s)
     V = np.array(vecs); D = V-central; Sig = (D.T@D)/2.0
     sd = np.sqrt(np.diag(Sig))
-    np.savez('output/thrust_anchor_targets.npz', keys=np.array(keys), central=central, Sigma_c=Sig,
+    np.savez(f'output/thrust_anchor_targets{SFX}.npz', keys=np.array(keys), central=central, Sigma_c=Sig,
              variations=V, labels=np.array(labels))
     summ = dict(alpha_s=asc, alpha_s_err=sa, alpha_0=a0c, alpha_0_err=s0, rho=rho,
                 chi2=fits[(1.0,1.0,'logR',1.0)][2], ndf=int(msk.sum())-2, shift=float(N.shift(1.0, a0c, asmz=asc)),
@@ -144,8 +151,8 @@ def main():
                 mean_thrust=cen['tau'], coverage_pert=nin, coverage_with_exp=ninx,
                 sigma_rel={k: float(s/abs(c)) for k, s, c in zip(keys, sd, central)},
                 ratio_to_scet={k: cen[k]/N.SCET[k] for k in keys})
-    json.dump(summ, open('output/chain_summary.json', 'w'), indent=1)
-    print('wrote output/moments_joint.json, output/thrust_anchor_targets.npz, output/chain_summary.json')
+    json.dump(summ, open(f'output/chain_summary{SFX}.json', 'w'), indent=1)
+    print(f'wrote output/moments_joint{SFX}.json, output/thrust_anchor_targets{SFX}.npz, output/chain_summary{SFX}.json')
 
 if __name__ == '__main__':
     main()

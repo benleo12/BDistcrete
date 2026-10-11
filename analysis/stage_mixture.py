@@ -1,17 +1,28 @@
 #!/usr/bin/env python3
 """Train the mixture stage on any mixture data set.
 
-    q(Phi; theta_S, theta_H, f) = (1 - f) q_S(Phi; theta_S) + f q_H(Phi; theta_H)
+The default is the MULTIPLICATIVE (geometric) mixture of the two generators,
+
+    q(Phi; theta_S, theta_H, f) ~ q_S(Phi; theta_S)^(1 - f) q_H(Phi; theta_H)^f ,
+
+whose log ratio to the pooled reference is linear in the fraction, (1 - f) l_S + f l_H, so the
+whole model stays one exponential family in theta and the head stays an inner product
+<a(Phi), (1 - f) b_S(theta_S) + f b_H(theta_H)>. That is what the wifi basis (wifi_embed.py)
+and the maximum-entropy tilt need. No generator samples the interpolation between the ends,
+so the classifier targets are the pure runs of each generator (LADDER_TARGET_PURE=1), and the
+wifi protocol holds a fifth of each run out of training for the weight fit and trains each
+member on a bootstrap resample (LADDER_FIT_FRAC=0.2, LADDER_BOOTSTRAP=1). Set
+LADDER_HEAD_KIND=mixture for the additive mixture (1 - f) q_S + f q_H of the earlier drafts.
 
 This replaces stageDM.py, which knew that the mixture had seven parameters and carried their
 box as a literal list. Everything here comes from the data set's own meta.json, which
-make_mixture_data.py writes with the axes and the box of each side, so the eight-parameter
-Sherpa and Herwig designs give a seventeen-parameter mixture with nothing to edit.
+make_mixture_data.py (or make_pure_dataset.py) writes with the axes and the box of each side,
+so the eight-parameter Sherpa and Herwig designs give a seventeen-parameter mixture with
+nothing to edit. The block sizes LADDER_MIX_SPLIT follow from the same file.
 
 The head is the EXACT mixture form, not a generic function of seventeen inputs. That matters
-at the edges: writing the logit as log[(1-f) e^l_S + f e^l_H] makes the derivative with
-respect to theta_H vanish identically at f = 0, so a fraction of zero is the first generator
-alone rather than an approximation to it.
+at the edges: at f = 0 the derivative with respect to theta_H vanishes identically, so a
+fraction of zero is the first generator alone rather than an approximation to it.
 
 The rank deserves a word, because it is the one number here that is a choice. The score
 expansion needs 1 + d directions to first order and 1 + d + d(d+1)/2 to second. At d = 17
@@ -20,11 +31,11 @@ a margin, because the single-generator rank scans measure where the descent actu
 and the honest procedure is to take that measurement rather than to assume the second-order
 count is needed. Set LADDER_K explicitly to override.
 
-    DM_DATA=data_stageDM17 LADDER_K=48 python stage_mixture.py
+    DM_DATA=data_stagePURE17 LADDER_K=48 python stage_mixture.py
 """
 import json, os
 
-DATA = os.environ.get('DM_DATA', 'data_stageDM17')
+DATA = os.environ.get('DM_DATA', 'data_stagePURE17' if os.path.exists('data_stagePURE17/meta.json') else 'data_stageDM17')
 meta = json.load(open(f'{DATA}/meta.json'))
 train = {m['rid']: tuple(m['theta']) for m in meta['train']}
 held = {m['rid']: tuple(m['theta']) for m in meta['held']}
@@ -36,7 +47,16 @@ assert all(len(t) == d for t in held.values()), 'a held theta has the wrong leng
 
 K1 = 1 + d
 K2 = 1 + d + d*(d + 1)//2
-os.environ.setdefault('LADDER_HEAD_KIND', 'mixture')
+os.environ.setdefault('LADDER_HEAD_KIND', 'geometric')
+os.environ.setdefault('LADDER_MIX_SPLIT', f'{len(s_box)},{len(h_box)}')
+if os.environ['LADDER_HEAD_KIND'] == 'geometric':
+    # the wifi protocol: pure-run targets, a fit set held out of training, bootstrap members.
+    # The fit split needs the per-run reference draws of the low-memory path.
+    for _k, _v in (('LADDER_TARGET_PURE', '1'), ('LADDER_FIT_FRAC', '0.2'),
+                   ('LADDER_BOOTSTRAP', '1'), ('LADDER_LOWMEM', '1')):
+        os.environ.setdefault(_k, _v)
+    _pure = [t for t in train.values() if t[-1] in (0, 1)]
+    assert _pure, 'the geometric mixture trains on pure runs, and this data set has none at f = 0 or 1'
 # The export filename is the stage key followed by LADDER_SUFFIX, so a suffix of 'MIX17' on the
 # stage key 'MIX' writes MIXMIX17_cond.npz. DM_TAG is the tag you WANT, and the suffix is
 # derived from it. Getting this wrong once produced a correct model under a name nothing else

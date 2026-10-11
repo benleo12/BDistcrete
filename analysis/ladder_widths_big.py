@@ -22,7 +22,7 @@ else:
     cfg = R.STAGES[tag]
 DATA = cfg['data']; OBS = cfg['obs'] + cfg['flav_obs']
 kind = str(np.load(export).get('head_kind', 'cond'))
-h = (MixtureHead if kind == 'mixture' else Head)(export)
+h = (MixtureHead if kind in ('mixture', 'geometric') else Head)(export)
 A = h.pack(np.asarray(np.load(export, mmap_mode='r')['AE']))
 ref = np.load(refpath); robs = {o: np.asarray(ref[o], np.float64) for o in OBS}
 assert len(robs[OBS[0]]) == A.shape[0]

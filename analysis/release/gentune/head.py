@@ -255,7 +255,8 @@ class MixtureHead(Head):
 
     def __init__(self, path):
         c = np.load(path)
-        assert str(c.get('head_kind', 'cond')) == 'mixture', \
+        self.kind = str(c.get('head_kind', 'cond'))
+        assert self.kind in ('mixture', 'geometric'), \
             f'{path} is not a mixture export, use Head'
         self.path = path
         self.mtime = os.path.getmtime(path)
@@ -319,6 +320,10 @@ class MixtureHead(Head):
             sl = slice(m*self.K, (m + 1)*self.K)
             lS = Ap[:, sl] @ bS
             lH = Ap[:, sl] @ bH
+            if self.kind == 'geometric':
+                # the multiplicative mixture q_S^(1-f) q_H^f: the log ratio is linear in f
+                acc += (1.0 - fr)*lS + fr*lH
+                continue
             # log-sum-exp with the larger exponent pulled out, so neither term can overflow
             big = np.maximum(lS, lH)
             acc += big + np.log(np.clip((1 - fr)*np.exp(lS - big) + fr*np.exp(lH - big), 1e-300, None))

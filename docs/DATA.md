@@ -12,6 +12,11 @@ Sec. 6, and Apps. B, D and E. Of the optional archives (B11 to B13, 2.4 GB), App
 and the cost comparison of Sec. 5.8 needs B11. The training archives (C1 to C9, 25.1 GB) are needed only to
 retrain a network, which the rank scans of Sec. 5.4 and the wide coupling range of Sec. 5.5 do.
 
+
+> **October 2026 revision.** The multiplicative-mixture models and the WiFi bases of the revised
+> paper (`MIXGEO*` under `output/models/`, `output/wifi_MIXGEO*_basis.npz`) are not in the
+> `data-v1` release yet. `docs/REPRODUCE.md` lists them and the commands that produce them.
+
 ## Download
 
 ```bash

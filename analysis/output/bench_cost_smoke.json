@@ -2,7 +2,7 @@
  "device": "cpu",
  "threads": 32,
  "reps": 1,
- "host": "nid004377",
+ "host": "perlmutter-gpu-node",
  "n_events": 1149888,
  "n_particles": 47998800,
  "prep_seconds": 12.675545191043057,

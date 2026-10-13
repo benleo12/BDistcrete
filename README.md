@@ -10,8 +10,9 @@ stored event sample. A classifier conditioned on the generator parameters reweig
 any point of a parameter box, so the generator becomes a continuous, differentiable function of its
 hadronization and shower parameters, including the choice between Sherpa and Herwig as the fraction
 of a multiplicative mixture (the generator uncertainty). A fit of the classifier's own ensemble of
-trainings on held-out events, following Benevedes and Thaler (arXiv:2506.00113), gives the central
-weight and its covariance (the learning uncertainty). A maximum-entropy reweighting then imposes
+trainings on held-out events, following Benevedes and Thaler (arXiv:2506.00113), gives the
+covariance of the weight (the learning uncertainty), while the prediction is the mean of the
+ensemble members. A maximum-entropy reweighting then imposes
 the windowed thrust moments of an NNLL+NLO calculation on the same events and propagates its scale
 and scheme variations (the theory uncertainty). The demonstration of the paper shows the three
 bands of the thrust distribution and of other observables, separately and combined, against LEP

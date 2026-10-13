@@ -116,10 +116,13 @@ print(f'[{tag}] central: generator only <1-T> {o_c0["thrust"]:.5f}, imposed {o_c
 if w_wifi is None:
     learn_band = learn_band0 = {k: float('nan') for k in o_c}; learn_hist = learn_hist0 = np.full(len(h_c), np.nan)
 else:
-    J, Jh = jac_wifi(central, w_wifi)
+    # the derivative is taken at the weights that define the central prediction: the wifi weights
+    # when they are the central estimate, otherwise the mean of members written in the same basis
+    w_at = w_wifi if CENW is not None else W['w_published']
+    J, Jh = jac_wifi(central, w_at)
     learn_band = {k: float(np.sqrt(max(J[k] @ C @ J[k], 0))) for k in J}
     learn_hist = np.sqrt(np.maximum(np.einsum('bi,ij,bj->b', Jh, C, Jh), 0))
-    J0, Jh0 = jac_wifi(central, w_wifi, anchored=False)
+    J0, Jh0 = jac_wifi(central, w_at, anchored=False)
     learn_band0 = {k: float(np.sqrt(max(J0[k] @ C @ J0[k], 0))) for k in J0}
     learn_hist0 = np.sqrt(np.maximum(np.einsum('bi,ij,bj->b', Jh0, C, Jh0), 0))
     print(f'[{tag}] learning band: <1-T> {learn_band["thrust"]:.2e} (generator only {learn_band0["thrust"]:.2e}), '

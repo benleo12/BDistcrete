@@ -92,13 +92,14 @@ Xd_h = design(np.concatenate([DENFIT[rid] for rid in HELD])); del DENFIT
 w_held = fit(Xn_h, Xd_h, np.ones(M2 + 1, bool)); del Xn_h, Xd_h
 print('held-fit weights:', np.round(w_held, 4))
 W = {'published': w_pub, 'wifi': w_wifi, 'diagonal': w_diag, 'held-fit': w_held}
-Lheld = {k: [] for k in W}; per = {k: {} for k in W}
+Lheld = {k: [] for k in W}; per = {k: {} for k in W}; NEFF = {}
 for rid, th in zip(HELD, B['held_theta']):
     Fref = fref_of(th); rep = SEL[rid][1]
     Xh = design(B[f'held_f_{rid}'][rep]); Xr = design(DEN[rid])
     for name, wv in W.items():
         Lheld[name].append(loss(wv, Xh, Xr))
         z = wv[0] + (Fref @ wv[1:].astype(np.float32)).astype(np.float64); wr = np.exp(z - z.max()); wr /= wr.sum()
+        NEFF.setdefault(name, {})[rid] = float(1.0/np.sum(wr**2)/Nref)      # effective sample fraction
         for o in OBS:
             tv = np.asarray(B[f'held_{o}_{rid}'], np.float64)[rep]; bins = make_bins(np.r_[robs[o], tv], o)
             p, nb = pulls(robs[o], wr, tv, bins); per[name][(rid, o)] = width_of(p)
@@ -107,7 +108,10 @@ out = {}
 for name in W:
     widths = {o: float(np.mean([per[name][(r, o)] for r in [int(x) for x in B['held_rids']]])) for o in OBS}
     out[name] = dict(held_loss=float(np.mean(Lheld[name])), held_loss_per_run=[float(x) for x in Lheld[name]],
-                     closure=float(np.mean(list(widths.values()))), per_obs=widths, w=W[name].tolist())
+                     closure=float(np.mean(list(widths.values()))), per_obs=widths, w=W[name].tolist(),
+                     closure_per_run={str(r): float(np.mean([per[name][(r, o)] for o in OBS])) for r in HELD},
+                     per_run_obs={str(r): {o: float(per[name][(r, o)]) for o in OBS} for r in HELD},
+                     neff_fraction={str(r): NEFF[name][r] for r in HELD})
     print(f'{name:10s}: held-out loss {out[name]["held_loss"]:.5f}   closure {out[name]["closure"]:.3f}   ' + ' '.join(f'{o} {v:.2f}' for o, v in widths.items()), flush=True)
 json.dump(out, open(bas.replace('_basis.npz', '_diag.json'), 'w'), indent=1)
 print(f'wrote {bas.replace("_basis.npz", "_diag.json")} [{time.time()-t0:.0f} s]')

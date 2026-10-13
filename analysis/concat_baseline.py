@@ -147,6 +147,10 @@ class MixtureOf(nn.Module):
         else:
             lS, lH = s.g(f, m, aS), s.g(f, m, aH)
         fr = (0.5 + 0.5*th[:, -1]).clamp(0.0, 1.0)
+        if GEOMETRIC:
+            # the multiplicative mixture q_S^(1-f) q_H^f: the log ratio is linear in the fraction, as in
+            # GeoMixturePFN (r2_ladder.py), the model of the paper
+            return (1.0 - fr)*lS + fr*lH
         return torch.logaddexp(torch.log1p(-fr) + lS, torch.log(fr) + lH)
 
     @torch.no_grad()
@@ -159,16 +163,17 @@ class MixtureOf(nn.Module):
 
 
 MODE = os.environ.get('CONCAT_MODE', 'early')     # early: theta on every particle (DCTR); late: after the sum
-HEAD = os.environ.get('CONCAT_HEAD', 'plain')      # plain: one generic output (published); mixture: MixtureOf
+HEAD = os.environ.get('CONCAT_HEAD', 'plain')      # plain: one generic output (published); mixture: MixtureOf (additive); geometric: MixtureOf (multiplicative)
+GEOMETRIC = HEAD == 'geometric'
 Base = LatePFN if MODE == 'late' else ConcatPFN
-Net = (lambda C, d: MixtureOf(Base, C, d)) if HEAD == 'mixture' else Base
-SUFFIX = (('_late' if MODE == 'late' else '') + ('_mixhead' if HEAD == 'mixture' else '')
+Net = (lambda C, d: MixtureOf(Base, C, d)) if HEAD in ('mixture', 'geometric') else Base
+SUFFIX = (('_late' if MODE == 'late' else '') + ('_mixhead' if HEAD == 'mixture' else '_geohead' if HEAD == 'geometric' else '')
           + (f'_s{SEED_OFFSET}' if SEED_OFFSET else ''))
 
 
 def run_stage(tag):
-    if HEAD == 'mixture' and tag != 'MIX':
-        raise SystemExit('CONCAT_HEAD=mixture needs the mixture stage MIX')
+    if HEAD in ('mixture', 'geometric') and tag != 'MIX':
+        raise SystemExit(f'CONCAT_HEAD={HEAD} needs the mixture stage MIX')
     if tag == 'MIX':
         # the seventeen-parameter mixture: its design comes from the data set's own meta.json
         from mixture_cfg import mixture_cfg
@@ -186,10 +191,15 @@ def run_stage(tag):
     norm = np.array(cfg['norm']); d = cfg['ntheta']
     def tn(theta): return ((np.asarray(theta) - norm[:, 0]) / norm[:, 1]).astype(np.float32)
     SH, NB, STR, tf, tm = {}, {}, {}, {}, {}
+    # CONCAT_EVENTS_PER_RUN caps the training events loaded per run (the concatenation network keeps
+    # every training run's particles resident, 80k events per run of the pure-run data set is too many)
+    cap = int(os.environ.get('CONCAT_EVENTS_PER_RUN', '0'))
     for rid in list(cfg['train']) + list(cfg['held']):
-        dd = np.load(f'{DATA}/particles_full_{rid:04d}.npz')
+        dd = dict(np.load(f'{DATA}/particles_full_{rid:04d}.npz'))
         SH[rid] = pd.read_csv(f'{DATA}/shapes_run_{rid:04d}.csv')
         assert len(SH[rid]) == len(dd['mask'])
+        if cap and rid in cfg['train'] and len(dd['mask']) > cap:
+            dd = {k: v[:cap] for k, v in dd.items()}; SH[rid] = SH[rid].iloc[:cap].reset_index(drop=True)
         if 'nbaryon' in cfg['flav_obs']: NB[rid] = dd['nbaryon'].astype(np.float32)
         if 'strange' in cfg['flav_obs']: STR[rid] = strange_frac(dd['particles'], dd['mask']).astype(np.float32)
         if rid in cfg['train']:

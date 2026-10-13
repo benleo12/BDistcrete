@@ -85,6 +85,7 @@ print('their errors:'); print(np.round(sd, 4), flush=True)
 
 # ---- closure on the held-out runs, published against wifi ------------------------------------
 AE = np.asarray(c['AE'])                                      # (ENS, N, K)
+AE32 = np.ascontiguousarray(AE.transpose(1, 0, 2)).astype(np.float32)   # (N, ENS, K)
 norm = np.asarray(c['norm'], np.float64); act = {'relu': lambda z: np.maximum(z, 0.0), 'silu': lambda z: z/(1 + np.exp(-z))}[str(c['act'])]
 Lnl = int(c['nlayers'])
 def bnet(prefix, mi, x):
@@ -105,13 +106,16 @@ w_pub = np.zeros(M2 + 1); w_pub[1:] = np.eye(ENS).ravel()/(ENS*T)
 res = {'published': {}, 'wifi': {}}; per = {'published': {}, 'wifi': {}}
 for rid, th in zip([int(r) for r in B['held_rids']], B['held_theta']):
     Bt = btilde(th)
-    Fref = np.einsum('nik,jk->nij', AE.transpose(1, 0, 2).astype(np.float64), Bt).reshape(Nref, M2)
+    # single precision: at thirty-two members the (Nref, M^2) basis is 4.7 GB in float32 and twice
+    # that in float64; the log ratio is accumulated in float64 afterwards
+    Fref = np.einsum('nik,jk->nij', AE32, Bt.astype(np.float32)).reshape(Nref, M2)
     n = len(B[f'held_f_{rid}']); perm = np.random.default_rng(1000 + rid).permutation(n); rep = perm[n//2:]
     for name, wv in (('published', w_pub), ('wifi', w)):
-        z = wv[0] + Fref @ wv[1:]; wr = np.exp(z - z.max()); wr /= wr.sum()
+        z = wv[0] + (Fref @ wv[1:].astype(np.float32)).astype(np.float64); wr = np.exp(z - z.max()); wr /= wr.sum()
         for o in OBS:
             tv = np.asarray(B[f'held_{o}_{rid}'], np.float64)[rep]
             bins = make_bins(np.r_[robs[o], tv], o); p, nb = pulls(robs[o], wr, tv, bins); per[name][(rid, o)] = width_of(p)
+    del Fref
 for name in per:
     res[name] = dict(master=float(np.mean(list(per[name].values()))),
                      per_obs={o: float(np.mean([per[name][(r, o)] for r in [int(x) for x in B['held_rids']]])) for o in OBS})

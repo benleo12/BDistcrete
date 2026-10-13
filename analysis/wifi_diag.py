@@ -73,25 +73,36 @@ ref = np.load(refpath); robs = {o: np.asarray(ref[o], np.float64) for o in OBS};
 rng = np.random.default_rng(3)
 # a third variant: the weights fitted on the SELECTION halves of the held-out runs, where the
 # published calibration constant is fitted, and judged like everything else on the comparison halves
-FREF = {}; SEL = {}
-for rid, th in zip([int(r) for r in B['held_rids']], B['held_theta']):
-    Bt = btilde(th); FREF[rid] = np.einsum('nik,jk->nij', AE.transpose(1, 0, 2).astype(np.float64), Bt).reshape(Nref, M2)
+# The basis of the reference at a held-out point is (Nref, M^2); at sixteen members and 1.15M
+# events that is 1.2 GB in single precision, so it is built for ONE run at a time and freed, and
+# the subsamples the held-fit variant and the loss need are taken while it exists.
+AE32 = np.ascontiguousarray(AE.transpose(1, 0, 2)).astype(np.float32); del AE
+def fref_of(th):
+    Bt = btilde(th).astype(np.float32)
+    return np.einsum('nik,jk->nij', AE32, Bt).reshape(Nref, M2)
+HELD = [int(r) for r in B['held_rids']]; SEL = {}; DEN = {}; DENFIT = {}
+for rid, th in zip(HELD, B['held_theta']):
     n = len(B[f'held_f_{rid}']); perm = np.random.default_rng(1000 + rid).permutation(n); SEL[rid] = (perm[:n//2], perm[n//2:])
-Xn_h = design(np.concatenate([B[f'held_f_{rid}'][SEL[rid][0]] for rid in FREF]))
-Xd_h = design(np.concatenate([FREF[rid][np.sort(rng.choice(Nref, 4000, replace=False))] for rid in FREF]))
-w_held = fit(Xn_h, Xd_h, np.ones(M2 + 1, bool))
+    Fref = fref_of(th)
+    DENFIT[rid] = Fref[np.sort(rng.choice(Nref, 4000, replace=False))].astype(np.float64)
+    DEN[rid] = Fref[np.sort(rng.choice(Nref, NDEN, replace=False))].astype(np.float64)
+    del Fref
+Xn_h = design(np.concatenate([B[f'held_f_{rid}'][SEL[rid][0]] for rid in HELD]))
+Xd_h = design(np.concatenate([DENFIT[rid] for rid in HELD])); del DENFIT
+w_held = fit(Xn_h, Xd_h, np.ones(M2 + 1, bool)); del Xn_h, Xd_h
 print('held-fit weights:', np.round(w_held, 4))
 W = {'published': w_pub, 'wifi': w_wifi, 'diagonal': w_diag, 'held-fit': w_held}
 Lheld = {k: [] for k in W}; per = {k: {} for k in W}
-for rid, th in zip([int(r) for r in B['held_rids']], B['held_theta']):
-    Fref = FREF[rid]; rep = SEL[rid][1]
-    Xh = design(B[f'held_f_{rid}'][rep]); Xr = design(Fref[np.sort(rng.choice(Nref, NDEN, replace=False))])
+for rid, th in zip(HELD, B['held_theta']):
+    Fref = fref_of(th); rep = SEL[rid][1]
+    Xh = design(B[f'held_f_{rid}'][rep]); Xr = design(DEN[rid])
     for name, wv in W.items():
         Lheld[name].append(loss(wv, Xh, Xr))
-        z = wv[0] + Fref @ wv[1:]; wr = np.exp(z - z.max()); wr /= wr.sum()
+        z = wv[0] + (Fref @ wv[1:].astype(np.float32)).astype(np.float64); wr = np.exp(z - z.max()); wr /= wr.sum()
         for o in OBS:
             tv = np.asarray(B[f'held_{o}_{rid}'], np.float64)[rep]; bins = make_bins(np.r_[robs[o], tv], o)
             p, nb = pulls(robs[o], wr, tv, bins); per[name][(rid, o)] = width_of(p)
+    del Fref
 out = {}
 for name in W:
     widths = {o: float(np.mean([per[name][(r, o)] for r in [int(x) for x in B['held_rids']]])) for o in OBS}

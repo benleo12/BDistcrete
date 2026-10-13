@@ -73,7 +73,7 @@ C = ref_f.shape[-1]
 # recovered by replaying that step: the same seed builds the same initial network, and the same
 # generator draws the same first batch as concat_baseline.run_stage.
 Base = LatePFN if MODE == 'late' else ConcatPFN
-make = (lambda: MixtureOf(Base, C, d)) if HEAD == 'mixture' else (lambda: Base(C, d))
+make = (lambda: MixtureOf(Base, C, d)) if HEAD in ('mixture', 'geometric') else (lambda: Base(C, d))
 off = int(os.environ.get('CONCAT_SEED_OFFSET', '0'))
 side = wpath.replace('.pt', '_embscale.json')
 scales = json.load(open(side)) if os.path.exists(side) else None

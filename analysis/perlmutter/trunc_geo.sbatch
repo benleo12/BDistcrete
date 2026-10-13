@@ -3,9 +3,9 @@
 #SBATCH -C gpu
 #SBATCH -q shared
 #SBATCH -N 1
-#SBATCH -G 1
-#SBATCH -c 32
-#SBATCH -t 02:30:00
+#SBATCH -G 2
+#SBATCH -c 64
+#SBATCH -t 03:00:00
 #SBATCH -J trunc_geo
 #SBATCH -o logs/trunc_geo_%j.out
 #SBATCH -e logs/trunc_geo_%j.err

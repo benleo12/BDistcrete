@@ -3,6 +3,9 @@
 # usage: gen_stageF.sh <rid> <alpha_fsr> <ptmin> <clmax> <clpow> <psplit> <pwtsq> <pwtdiq> <clsmr> <events>
 set -e
 rid=$1; af=$2; pt=$3; cm=$4; cp_=$5; ps=$6; sq=$7; dq=$8; sm=$9; ev=${10}
+# Symmetry addition: GEN_SEED gives a run extra, independent events at the same parameters
+# (the default, the run id, is the published recipe).
+seed=${GEN_SEED:-$rid}
 [ $# -eq 10 ] || { echo "BAD ARGC $# (want 10) for rid=$rid"; exit 2; }
 chk() { awk -v v="$2" -v lo="$3" -v hi="$4" -v n="$1" \
   'BEGIN{ if (v+0<lo || v+0>hi) { printf "BAD %s=%s, expected [%g,%g]\n", n, v, lo, hi; exit 1 } }' || exit 2; }
@@ -42,7 +45,7 @@ saverun r$rid EventGenerator
 CARD
 # the CVMFS build hardcodes its Jenkins build path for HerwigDefaults.rpo, so point --repo at the real one
 Herwig read -i $HERWIGPATH --repo "$HERWIG_REPO" r$rid.in > read.log 2>&1 || { echo "READ FAIL $rid"; exit 1; }
-Herwig run r$rid.run -N $ev --seed $rid --repo "$HERWIG_REPO" > run.log 2>&1 || { echo "RUN FAIL $rid"; exit 1; }
+Herwig run r$rid.run -N $ev --seed $seed --repo "$HERWIG_REPO" > run.log 2>&1 || { echo "RUN FAIL $rid"; exit 1; }
 [ -f events.hepmc ] || { echo "NO HEPMC $rid"; exit 1; }
 python3 "$HERE/extract_particles_full_flavor.py" --input events.hepmc --output $DATA/particles_full_${rid}.npz --fmt herwig > extract.log 2>&1 || { echo "EXTRACT FAIL $rid"; tail -5 extract.log; exit 1; }
 python3 "$HERE/compute_shapes_only.py" --input events.hepmc --output-dir $DATA --run-id $rid --fmt herwig > shapes.log 2>&1 || { echo "SHAPES FAIL $rid"; tail -5 shapes.log; exit 1; }

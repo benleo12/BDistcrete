@@ -13,6 +13,8 @@ the samples can be rebuilt, and so the parameter that a run id corresponds to is
 | `stageF_design.csv` | the original Herwig design, 64 training and 8 held |
 | `stageF_augment_design.csv` | 48 further Herwig points, added to fix the design's conditioning |
 | `stageF_design_aug.csv` | the two Herwig files combined, 112 training points |
+| `stageE_design_v3all.csv` | the Sherpa design of the released `E`: the points of `stageE_design.csv` plus 256 training and 16 held points from `gen/make_design_v3.py`, 352 training and 24 held in all |
+| `stageF_design_v3all.csv` | the Herwig design of the released `F`: the points of `stageF_design_aug.csv` plus 256 training and 16 held points, 368 training and 24 held in all |
 | `extract_particles_full_flavor.py` | HepMC to the per-particle arrays the models read |
 | `compute_shapes_only.py` | HepMC to the event-shape table used for closure |
 | `compute_efps.py` | the HepMC parser and shape definitions the previous file imports |
@@ -20,10 +22,11 @@ the samples can be rebuilt, and so the parameter that a run id corresponds to is
 Each design row is `run_id, role, <the parameters>`. The run id is also the generator seed, so a
 row fully determines a run. `role` is one of:
 
-- `train`, a point the head was fitted on. 96 for Sherpa, 112 for Herwig once the augmentation
-  is included, 64 before it.
-- `held`, a point kept out of training entirely, 8 per generator, which is what every closure
-  number in `STAGES.md` is measured on.
+- `train`, a point the head was fitted on. 352 for Sherpa and 368 for Herwig in the designs of
+  the released networks, 96 and 112 in the earlier ones.
+- `held`, a point kept out of training entirely, 24 per generator in the designs of the
+  released networks and 8 in the earlier ones, which is what every closure number in
+  `STAGES.md` is measured on.
 - `scan_<parameter>`, a one-dimensional scan along a single axis with the other seven fixed at a
   single reference point, 5 points each. The reference point is not the centre of the box. These
   were used to look at how one knob moves an observable and are no part of training or of the
@@ -77,10 +80,10 @@ run id, which is why there is one shift and not two.
 
 ## Sample sizes and conventions
 
-Training runs are 80,000 events and so are the held runs of the two single-generator designs
-here: the `n_held` column of `closure_E.csv` and `closure_F.csv` reads 80,000 throughout. The
-mixture is built by resampling those same events rather than generating new ones, so two of its
-ten held points hold 40,000 and the rest 80,000, which `closure_MIX17.csv` records per point.
+Training runs are 80,000 events. The held runs of `E`, `F` and `MIX17` hold 400,000, the run
+itself and four more of 80,000 at the same point with independent seeds (`gen/gen_one.sh`), and
+the `n_held` column of their closure tables reads 400,000 throughout. The mixture is trained on
+the runs of both generators, so its 48 held points are the 24 of each.
 Both generators keep every hadron with `c*tau` greater than 10 mm undecayed. Herwig decays
 those by default and Sherpa does not, so `gen_stageF.sh` sets `DecayHandler:MaxLifeTime` to
 match. A sample generated without that line is not comparable with these.
@@ -115,13 +118,14 @@ momenta the axis perpendicular to both fixes the hemisphere of every other parti
 sign choices for the pair complete the candidate, and the largest candidate is the thrust. The
 single-seed sign iteration it replaced on 2026-09-28 converges to a local maximum in about 4
 percent of Z-pole events, biasing the mean of one minus thrust by +1.2 percent, the heavy jet
-mass by +1.5 percent, and putting those events into the far tail. The closure tables shipped
-with this release were computed before the change, with the same finder on both sides of every
-comparison, so they remain valid as tests of the reweighting, and a regeneration with this
-bundle gives slightly different shape values than the shipped `shapes_run_*.csv` would.
+mass by +1.5 percent, and putting those events into the far tail. The samples of `E`, `F` and
+`MIX17` were generated after the change, so their closure tables use the exact axis. The table
+of `C_1M` was computed before it, with the same finder on both sides of every comparison, so it
+remains valid as a test of the reweighting.
 
 `gentune/features.py` keeps the old finder on purpose. It only sets the frame the per-particle
-features are expressed in, the heads were trained in that frame, and a user's events must be
-embedded in the same one. The two are separated so that the observable is right and the
-embedding is consistent, and they change together when the heads are retrained.
+features are expressed in, and `extract_particles_full_flavor.py` built the training samples of
+every released network in that frame, the current ones included. A user's events must be
+embedded in the same frame. The two are separated so that the observable is right and the
+embedding is consistent.
 

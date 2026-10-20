@@ -53,6 +53,8 @@ repository. The training times are in the README.
 | Fig. 12 and Sec. 4.2, the calculation against ALEPH and DELPHI | `output/calc_bins_nlo_point.json`, `output/calc_vs_delphi_MIXGEOV3S9.json` | `python calc_bins.py`, `NPZ=output/three_bands_MIXGEOV3S9.npz python calc_vs_delphi.py MIXGEOV3S9`, then `python figs_r8.py aleph` |
 | Table 6, the fit of the basis weights | `output/wifi_MIXGEOV3S9*_fit.npz` | `wifi_fit.py`, run by `symmetry/wifi_cov.sbatch` **(data)** |
 | the released networks `E`, `F`, `MIX17` | network exports **(data)** | `sbatch symmetry/package_r8.sbatch` |
+| `release/STAGES.md`, `release/closure_*.csv`, `release/closure_summary.json`, `output/precision_gap_r8.json` | network exports, held-out runs **(data)** | `sbatch symmetry/table_r8.sbatch` (`make_stage_table.py`, then `precision_gap.py`), which writes into `release_r8_table/`, copied into `release/` |
+| `release/accuracy_law.json`, `release/accuracy_law_points.csv` | the closure tables above, held-out runs **(data)** | `sbatch symmetry/accuracy_r8.sbatch` (`closure_vs_distance.py`, then `fit_accuracy_law.py`), into the same directory |
 
 `figs_r8.py` draws every data figure at its printed size with one palette, in which each color has one
 meaning across the paper (its header lists them). It reads `output/` and writes `output/r8_<name>.pdf`.

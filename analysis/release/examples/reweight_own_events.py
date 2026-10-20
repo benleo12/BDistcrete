@@ -17,7 +17,7 @@ import argparse, os, sys
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from gentune import Head, MixtureHead, Trunk, features, axes
+from gentune import load_head, Trunk, features, axes
 
 
 def main():
@@ -37,7 +37,7 @@ def main():
 
     hp = f'{a.models}/{a.stage}_head.npz'
     kind = str(np.load(hp).get('head_kind', 'cond'))
-    head = (MixtureHead if kind == 'mixture' else Head)(hp)
+    head = load_head(hp)
     print(f'{a.stage}: {kind} head, {head.nt} parameters, {head.ENS} ensemble members, T={head.T}')
     print('training box, one row per parameter:')
     nm = axes.names(a.stage, head.nt)

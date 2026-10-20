@@ -1,8 +1,8 @@
 # Continuous generator-parameter reweighting
 
-This is the released code and trained models from *Beyond Discrete Variations: Continuous
-Generator Uncertainties Anchored to Precision QCD*. It answers one question, per event, without
-running a generator:
+This is the released code and trained networks of *Combined Uncertainties from Event Generators
+and Precision QCD* (Assi and Thaler). It answers one question, per event, without running a
+generator:
 
 > I have an event sample from Sherpa or Herwig. What weights turn it into the sample I would
 > have got with different hadronization and shower parameters?
@@ -33,11 +33,15 @@ stored events hold the six per-particle columns already constructed, so the self
 the two networks and the final column mapping but NOT the HepMC parsing or the thrust-frame
 construction that produced those columns. Run `examples/reweight_own_events.py` on a file of
 your own to exercise that path. And the logits it compares against are the ones the shipped
-files produce on a float32 reader, not the ones the training run itself recorded: stages trained
-through the float16 feature cache differ from their training run by a few parts in a thousand in
-the logit, which is stored alongside as `logit_probe_from_export` so the gap is on the record
-rather than hidden. The effect on anything anyone uses is smaller than the statistical error of
-the reference sample.
+files produce. The training run's own logits are stored alongside as `logit_probe_from_export`,
+with the largest difference between the two as `precision_gap`, so that gap is on the record
+rather than hidden.
+
+`E`, `F` and `MIX17` were trained on per-particle features stored as float16, and their trunk
+files say so (`feature_precision`). `Trunk` rounds your features the same way before the network
+sees them, which reproduces the training inputs. Read in float32 instead, the reweighted means of
+`MIX17` would move by up to 0.17 percent, about its accuracy floor, and those of `E` and `F` by
+0.02 percent (`analysis/precision_gap.py`).
 
 Then look at what a head does:
 
@@ -90,18 +94,20 @@ from them grow accordingly.
 
 A mixture head does not reweight within one generator. It reweights across a family that
 contains both, so that "which generator" stops being a discrete choice you cannot interpolate
-and becomes a number you can put a prior on.
+and becomes a number you can put a prior on. `MIX17` is the multiplicative mixture of the paper,
 
-    q(Phi; theta_S, theta_H, f) = (1 - f) q_S(Phi; theta_S) + f q_H(Phi; theta_H)
+    q(Phi; theta_S, theta_H, f)  proportional to  q_S(Phi; theta_S)^(1 - f) q_H(Phi; theta_H)^f
 
-Its parameter vector is the two generators' parameters followed by the fraction,
-`theta = (*theta_S, *theta_H, f)`, with `f` in [0, 1] and `f = 0` meaning the first generator
-alone. Use it exactly like a single-generator head:
+so its log ratio to the reference is `(1 - f) l_S + f l_H`, linear in the fraction, where `l_S`
+and `l_H` are the log ratios of the two generators. The paper calls the fraction xi. The
+parameter vector is the two generators' parameters followed by the fraction,
+`theta = (*theta_S, *theta_H, f)`, with `f` in [0, 1] and `f = 0` meaning Sherpa alone. Use it
+exactly like a single-generator head:
 
 ```python
-from gentune import MixtureHead
-head = MixtureHead('models/<tag>_head.npz')
-print(head.nS, head.nH)          # how many parameters each side takes
+from gentune import load_head
+head = load_head('models/MIX17_head.npz')     # the right class for any export
+print(head.nS, head.nH)                       # how many parameters each side takes
 w = head.ratio_weights(A, theta_to, theta_from)
 ```
 
@@ -109,16 +115,34 @@ w = head.ratio_weights(A, theta_to, theta_from)
 the exported networks rather than assumed, so the two generators need not have the same number
 of parameters.
 
-The edges are exact rather than approximate. Writing the logit as
-`log[(1-f) exp(l_S) + f exp(l_H)]` makes the derivative with respect to `theta_H` vanish
-identically at `f = 0`, and with respect to `theta_S` at `f = 1`. So a fraction of zero is the
-first generator alone, not a numerical approach to it, and a prior that puts weight at the
-endpoints is not fighting the parameterization.
+The edges are exact rather than approximate. At `f = 0` the log ratio is `l_S` itself and its
+derivative with respect to `theta_H` vanishes identically, and the same holds at `f = 1` for
+`theta_S`. So a fraction of zero is Sherpa alone, not a numerical approach to it, and a prior
+that puts weight at the endpoints is not fighting the parameterization. The reader also takes
+the additive mixture `(1 - f) q_S + f q_H` of earlier releases (`head_kind` `mixture`), whose
+log ratio is `log[(1 - f) exp(l_S) + f exp(l_H)]`.
 
 Two consequences worth knowing. A mixture head inherits the accuracy of both sides, so the
 weaker of the two sets the floor, and `STAGES.md` reports it measured rather than inferred. And
 at `f` near an endpoint the events of the silent generator carry little weight, so the
 effective sample size falls even though the weights are correct, which `n_eff()` will show you.
+
+## The learning band of MIX17
+
+The paper's learning band comes from the WiFi fit of Benevedes and Thaler (arXiv:2506.00113).
+Its basis functions are the cross terms of the M = 4 members, the event vector of member `i`
+against the parameter vector of member `j`, plus a constant,
+
+    log r(Phi, theta) = w_0 + sum_ij w_ij < a_i(Phi), b_j(theta) > ,
+
+with `b_j(theta) = (1 - f) b_S,j(theta_S) + f b_H,j(theta_H)` for the mixture.
+`models/MIX17_wifi.npz` holds the fitted weights `w` (`w_0` first, then `w_ij` row by row), their
+covariance `C`, and `w_published`, the mean of the members in the same basis (`w_ij` equal to one
+over M on the diagonal and zero elsewhere), which is what the prediction uses. The learning band
+of a reweighted mean `<O>` is `sqrt(g C g)`, where `g_k`, the derivative of `<O>` with respect
+to `w_k` at `w_published`, is the weighted covariance of `O` with the basis function `k`. With
+the calculation imposed the derivative also runs through the re-solved multipliers.
+`analysis/wifi_fit.py` makes the fit and `analysis/three_bands.py` propagates it.
 
 ## Being inside the box is not the same as having been sampled
 
@@ -128,13 +152,12 @@ head.support(theta)        # score, threshold, ok, nearest
 ```
 
 `box` is the range of each parameter. `support` is the question of whether the head ever saw a
-point like yours, and the two come apart. The Sherpa stage varies its eight parameters
-independently, so its box is filled. The Herwig stage varies eight parameters along a
-six-dimensional locus, because the published retunes that justify its ranges move the shower
-coupling and the shower cutoff together, and the cluster fission mass and power together.
-Sampling those as an independent rectangle would admit corners no tune has ever realised. The
-consequence for you is that large parts of the Herwig bounding box were never generated, and
-`in_box` alone will not tell you so. `check` will.
+point like yours, and the two can come apart. Both eight-parameter designs fill their boxes. The
+first Herwig design followed the published retunes, which move the shower coupling with the
+shower cutoff and the cluster fission mass with its power, and so covered a six-dimensional
+locus. The 256 points of each generator added for the current networks are a scrambled Sobol
+sequence over the whole box, which fills the rest. `check` still tells you when a point is far
+from every training point, which `in_box` alone does not.
 
 ## Conventions you have to match
 
@@ -187,18 +210,21 @@ Found by reading the code and by scanning, and worth knowing whatever you use th
 ## What is here and what is a separate download
 
 Four trained stages ship. `STAGES.md` gives each one's box, its training design and its measured
-closure, and `gentune.axes` names the parameters, in the order the head stores them.
+closure, and `gentune.axes` names the parameters, in the order the head stores them. The release
+names differ from the paper's stage letters, as the last column says.
 
-| stage | generator | parameters | what it varies |
-|---|---|---|---|
-| `C_1M` | Sherpa 3 | 3 | the shower coupling, the strange fraction and the Ahadic cluster transverse momentum scale. The paper's anchor section uses it as the three-parameter cross-check of its fit, trained on a cache of 1,080,000 events |
-| `E` | Sherpa 3 | 8 | the shower coupling and seven Ahadic hadronization parameters, among them the strange and the baryon fraction |
-| `F` | Herwig 7.3 | 8 | the shower coupling, the shower cutoff and six cluster hadronization parameters, among them the diquark weight that sets baryon production |
-| `MIX17` | both | 17 | the `E` box, the `F` box, and the fraction of the sample the Herwig side supplies. This is the model the paper's anchor section anchors and fits, on its reference sample of 1,149,888 events |
+| stage | generator | parameters | what it varies | in the paper |
+|---|---|---|---|---|
+| `E` | Sherpa 3 | 8 | the shower coupling and seven Ahadic hadronization parameters, among them the strange and the baryon fraction. Trained on 352 runs, closure measured at 24 held-out points | Stage D |
+| `F` | Herwig 7.3 | 8 | the shower coupling, the shower cutoff and six cluster hadronization parameters, among them the diquark weight that sets baryon production. Trained on 368 runs, closure measured at 24 held-out points | Stage E |
+| `MIX17` | both | 17 | the `E` box, the `F` box, and the fraction of the sample the Herwig side supplies. Reference sample of 1,149,840 events, closure measured at the 48 held-out points of both generators | the seventeen-parameter mixture of Sec. 4 |
+| `C_1M` | Sherpa 3 | 3 | the shower coupling, the strange fraction and the Ahadic cluster transverse momentum scale, trained on a cache of 1,080,000 events | an earlier version only |
 
-The paper's ladder heads, the one, two and three-parameter models behind its closure table, are
-not here. The three-parameter model that is here is the separate, larger training the anchor
-section compares with. The fit of the strong coupling itself uses `MIX17`.
+`E`, `F` and `MIX17` are the networks of the current paper, retrained when every result was
+redone at one training standard (version 2.0.0 of this release). Under the same names, version
+1.0.0 shipped the networks of the earlier version, and the git history keeps them. `C_1M` is
+unchanged from 1.0.0. The networks of the paper's Stages A, B and C (one, two and three
+parameters) are not here.
 
 Parameter names, ranges and the traps just above are printed by
 
@@ -220,6 +246,7 @@ In this repository, a few megabytes per stage:
 | `models/<stage>_trunk.npz` | the event-side network, so you can embed your own events |
 | `models/<stage>_selftest.npz` | reference events and the logits to reproduce |
 | `models/MANIFEST.json` | shapes, boxes, checksums, and the verification each stage passed |
+| `models/MIX17_wifi.npz` | the basis weights `w` of the learning band of `MIX17` and their covariance `C`, described above |
 | `generators/` | the generator scripts and parameter designs that produced the training samples |
 
 The full reference sample, which is what `weights` acts on and what the paper's own figures use,
@@ -237,7 +264,9 @@ checked to give byte-identical events to the one the released sample was generat
 
 `STAGES.md` carries the closure of every released head against the generator on parameter
 points held out of training, `closure_<stage>.csv` has it point by point, and
-`accuracy_law.json` has the fit described below in machine-readable form.
+`accuracy_law.json` has the fit described below in machine-readable form. For `E`, `F` and
+`MIX17` every held-out run has 400,000 events. The paper's closure widths of the same networks
+are in its Table 1.
 
 A single worst-case percentage is a bad way to state this, because it is set by one point and
 says nothing about where in the box that point sat. What the data supports is a floor plus a
@@ -247,33 +276,56 @@ that mean.
 
     relative error  =  floor  +  slope x displacement
 
-| stage | floor | slope per 100 sigma | scatter | measurements | exceptions |
+| stage | floor | slope per 100 sigma | scatter | measurements | points above the law |
 |---|---|---|---|---|---|
-| E, Sherpa, 8 parameters | 0.24% | 0.61% | 0.22% | 32 | none |
-| F, Herwig, 8 parameters | 0.39% | 0.28% | 0.29% | 32 | none |
-| MIX17, the two-generator mixture, 17 parameters | 0.28% | -0.22% | 0.15% | 40 | one, below |
+| E, Sherpa, 8 parameters | 0.12% | -0.10% | 0.07% | 96 | 6 |
+| F, Herwig, 8 parameters | 0.11% | 0.08% | 0.11% | 96 | 7 |
+| MIX17, the two-generator mixture, 17 parameters | 0.16% | 0.03% | 0.13% | 192 | 12 |
 
-Fitted robustly over four observables at the held points of each stage, with soft down-weighting
-rather than rejection, so the exceptions are identified by the fit rather than by choosing them.
-The displacements covered run from 1.0 to 33 sigma for Sherpa, 5.8 to 85 for Herwig and 1.9 to
-29 for the mixture. The 104 points behind the three fits ship as `accuracy_law_points.csv`, so
-the fit can be checked rather than taken on trust.
+Fitted robustly over four observables at the held points of each stage, with soft
+down-weighting rather than rejection, so the points above the law, more than three scatter units
+above it, are identified by the fit rather than by choosing them. The displacements run up to 123
+sigma for Sherpa, 389 for Herwig and 368 for the mixture. The 384 measurements behind the three
+fits ship as `accuracy_law_points.csv`, so the fit can be checked rather than taken on trust.
 
 **The four observables are one minus thrust, total multiplicity, total broadening and the heavy
 jet mass. The law does not cover the two flavour rates, the baryon rate and the strange
-fraction, and both exceed its floor by a factor of two to nine.** The baryon rate reaches 1.16
-percent on stage E against a floor of 0.24, 1.95 on stage F against 0.39, and 2.01 on the
-mixture against 0.28. The strange fraction reaches 0.53, 0.60 and 0.85 against the same floors.
-On every stage the baryon rate has the largest relative error of the six. So the law describes
-the shape observables, and a flavour rate has to be read off `STAGES.md` and
-`closure_<stage>.csv` directly rather than predicted from the floor and the slope. In pull units
-the ranking is different, and the total multiplicity is the worse of the two on stages F and
-MIX17.
+fraction.** The baryon rate reaches 1.36 percent on `E`, 2.05 on `F` and 1.15 on `MIX17`, with a
+root mean square over the held points of 0.47, 0.70 and 0.48 percent, three to seven times the
+floor. The strange fraction stays within 0.6 percent on every stage. So a flavour rate has to be
+read off `STAGES.md` and `closure_<stage>.csv` directly rather than predicted from the floor and
+the slope.
+
+The points above the law are named in `accuracy_law.json`. All but one are event shapes, at three
+held points of `E` and four of `F`, and on `MIX17` mostly at the same Herwig points. The largest
+is the Herwig held point 8215, at the low end of the cluster fission power: one minus thrust closes
+to 0.99 percent there on `F` and to 1.14 percent on `MIX17`, where the law predicts 0.16 and 0.18.
+**So an event shape of Herwig can be off by up to one percent at some points of its box, about
+five times the floor.**
+
+Three things follow.
+
+**The floor dominates.** On every stage the slope moves the error by less than 0.1 percent over
+100 sigma of displacement, no more than the scatter. So the accuracy you get is mostly a property
+of the head and not of how hard you push it, which is convenient: one number per stage is close
+to the whole story.
+
+**A tenth of a percent is not small on a large sample.** At the held points a pull of one is 0.15
+percent on one minus thrust and 0.05 percent on the total multiplicity, so the floors are pulls of
+one to three standard deviations there, and the worst pulls in `STAGES.md` reach 9.7 on `E` and 14
+on `F`, on the baryon rate and the total multiplicity. The model error, not the event count, is
+what limits these weights, and generating more events does not reduce it. If you need a rate to
+better than a few tenths of a percent, this is the wrong tool.
+
+**Seventeen parameters cost little over eight.** The mixture's floor is 0.16 percent against 0.12
+and 0.11 for the two generators alone, and its slope is as small. Widening the box did not cost an
+order of magnitude, which is what makes a continuous family practical rather than a curiosity.
 
 ### Why the baryon rate is the worst of the six
 
 Two measured properties of the observable account for most of it, and neither is a limit on the
-network's ability to see baryons.
+network's ability to see baryons. They were measured on `C_1M` and its box, and the tables of every
+stage show the same ordering.
 
 The parameter box moves the baryon rate furthest. Over the 27 training points of the
 three-parameter Sherpa box the generator's own mean baryon rate has a spread of 11.8 percent of
@@ -282,9 +334,9 @@ knob at all, so the whole move has to be delivered through the strong coupling. 
 the diquark weight alone moves the rate by 96 percent end to end while thrust moves 1.9 percent.
 And a baryon count is a wide per-event variable, with a relative spread of 1.04 against 0.29 for
 the total multiplicity, so at equal statistical significance its percent error is automatically
-about three and a half times larger. That factor is in the shipped tables and is the same on
-every stage: the relative error per unit pull is 0.37 to 0.38 percent per sigma for the baryon
-rate against 0.11 for the multiplicity on all four.
+about three and a half times larger. That factor is in the shipped tables: at the held points of
+`E` and `F` a pull of one is 0.17 percent on the baryon rate and 0.05 percent on the total
+multiplicity.
 
 What is left after those two is not a representation problem. A linear fit of the per-event
 baryon count on the 96 columns of the event vector reaches a held-out R-squared of 0.91, among
@@ -306,126 +358,35 @@ the three worst points leaves 0.95 percent against 0.44 for the shapes, and at t
 point two independent generator seeds agree to a mean squared pull of 0.97, so the rate is a
 reproducible function of the parameters.
 
-### Away from the held points the flavour rates are about three times worse
+### Away from its held points, `C_1M` reads the flavour rates about three times worse
 
 The numbers in `STAGES.md` are measured at the points held out of training, which for the
-three-parameter stage are five interior points. At twelve further points that were used for
-nothing at all, the root mean square relative error over the same reference rises from 0.35 to
-1.17 percent for the baryon rate, against 0.15 to 0.22 for the multiplicity, 0.12 to 0.34 for the
-broadening and 0.20 to 0.51 for one minus thrust. The strange fraction is the exception, 0.71 at
-the held points and 0.78 at the fresh ones, for the reason given next. So a baryon rate at an
-arbitrary point of the box should be expected at the percent level rather than at the few tenths
-the held points show, while the shape observables degrade by a factor of two to three from a
-lower base.
+three-parameter stage are five interior points. At twelve further points that were used for nothing
+at all, the root mean square relative error over the same reference rises from 0.35 to 1.17 percent
+for the baryon rate, against 0.15 to 0.22 for the multiplicity, 0.12 to 0.34 for the broadening and
+0.20 to 0.51 for one minus thrust. The strange fraction is the exception, 0.71 at the held points
+and 0.78 at the fresh ones, for the reason given next. So a baryon rate at an arbitrary point of the
+box should be expected at the percent level rather than at the few tenths the held points show,
+while the shape observables degrade by a factor of two to three from a lower base. The held points
+of `E`, `F` and `MIX17` are spread over their boxes, 16 of the 24 per generator drawn at random, so
+their tables already describe a typical point.
 
-### The calibration temperature, and why the strange fraction reads worse at the held points
+### The calibration temperature
 
 Every head carries one scalar, the calibration temperature that divides the logit before it is
-exponentiated. The training run chose it on one half of the held runs by bringing a binned
-closure statistic to its null of one, but over a grid that had no value between 1.0 and 1.2, and
-the three-parameter head was assigned 1.2 when the same objective on a fine grid gives 1.125.
-The head here ships at 1.125, and the export records the original value and the reason. At the
-twelve fresh points every one of the six observables improves, the all-observable root mean
-square from 0.83 to 0.67 percent, and at the held points five of six improve. The strange
-fraction at the held points is the one number that gets worse, 0.28 to 0.71 percent, and it is
-also the one whose held-point value at 1.2 was partly in-sample: the temperature was selected at
-those same parameter points with an objective in which the strange fraction's binned agreement
-carried weight. At the fresh points, which selected nothing, the strange fraction improves from
-1.08 to 0.78. The worst-case entry for this head in `STAGES.md` is therefore the strange fraction
-at one held point, 1.10 percent, and it is a more honest number than the 0.72 it replaces.
-
-Three things follow.
-
-**The floor dominates.** Over a 50 sigma displacement, further than any held point in the Sherpa
-box, the distance term adds 0.21% on top of a 0.25% floor. So the accuracy you get is mostly a
-property of the head and not of how hard you push it, which is convenient: one number per stage
-is close to the whole story.
-
-**A third of a percent is not small on a large sample.** On the million-event reference the
-statistical error on a mean is about 9 parts in ten thousand, so the Sherpa floor of 0.25% is
-a three standard deviation pull and the Herwig floor is four. The model error, not the event
-count, is what limits these weights, and generating more events does not reduce it. If you need
-a rate to better than half a percent, this is the wrong tool.
-
-**Eight parameters cost little over three, and seventeen cost nothing further.** The
-three-parameter Sherpa head reaches 1.10% worst case and the eight-parameter one 1.16%, while
-its floor is 0.25%. The seventeen-parameter mixture's floor is 0.29%, and its fitted slope is
-slightly negative, which at this scatter means no measurable dependence on displacement at all.
-Widening the box did not cost an order of magnitude, which is what makes a continuous family
-practical rather than a curiosity.
-
-### The documented exception, and the near one
-
-Both are total multiplicity, and both are on the Herwig side.
-
-On the mixture, held point 9934 closes its total multiplicity to 1.15% where the law predicts
-0.23%, 6.1 scatter units out, one measurement in forty and the only one beyond three units on
-any stage. On the Herwig head, held point 8206 closes to 1.35% where the law predicts 0.50%,
-2.9 units out, so the fit no longer lists it, but it is the worst single multiplicity error of
-that stage and it sits just under the line. **Treat Herwig multiplicity at the edges of its box
-as uncertain at the one to one and a half percent level.**
-
-`support()` will not flag either of them, and it is worth being exact about why, because an
-earlier version of this section told you to call it as though it would. `support()` answers
-whether a point sits in the region the training design covered. It does not answer whether the
-weights will be accurate there, and on this head it does not even rank the risk: all eight
-Herwig held points return `ok=True`, because the threshold is the largest score over the
-training design and every held point is inside that design by construction, and 8206 is only
-sixth of the eight by score while carrying the worst multiplicity error. Across those eight
-points the score correlates with the size of that error at 0.26, which is nothing to rely on.
-So read `support()` as the question it answers, whether the region was sampled, and read the
-accuracy off the closure tables.
-
-What that point is not: it is not a training shortfall, since doubling the budget to 72,000
-steps moved the width from 1.232 to 1.235. It is not too few runs, since training the Sherpa
-head on 64 runs to match Herwig's count and reference size cost 0.014 in width against
-Herwig's deficit of 0.149. It is not extrapolation beyond the data, since the point sits at
-position 0.34 inside the range of multiplicities the training runs span. And it is not input
-conditioning, since whitening the parameters by the design covariance made every observable
-worse in both stages. Each of those was tested rather than argued.
-
-### Why the Herwig floor is above Sherpa's
-
-This was an open question in an earlier version of the release and it is not any more, so here
-is what was established and what remains.
-
-The cause was the shape of the Herwig training design. It varied two of its eight parameters at
-30 percent of the amplitude of the other six, following published retunes in which the shower
-coupling and the cutoff move together, and the head responded 2.14 times more strongly along
-those two starved directions where the isotropic Sherpa head responds 0.59 times as strongly.
-That is a head fitting noise where the design gave it nothing, and it is measurable on any head
-with `head_direction_response.py`.
-
-Four other explanations were tested and rejected. Doubling the training budget on the original
-design moved the closure width from 1.232 to 1.235. Training the Sherpa head on 64 runs to match
-Herwig's count cost 0.014 in width against Herwig's deficit of 0.149. The failing point sat
-inside the range of multiplicities the training runs span, so it was not extrapolation. And
-whitening the parameters by the design covariance made every observable worse in both stages.
-
-The fix was to add 48 further Herwig points placed to raise the smallest eigenvalue of the
-design covariance, which took its anisotropy from 3.66 to 1.09 and matched the Sherpa box's
-1.11. The head shipped here is trained on all 112 points. Against the 64-point head it improves
-five of six observables, halves the multiplicity error from 1.31 to 0.65 percent, takes the
-worst single error from 3.43 to 1.95 percent and the worst pull from 28.8 to 11.5, and lowers
-this law's floor from 0.47 to 0.41 percent and its scatter from 0.49 to 0.32, both measured on
-the event shapes before the thrust-axis correction (on the corrected shapes the 112-point head gives
-0.39 and 0.29). The 64-point head's numbers are at its own calibration of 1.0, the
-112-point head's at the recalibrated 1.025.
-
-Two things did not resolve, and both are stated above rather than here: the baryon rate closes
-worse than it did on the narrower design, 1.24 against 0.93 percent in root mean square, and it
-has the largest relative error of the six on every stage, for the reasons measured above. And the
-direction response fell to 1.20 rather
-than below one, so the head still responds somewhat more strongly along the directions its
-design covers least, on a design where those directions are now barely distinguishable from the
-rest.
-
-One practical note for anyone reproducing this. The 48 added points deliberately sit where no
-published tune sits, with a high shower coupling against a low cutoff and the reverse, because a
-design has to span what the head will be asked about while a prior says where the answer
-probably lies. Folding the prior into the design is what left the first head unable to answer
-off-locus questions, and that cannot be undone after the fact. Restricting to the locus remains
-available afterwards as a prior.
+exponentiated. `E`, `F` and `MIX17` ship at 1.0, where their calibration statistic is 0.92 to 1.02
+for every observable against a null of one. For `C_1M` the training run chose it on one half of the
+held runs by bringing a binned closure statistic to its null of one, but over a grid that had no
+value between 1.0 and 1.2, and the three-parameter head was assigned 1.2 when the same objective on
+a fine grid gives 1.125. The head here ships at 1.125, and the export records the original value and
+the reason. At the twelve fresh points every one of the six observables improves, the all-observable
+root mean square from 0.83 to 0.67 percent, and at the held points five of six improve. The strange
+fraction at the held points is the one number that gets worse, 0.28 to 0.71 percent, and it is also
+the one whose held-point value at 1.2 was partly in-sample: the temperature was selected at those
+same parameter points with an objective in which the strange fraction's binned agreement carried
+weight. At the fresh points, which selected nothing, the strange fraction improves from 1.08 to
+0.78. The worst-case entry for this head in `STAGES.md` is therefore the strange fraction at one
+held point, 1.10 percent, and it is a more honest number than the 0.72 it replaces.
 
 ## Citation
 

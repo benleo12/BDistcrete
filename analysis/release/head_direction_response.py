@@ -22,7 +22,7 @@ import sys, os
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gentune.head import Head, MixtureHead
+from gentune.head import MIXTURE_KINDS, load_head
 
 NWEAK = int(os.environ.get('NWEAK', '2'))
 NPTS = int(os.environ.get('NPTS', '64'))
@@ -36,11 +36,11 @@ def probe(models, tag, block=None):
     shape error, and averaging the two blocks together would hide whichever one misbehaves."""
     hp = f'{models}/{tag}_head.npz'
     kind = str(np.load(hp).get('head_kind', 'cond'))
-    h = (MixtureHead if kind == 'mixture' else Head)(hp)
+    h = load_head(hp)
     if h.theta_train is None:
         print(f'{tag}: no training design shipped with this head, cannot run')
         return None
-    if kind == 'mixture' and block is None:
+    if kind in MIXTURE_KINDS and block is None:
         # the fraction is not a direction of either generator's network, so it is left out
         rS = probe(models, tag, 'S')
         rH = probe(models, tag, 'H')
@@ -53,7 +53,7 @@ def probe(models, tag, block=None):
         cols, Ws, bs, lab = slice(0, h.nt), h.W, h.b, tag
 
     def bvec(m, x):
-        return h._bvec_net(Ws[m], bs[m], x) if kind == 'mixture' else h._bvec(m, x)
+        return h._bvec_net(Ws[m], bs[m], x) if kind in MIXTURE_KINDS else h._bvec(m, x)
 
     X = h.theta_train[:, cols]
     mu = X.mean(0)

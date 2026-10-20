@@ -6,65 +6,259 @@
  "form": "error_percent = floor + slope_per_sigma * displacement",
  "stages": {
   "E": {
-   "n_points": 32,
-   "floor_percent": 0.2366062034071378,
-   "slope_percent_per_sigma": 0.006149608686112526,
-   "robust_scatter_percent": 0.21810175832672504,
+   "n_points": 96,
+   "floor_percent": 0.12374544643420245,
+   "slope_percent_per_sigma": -0.0009588487819986965,
+   "robust_scatter_percent": 0.07420996732516921,
    "displacement_range": [
-    1.0303422609391415,
-    33.12358874120312
+    1.0787377866107428,
+    122.744822481199
    ],
    "expected_at": {
-    "0": 0.2366062034071378,
-    "10": 0.29810229026826307,
-    "20": 0.35959837712938836,
-    "30": 0.4210944639905136,
-    "50": 0.5440866377127641
-   },
-   "outliers": []
-  },
-  "F": {
-   "n_points": 32,
-   "floor_percent": 0.39217121541098887,
-   "slope_percent_per_sigma": 0.002834086088997961,
-   "robust_scatter_percent": 0.2921582625654151,
-   "displacement_range": [
-    5.76416187293195,
-    85.05142952194826
-   ],
-   "expected_at": {
-    "0": 0.39217121541098887,
-    "10": 0.4205120763009685,
-    "20": 0.4488529371909481,
-    "30": 0.4771937980809277,
-    "50": 0.5338755198608869
-   },
-   "outliers": []
-  },
-  "MIX17": {
-   "n_points": 40,
-   "floor_percent": 0.2786800098297838,
-   "slope_percent_per_sigma": -0.0022121800647426967,
-   "robust_scatter_percent": 0.15055420663849134,
-   "displacement_range": [
-    1.948056360848804,
-    29.04429517237683
-   ],
-   "expected_at": {
-    "0": 0.2786800098297838,
-    "10": 0.25655820918235683,
-    "20": 0.23443640853492986,
-    "30": 0.2123146078875029,
-    "50": 0.16807100659264895
+    "0": 0.12374544643420245,
+    "10": 0.11415695861421549,
+    "20": 0.10456847079422851,
+    "30": 0.09497998297424155,
+    "50": 0.07580300733426762
    },
    "outliers": [
     {
-     "run": 9934,
+     "run": 7219,
+     "observable": "1_minus_thrust",
+     "displacement_sigma": 4.7423040306723445,
+     "error_percent": 0.5625626841613097,
+     "predicted_percent": 0.11919829399052476,
+     "excess_scatter_units": 5.974458770855874
+    },
+    {
+     "run": 7219,
+     "observable": "rho_heavy",
+     "displacement_sigma": 1.0787377866107428,
+     "error_percent": 0.5212295445707485,
+     "predicted_percent": 0.12271110002141476,
+     "excess_scatter_units": 5.370147150222116
+    },
+    {
+     "run": 7212,
+     "observable": "1_minus_thrust",
+     "displacement_sigma": 16.196973677849247,
+     "error_percent": 0.4849700166519969,
+     "predicted_percent": 0.10821499795113175,
+     "excess_scatter_units": 5.07687891910827
+    },
+    {
+     "run": 7217,
+     "observable": "1_minus_thrust",
+     "displacement_sigma": 8.95581969217845,
+     "error_percent": 0.4031908325486476,
+     "predicted_percent": 0.1151581696305572,
+     "excess_scatter_units": 3.881320438479706
+    },
+    {
+     "run": 7212,
+     "observable": "rho_heavy",
+     "displacement_sigma": 4.675314460643373,
+     "error_percent": 0.3800402568932428,
+     "predicted_percent": 0.11926252685815365,
+     "excess_scatter_units": 3.5140526190023427
+    },
+    {
+     "run": 7219,
+     "observable": "B_total",
+     "displacement_sigma": 4.959132021713428,
+     "error_percent": 0.3610171679196094,
+     "predicted_percent": 0.11899038873541179,
+     "excess_scatter_units": 3.2613783283813857
+    }
+   ]
+  },
+  "F": {
+   "n_points": 96,
+   "floor_percent": 0.10616041080199887,
+   "slope_percent_per_sigma": 0.000819628460737843,
+   "robust_scatter_percent": 0.107684336812667,
+   "displacement_range": [
+    0.3574042559296481,
+    388.7116592284359
+   ],
+   "expected_at": {
+    "0": 0.10616041080199887,
+    "10": 0.11435669540937729,
+    "20": 0.12255298001675573,
+    "30": 0.13074926462413416,
+    "50": 0.147141833838891
+   },
+   "outliers": [
+    {
+     "run": 8215,
+     "observable": "1_minus_thrust",
+     "displacement_sigma": 68.66495769308544,
+     "error_percent": 0.9855561856491416,
+     "predicted_percent": 0.1624401643826116,
+     "excess_scatter_units": 7.643785954669187
+    },
+    {
+     "run": 8215,
+     "observable": "rho_heavy",
+     "displacement_sigma": 48.84341987866758,
+     "error_percent": 0.8072766886332806,
+     "predicted_percent": 0.14619386785432334,
+     "excess_scatter_units": 6.1390805789054514
+    },
+    {
+     "run": 8215,
+     "observable": "B_total",
+     "displacement_sigma": 93.20545981133442,
+     "error_percent": 0.6797544145664445,
+     "predicted_percent": 0.1825542583595258,
+     "excess_scatter_units": 4.617200336868608
+    },
+    {
+     "run": 8211,
+     "observable": "rho_heavy",
+     "displacement_sigma": 2.583249845016533,
+     "error_percent": 0.5056650542796144,
+     "predicted_percent": 0.10827771589617104,
+     "excess_scatter_units": 3.6902984235744336
+    },
+    {
+     "run": 8211,
+     "observable": "1_minus_thrust",
+     "displacement_sigma": 2.6642450448991024,
+     "error_percent": 0.502014480381208,
+     "predicted_percent": 0.10834410186717794,
+     "excess_scatter_units": 3.6557812414156254
+    },
+    {
+     "run": 8213,
+     "observable": "1_minus_thrust",
+     "displacement_sigma": 31.13091929382668,
+     "error_percent": 0.4831856302407946,
+     "predicted_percent": 0.13167619826415206,
+     "excess_scatter_units": 3.2642577591218838
+    },
+    {
+     "run": 8223,
+     "observable": "1_minus_thrust",
+     "displacement_sigma": 68.92435742722108,
+     "error_percent": 0.4867976132384499,
+     "predicted_percent": 0.162652775787417,
+     "excess_scatter_units": 3.010139144144346
+    }
+   ]
+  },
+  "MIX17": {
+   "n_points": 192,
+   "floor_percent": 0.1585687610814103,
+   "slope_percent_per_sigma": 0.00027343262378137176,
+   "robust_scatter_percent": 0.13097975477570678,
+   "displacement_range": [
+    0.0098314412346405,
+    367.7587177363867
+   ],
+   "expected_at": {
+    "0": 0.1585687610814103,
+    "10": 0.16130308731922402,
+    "20": 0.16403741355703774,
+    "30": 0.16677173979485144,
+    "50": 0.17224039227047888
+   },
+   "outliers": [
+    {
+     "run": 8215,
+     "observable": "1_minus_thrust",
+     "displacement_sigma": 79.59753278569843,
+     "error_percent": 1.141378418702345,
+     "predicted_percent": 0.18033332331752758,
+     "excess_scatter_units": 7.337356044302699
+    },
+    {
+     "run": 8216,
+     "observable": "1_minus_thrust",
+     "displacement_sigma": 87.0101512598784,
+     "error_percent": 0.8587319560567332,
+     "predicted_percent": 0.18236017503601287,
+     "excess_scatter_units": 5.16394142116816
+    },
+    {
+     "run": 8211,
+     "observable": "rho_heavy",
+     "displacement_sigma": 3.6216651906090154,
+     "error_percent": 0.7983301329801594,
+     "predicted_percent": 0.15955904249693617,
+     "excess_scatter_units": 4.876868883875007
+    },
+    {
+     "run": 8215,
+     "observable": "B_total",
+     "displacement_sigma": 101.03527184839824,
+     "error_percent": 0.768881593080825,
+     "predicted_percent": 0.186195100557382,
+     "excess_scatter_units": 4.4486760073818346
+    },
+    {
+     "run": 8211,
+     "observable": "1_minus_thrust",
+     "displacement_sigma": 8.569981300027296,
+     "error_percent": 0.6855325388521829,
+     "predicted_percent": 0.16091207355403406,
+     "excess_scatter_units": 4.005355378749357
+    },
+    {
+     "run": 8216,
+     "observable": "rho_heavy",
+     "displacement_sigma": 78.81440023975203,
+     "error_percent": 0.6841468113186201,
+     "predicted_percent": 0.18011918933072088,
+     "excess_scatter_units": 3.8481338039684796
+    },
+    {
+     "run": 8215,
      "observable": "mult_total",
-     "displacement_sigma": 22.95784604636915,
-     "error_percent": 1.1487946780290896,
-     "predicted_percent": 0.22789312047657403,
-     "excess_scatter_units": 6.116744115717547
+     "displacement_sigma": 154.57467541767025,
+     "error_percent": 0.6997801395416238,
+     "predicted_percent": 0.20083452015101777,
+     "excess_scatter_units": 3.8093338947306306
+    },
+    {
+     "run": 8215,
+     "observable": "rho_heavy",
+     "displacement_sigma": 55.056645143798576,
+     "error_percent": 0.6355572432020143,
+     "predicted_percent": 0.17362304401967907,
+     "excess_scatter_units": 3.526760299508605
+    },
+    {
+     "run": 8202,
+     "observable": "rho_heavy",
+     "displacement_sigma": 70.63938944552037,
+     "error_percent": 0.5931958747397585,
+     "predicted_percent": 0.17788387467981306,
+     "excess_scatter_units": 3.170810639943072
+    },
+    {
+     "run": 8216,
+     "observable": "B_total",
+     "displacement_sigma": 95.939162013577,
+     "error_percent": 0.5800458078095071,
+     "predicted_percent": 0.18480165787416877,
+     "excess_scatter_units": 3.017597266174188
+    },
+    {
+     "run": 7219,
+     "observable": "1_minus_thrust",
+     "displacement_sigma": 6.218773489262202,
+     "error_percent": 0.5548588233253849,
+     "predicted_percent": 0.1602691766332813,
+     "excess_scatter_units": 3.0126002859587686
+    },
+    {
+     "run": 8219,
+     "observable": "1_minus_thrust",
+     "displacement_sigma": 3.368144919707308,
+     "error_percent": 0.5529129323185972,
+     "predicted_percent": 0.15948972178408177,
+     "excess_scatter_units": 3.0036948168686357
     }
    ]
   }

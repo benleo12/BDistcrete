@@ -10,11 +10,12 @@
     w = head.ratio_weights(A, theta_to, theta_from)     # per event weights
 
 Run `python -m gentune.selftest models` first. It proves your install reproduces the logits
-the training run produced, which takes a few seconds and rules out every silent mismatch.
+the shipped files produce, which takes a few seconds and rules out every silent mismatch.
+`load_head(path)` returns the right class for any export, a single generator or a mixture.
 """
-from .head import Head, MixtureHead
+from .head import Head, MixtureHead, MIXTURE_KINDS, load_head
 from .trunk import Trunk
 from . import features
 from . import axes
 
-__all__ = ['Head', 'MixtureHead', 'Trunk', 'features', 'axes']
+__all__ = ['Head', 'MixtureHead', 'MIXTURE_KINDS', 'load_head', 'Trunk', 'features', 'axes']

@@ -129,7 +129,7 @@ def main(tags):
         # Some exports carry a suffix for a variant of the same design, for example C_1M is
         # stage C's design at the one-million-event reference. The design is the design.
         dtag = design_key(tag, STAGES, DESIGN_ALIAS)
-        if dtag not in STAGES and str(cond.get('head_kind', 'cond')) == 'mixture':
+        if dtag not in STAGES and str(cond.get('head_kind', 'cond')) in ('mixture', 'geometric'):
             # a mixture export: its design lives in the data set's meta.json, not the registry
             if _register_mixture(STAGES, [tag]) is not None:
                 dtag = tag
@@ -198,7 +198,7 @@ def main(tags):
                         f'{nrun} runs x {nper} = {nrun*nper}. One of the two records is wrong.')
                     print(f'   design checked against the export: {nref} reference events is '
                           f'{nrun} runs x {nper}, the recorded composition for {tag}')
-                elif str(cond.get('head_kind', 'cond')) == 'mixture':
+                elif str(cond.get('head_kind', 'cond')) in ('mixture', 'geometric'):
                     print(f'   NOTE legacy mixture export without fitted_theta: its design cannot '
                           f'be verified here, because both mixture data sets hold {len(tr)} runs at '
                           f'{per:.0f} reference events each. Verify DM_DATA by hand.')
@@ -234,7 +234,7 @@ def main(tags):
 
         # 1. the reader reproduces the logits the training run recorded. This is checked on
         # the FULL export, because the shipped head deliberately has no reference vectors.
-        HKfull = MixtureHead if str(cond.get('head_kind', 'cond')) == 'mixture' else Head
+        HKfull = MixtureHead if str(cond.get('head_kind', 'cond')) in ('mixture', 'geometric') else Head
         h = HKfull(cp)
         dchk = h.replay_checksum()
         print(f'   logit checksum replay max|df| = {dchk:.3e}')
@@ -280,6 +280,15 @@ def main(tags):
                   f'{max(d32, d16):.3e} of a standard deviation')
             assert dae < 1e-3, (f'{tag}: the numpy trunk is not the same network as the '
                                f'exported one at either precision ({d32:.2e}, {d16:.2e})')
+            # The trunk file records the precision the network was trained at, and the numpy
+            # reader rounds a user's features to it. Read in float32, the float16-trained
+            # features of MIX17 move a reweighted mean by up to 0.17 percent, the size of its
+            # accuracy floor (precision_gap.py), so the gap is closed rather than documented.
+            prec = 'float32' if d32 <= d16 else 'float16'
+            tz = dict(np.load(f'{REL}/models/{out_tag}_trunk.npz'))
+            tz['feature_precision'] = np.str_(prec)
+            np.savez_compressed(f'{REL}/models/{out_tag}_trunk.npz', **tz)
+            print(f'   trunk file records feature_precision = {prec}')
         elif not has_trunk:
             r = np.load(rp) if os.path.exists(rp) else None
         else:
@@ -301,12 +310,11 @@ def main(tags):
             sel = np.sort(np.random.default_rng(20260910).choice(len(r['mask']), ns, replace=False))
             AEs = np.ascontiguousarray(cond['AE'][:, sel, :])
             # The probe logits are what a USER must reproduce, so they are computed the way
-            # a user computes them: features in float32 through the shipped numpy trunk and
-            # head. Storing the training run's own logits instead would make every user's
-            # self-test fail by the float16 quantization of the stored reference, which is a
-            # property of how the training cached its features and not of their install.
-            # Both are kept, with the gap between them recorded, so the provenance is visible.
-            HK0 = MixtureHead if str(cond.get('head_kind', 'cond')) == 'mixture' else Head
+            # a user computes them: raw particles through the shipped numpy trunk, which rounds
+            # the features to the precision its file records, and the shipped head. The
+            # training run's own logits are kept too, with the largest difference between the
+            # two, so the provenance is visible.
+            HK0 = MixtureHead if str(cond.get('head_kind', 'cond')) in ('mixture', 'geometric') else Head
             _h0 = HK0(f'{REL}/models/{out_tag}_head.npz')
             _tp = np.asarray(probe, np.float64)
             _lex = np.stack([h.logit(AEs, t) for t in _tp])          # from the training run
@@ -325,13 +333,13 @@ def main(tags):
                 reference_index=sel, n_reference_events=np.int64(len(r['mask'])),
                 theta_probe=_tp, logit_probe=_lus, logit_probe_from_export=_lex,
                 precision_gap=np.float64(_gap))
-            print(f'   probe logits stored from the float32 user path; they differ from the '
-                  f'training run by {_gap:.2e} in the logit (float16 feature cache)')
+            print(f'   probe logits stored from the user path; they differ from the '
+                  f'training run by {_gap:.2e} in the logit')
             print(f'   self-test bundle: {ns} events, {len(probe)} probe points')
             # 4. the end-to-end path a user actually runs: raw particles from the bundle,
             # features rebuilt from scratch, the numpy trunk, the shipped head, compared with
             # the logits this training run produced. Nothing from the torch model is involved.
-            HK = MixtureHead if str(cond.get('head_kind', 'cond')) == 'mixture' else Head
+            HK = MixtureHead if str(cond.get('head_kind', 'cond')) in ('mixture', 'geometric') else Head
             hs = HK(f'{REL}/models/{out_tag}_head.npz')
             sb = np.load(f'{REL}/models/{out_tag}_selftest.npz')
             if has_trunk:
@@ -358,6 +366,8 @@ def main(tags):
             checksum_replay=dchk, trunk_vs_export=dae, selftest_vs_export=dself,
             trunk_vs_export_float32=d32 if dae is not None else None,
             trunk_vs_export_float16=d16 if dae is not None else None,
+            feature_precision=(('float32' if d32 <= d16 else 'float16') if dae is not None
+                               else None),
             sha256={f'{tag}_{k}.npz': sha256(f'{REL}/models/{out_tag}_{k}.npz')
                     for k in ('head', 'trunk', 'selftest', 'cond')
                     if os.path.exists(f'{REL}/models/{out_tag}_{k}.npz')})

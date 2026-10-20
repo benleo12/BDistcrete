@@ -8,17 +8,17 @@ Its scope, stated precisely, because a PASS is easy to read more into than it ca
 stored events hold the six per-particle columns ALREADY CONSTRUCTED, so this exercises the two
 networks and the final column mapping but NOT the HepMC parsing or the thrust-frame
 construction that produced those columns. Run examples/reweight_own_events.py on a file of your
-own to exercise that. And the stored logits are the ones the shipped files produce on a float32
-reader, not the ones the training run itself recorded: stages trained through the float16
-feature cache differ from their training run by a few parts in a thousand in the logit, and that
-value is kept alongside as logit_probe_from_export so the gap is on the record.
+own to exercise that. And the stored logits are the ones the shipped files produce, with the
+features rounded to float16 for the stages trained that way, as gentune.Trunk does for your own
+events. The training run's own logits are kept alongside as logit_probe_from_export, and the
+largest difference between the two as precision_gap, so that gap is on the record.
 
 Usage: python -m gentune.selftest [models_dir]
 """
 import glob, os, sys
 import numpy as np
 
-from .head import Head, MixtureHead
+from .head import load_head
 from .trunk import Trunk
 from .features import trunk_features
 
@@ -29,7 +29,7 @@ def check(tag, models='models'):
     hp = f'{models}/{tag}_head.npz'
     c = np.load(hp)
     kind = str(c.get('head_kind', 'cond'))
-    head = MixtureHead(hp) if kind == 'mixture' else Head(hp)
+    head = load_head(hp)
     sb = np.load(f'{models}/{tag}_selftest.npz')
     tp = f'{models}/{tag}_trunk.npz'
     if os.path.exists(tp):
@@ -46,10 +46,10 @@ def check(tag, models='models'):
     w = head.ratio_weights(A, sb['theta_probe'][-1], sb['theta_probe'][0])
     ok = df < TOL
     tr = 'own events' if os.path.exists(tp) else 'reference only'
-    # dA compares against the reference vectors the TRAINING run exported. Stages whose
-    # training cached features as float16 show a gap of a few percent of a standard deviation
-    # there by construction, which is why it is reported and not tested. The logit comparison
-    # is the test: it is against the float32 path a user actually runs.
+    # dA compares against the reference vectors the TRAINING run exported. It is reported and
+    # not tested, because a stage exported before feature_precision was recorded reads its
+    # float16-trained features in float32 and differs there by construction. The logit
+    # comparison is the test: it is against the path a user actually runs.
     print(f'{tag:>12} {kind:>9} d={head.nt:<3} events={len(sb["mask"]):<6} {tr:>14}  '
           f'dA(vs training)={dA:.1e}  max|dlogit|={df:.2e}  '
           f'N_eff/N={head.n_eff(w)/len(w):.3f}  {"PASS" if ok else "FAIL"}')
@@ -69,7 +69,7 @@ def main(argv):
         print(f'\nFAILED: {bad}. Do not use these weights. The most likely cause is a numpy '
               f'or file version mismatch, so check the sha256 values in MANIFEST.json first.')
         return 1
-    print('\nall stages reproduce the training run to better than 1e-3 in the logit')
+    print('\nall stages reproduce the shipped logits to better than 1e-3')
     return 0
 
 

@@ -21,7 +21,7 @@ import numpy as np
 
 sys.path.insert(0, 'release')
 from gentune import features as F
-from gentune.head import Head, MixtureHead
+from gentune.head import Head, MixtureHead, load_head
 from gentune.trunk import Trunk
 from r2_ladder import build_feats
 
@@ -118,7 +118,7 @@ def test_packaged(tag):
         print(f'  SKIP  packaged checks: {tag} is not in {md}')
         return
     c = np.load(hp)
-    head = (MixtureHead if str(c.get('head_kind', 'bilinear')) == 'mixture' else Head)(hp)
+    head = load_head(hp)
     s = np.load(sb)
     tp = f'{md}/{tag}_trunk.npz'
     if os.path.exists(tp):
@@ -127,7 +127,9 @@ def test_packaged(tag):
         # vectors carry that quantization while a user works in float32. What must hold
         # exactly is that this numpy trunk IS the torch network, which the float16 round trip
         # tests. The float32 number is the size of the quantization gap, reported not tested.
-        trunk = Trunk(tp)
+        # The reader would round a float16 stage's inputs itself, so it is held at float32 here
+        # and the rounding is applied by hand below.
+        trunk = Trunk(tp, feature_precision='float32')
         Fr = F.trunk_features(s['particles'])
         ref = np.asarray(s['AE'], np.float64)
         sd = float(np.std(ref))

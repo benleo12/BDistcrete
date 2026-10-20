@@ -75,7 +75,7 @@ def closure(tag):
         return None, (f'{tag} is an {int(cond["ntheta"])} parameter head but design {dtag!r} has '
                       f'{cfg["ntheta"]} parameters. Add {tag!r} to ALIAS, or point DM_DATA at the '
                       f'right mixture data set.')
-    HK = MixtureHead if str(cond.get('head_kind', 'cond')) == 'mixture' else Head
+    HK = MixtureHead if str(cond.get('head_kind', 'cond')) in ('mixture', 'geometric') else Head
     h = HK(cp)
     r = np.load(rp)
     OBS = cfg['obs'] + cfg['flav_obs']

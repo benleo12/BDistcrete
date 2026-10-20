@@ -13,6 +13,13 @@ is a plain conversion of the torch checkpoint, so no deep learning framework is 
 The pooled embedding is divided by a constant fixed at initialization (emb_scale), one value
 per ensemble member. It is part of the model, not a preprocessing choice, so it travels in the
 npz and is applied here.
+
+So does the precision of the inputs. Stages trained through the memmap cache saw their
+per-particle features stored as float16, and their trunk file says feature_precision = float16.
+normalize() then rounds your features the same way before anything else, so the network reads
+exactly what it was trained on. Reading them in float32 instead moves a reweighted mean of MIX17
+by up to 0.17 percent, the size of its accuracy floor (analysis/precision_gap.py). A file without
+the field is a float32 stage and is read as before.
 """
 import numpy as np
 
@@ -26,9 +33,14 @@ def _act(z, name):
 
 
 class Trunk:
-    def __init__(self, path):
+    def __init__(self, path, feature_precision=None):
+        """feature_precision overrides the file's own value, 'float32' or 'float16'. It exists to
+        measure the difference the rounding makes, and a user has no reason to set it."""
         t = np.load(path)
         self.path = path
+        self.feature_precision = feature_precision or (
+            str(t['feature_precision']) if 'feature_precision' in t.files else 'float32')
+        assert self.feature_precision in ('float32', 'float16'), self.feature_precision
         self.act = str(t['act'])
         self.ENS = int(t['ens'])
         self.K = int(t['K'])
@@ -47,8 +59,12 @@ class Trunk:
         """Standardize the per-particle features with the statistics the model was trained
         with, then re-zero the padded slots so pooling still ignores them. Using your own
         sample's statistics here would remove exactly the between-run differences the model
-        reads, so the shipped mu and sigma are the only correct choice."""
-        f = (np.asarray(feats, np.float32) - self.feat_mu)/self.feat_sd
+        reads, so the shipped mu and sigma are the only correct choice. A float16 stage first
+        rounds the raw features to float16, as its training did."""
+        f = np.asarray(feats, np.float32)
+        if self.feature_precision == 'float16':
+            f = f.astype(np.float16).astype(np.float32)
+        f = (f - self.feat_mu)/self.feat_sd
         return f*np.asarray(mask, np.float32)[..., None]
 
     def _member(self, m, fn, mask):

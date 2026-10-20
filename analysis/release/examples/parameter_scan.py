@@ -17,7 +17,7 @@ import argparse, os, sys
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from gentune import Head, MixtureHead, Trunk, features, axes
+from gentune import load_head, Trunk, features, axes
 
 
 def observables(particles, mask):
@@ -47,7 +47,7 @@ def main():
 
     hp = f'{a.models}/{a.stage}_head.npz'
     kind = str(np.load(hp).get('head_kind', 'cond'))
-    head = (MixtureHead if kind == 'mixture' else Head)(hp)
+    head = load_head(hp)
     sb = np.load(f'{a.models}/{a.stage}_selftest.npz')
     tp = f'{a.models}/{a.stage}_trunk.npz'
     A = (Trunk(tp).embed(features.trunk_features(sb['particles']), sb['mask'])

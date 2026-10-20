@@ -29,6 +29,11 @@ import os
 import numpy as np
 
 
+# head_kind of the two mixture exports: 'mixture' is the additive (1 - f) q_S + f q_H of the
+# earlier release, 'geometric' the multiplicative q_S^(1-f) q_H^f of the paper's MIX17. Every
+# other export is a single-generator head.
+MIXTURE_KINDS = ('mixture', 'geometric')
+
 def sigm(z):
     return 0.5*(1.0 + np.tanh(0.5*z))         # logistic, written so large |z| cannot overflow
 
@@ -42,7 +47,7 @@ class Head:
         # field existed carry no head_kind at all. Both are this class, and only the mixture is not,
         # so test for what is excluded rather than for one accepted spelling.
         kind = str(c.get('head_kind', 'cond'))
-        assert kind != 'mixture', f'{path} is a mixture export, use MixtureHead'
+        assert kind not in MIXTURE_KINDS, f'{path} is a mixture export, use MixtureHead or load_head'
         self.path = path
         self.mtime = os.path.getmtime(path)
         self.K = int(c['K'])                   # contraction width, includes any additive columns
@@ -241,12 +246,16 @@ class MixtureHead(Head):
     the second generator's, and f in [0, 1] the fraction of the second. Per ensemble member
 
         l_S = < a(Phi), b_S(theta_S) > ,   l_H = < a(Phi), b_H(theta_H) > ,
-        f_m = log[ (1 - f) exp(l_S) + f exp(l_H) ] ,
 
-    and the ensemble logit is the mean of f_m. Written this way the head is exact at the
-    edges: the derivative with respect to theta_H vanishes identically at f = 0 and the one
-    with respect to theta_S at f = 1, so a fraction of zero is the first generator alone and
-    not an approximation to it.
+    and the member's logit is
+
+        f_m = (1 - f) l_S + f l_H                       (head_kind 'geometric', MIX17)
+        f_m = log[ (1 - f) exp(l_S) + f exp(l_H) ]      (head_kind 'mixture', additive)
+
+    for the multiplicative mixture q_S^(1-f) q_H^f and the additive one (1 - f) q_S + f q_H.
+    The ensemble logit is the mean of f_m. Both forms are exact at the edges: the derivative
+    with respect to theta_H vanishes identically at f = 0 and the one with respect to theta_S
+    at f = 1, so a fraction of zero is the first generator alone and not an approximation to it.
 
     The two parameter blocks are read from the shapes of the exported networks rather than
     assumed to be equal in size, so a mixture of generators with different parameter counts
@@ -328,3 +337,9 @@ class MixtureHead(Head):
             big = np.maximum(lS, lH)
             acc += big + np.log(np.clip((1 - fr)*np.exp(lS - big) + fr*np.exp(lH - big), 1e-300, None))
         return acc/self.ENS
+
+
+def load_head(path):
+    """The head class an export needs, read from its head_kind."""
+    kind = str(np.load(path).get('head_kind', 'cond'))
+    return (MixtureHead if kind in MIXTURE_KINDS else Head)(path)

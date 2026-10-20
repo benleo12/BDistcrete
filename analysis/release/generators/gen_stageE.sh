@@ -3,6 +3,9 @@
 # usage: gen_stageE.sh <rid> <alphas> <pt_max> <alpha_l> <gamma_l> <strange> <baryon> <alpha_g> <beta_l> <events>
 set -e
 rid=$1; as=$2; ptmax=$3; al=$4; gl=$5; sf=$6; bf=$7; ag=$8; bl=$9; ev=${10}
+# Symmetry addition: GEN_SEED gives a run extra, independent events at the same parameters
+# (the default, the run id, is the published recipe).
+seed=${GEN_SEED:-$rid}
 # Argument sanity, so a column-misalignment fails loudly instead of running for hours.
 # (An earlier version lost one column to a bad `shift`, putting the event count into BETA_L,
 #  which made cluster fragmentation grind at 4 events per 90 minutes with no error message.)
@@ -24,7 +27,7 @@ cd "$rd"
 cat > Sherpa.yaml <<YAML
 EVENTS: $ev
 EVENT_OUTPUT: HepMC3_GenEvent[events]
-RANDOM_SEED: $rid
+RANDOM_SEED: $seed
 BEAMS: [11, -11]
 BEAM_ENERGIES: 45.6
 ALPHAS(MZ): $as

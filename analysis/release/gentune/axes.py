@@ -31,7 +31,7 @@ NAMES = {
 
 GENERATOR = {'C_1M': 'Sherpa 3', 'E': 'Sherpa 3', 'F': 'Herwig 7.3', 'MIX17': 'both'}
 
-DESIGN = {'E': 'stageE_design.csv', 'F': 'stageF_design_aug.csv'}
+DESIGN = {'E': 'stageE_design_v3all.csv', 'F': 'stageF_design_v3all.csv'}
 
 NOTES = {
     'alphas': 'the shower coupling at the Z mass',

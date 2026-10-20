@@ -490,7 +490,7 @@ def coverage():
 
 # ---- Fig. the calculation against ALEPH and DELPHI (App. C) --------------------------------------
 def aleph():
-    """The NNLL+NLO calculation with the dispersive shift at the fixed point of the fit to ALEPH, with its
+    """The NNLL+NLO calculation with the dispersive shift at the input values of the demonstration, with its
     theory band (Eq. thband: the two scale pairs at half weight, the change of scheme once, the three
     dispersive-model variations as their root mean square, each side kept apart), against ALEPH and
     DELPHI, both normalized to the total rate as published (calc_bins.py)."""
@@ -530,11 +530,11 @@ def aleph():
     ax.set_yscale('log'); ax.set_xlim(0, 0.5); ax.set_ylim(2e-3, 40)
     ax.set_ylabel(r'$\frac{1}{\sigma}\frac{d\sigma}{d\tau}$')
     plt.setp(ax.get_xticklabels(), visible=False)
-    ax.text(0.5*(WLO + WHI), 22, 'window of the fit', ha='center', fontsize=7.5, color=REF)
+    ax.text(0.5*(WLO + WHI), 22, 'window of the calculation', ha='center', fontsize=7.5, color=REF)
     ax.legend([(Patch(color=THEORY, alpha=BAND_ALPHA, lw=0), Line2D([], [], color=THEORY, lw=1.3)),
                Line2D([], [], color=THEORY, lw=1.0, ls=(0, (3, 2))), ha, hd_],
               ['calculation and its theory band', 'calculation outside the window',
-               'ALEPH, used in the fit', 'DELPHI'], loc='lower left', fontsize=7.5, handlelength=2.0)
+               'ALEPH', 'DELPHI'], loc='lower left', fontsize=7.5, handlelength=2.0)
     trim(ax)
     # ratio panel: data over the calculation, inside the window and up to tau = 0.4
     ar.stairs(np.where(inw, 1 + up/cen, np.nan), edges, baseline=np.where(inw, 1 - dn/cen, np.nan), fill=True, color=THEORY, alpha=BAND_ALPHA, lw=0)

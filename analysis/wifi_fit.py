@@ -13,6 +13,12 @@ of L and U the covariance of its gradient, estimated from the fit set. The denom
 pooled events across the parameter points, so U sums each event's contributions before taking the
 covariance over events.
 
+WIFI_LOSS=bce minimizes instead the members' own training loss, the balanced binary cross entropy
+< log(1 + exp(-w.f)) >_num + < log(1 + exp(w.f)) >_den, with the same minimum for a well-specified
+basis. It does not reward pushing a denominator event whose log ratio is already very negative
+further down (for a pure run, the distinguishable events of the other generator), which the loss
+above rewards without limit.
+
 Closure: the weights of the reference sample at every held-out point are rebuilt from the export,
 e^{w.f}, and compared with the held-out run as in the paper (comparison half, closure width), for
 the published network (w_ij = delta_ij/(M T)) and for the wifi fit, so the fit cannot silently
@@ -22,6 +28,7 @@ make the weights worse.
 """
 import os, sys, json, time
 import numpy as np
+from scipy.special import expit
 sys.path.insert(0, '.')
 from r2_ladder import make_bins, pulls, width_of
 
@@ -30,6 +37,7 @@ B = np.load(bas); c = np.load(export, mmap_mode='r')
 ENS, K = int(B['ens']), int(B['K']); M2 = ENS*ENS; OBS = [str(o) for o in B['obs']]
 kind = str(B['kind']); T = float(c['temperature'])
 OUT = os.environ.get('WIFI_FIT_OUT', bas.replace('_basis.npz', '_fit'))
+LOSS = os.environ.get('WIFI_LOSS', 'mlc'); assert LOSS in ('mlc', 'bce'), LOSS
 t0 = time.time()
 
 
@@ -44,6 +52,12 @@ print(f'{M2 + 1} weights, numerator {Nn} rows, denominator {Nd} rows [{time.time
 
 def loss_grad_hess(w):
     zn, zd = Xn @ w, Xd @ w
+    if LOSS == 'bce':
+        sn, sd_ = expit(-zn), expit(zd)
+        L = np.mean(np.logaddexp(0, -zn)) + np.mean(np.logaddexp(0, zd))
+        gn = (Xn*(-sn)[:, None]).sum(0)/Nn; gd = (Xd*sd_[:, None]).sum(0)/Nd
+        H = (Xn*(sn*(1 - sn))[:, None]).T @ Xn/Nn + (Xd*(sd_*(1 - sd_))[:, None]).T @ Xd/Nd
+        return L, gn + gd, H
     en, ed = np.exp(-zn), np.exp(zd)
     L = np.mean(-zn + en - 1) + np.mean(zd + ed - 1)
     gn = (Xn*(-(1 + en))[:, None]).sum(0)/Nn; gd = (Xd*(1 + ed)[:, None]).sum(0)/Nd
@@ -71,8 +85,11 @@ print(f'Newton: {it+1} iterations, loss {L0:.6f} (published weights) -> {L:.6f},
 
 # the sandwich: U from the per-event gradient contributions
 zn, zd = Xn @ w, Xd @ w
-an = Xn*(-(1 + np.exp(-zn)))[:, None]/Nn                    # numerator rows, one event each
-bd = Xd*(1 + np.exp(zd))[:, None]/Nd                         # denominator rows, events reused across thetas
+if LOSS == 'bce':
+    an = Xn*(-expit(-zn))[:, None]/Nn; bd = Xd*expit(zd)[:, None]/Nd
+else:
+    an = Xn*(-(1 + np.exp(-zn)))[:, None]/Nn                    # numerator rows, one event each
+    bd = Xd*(1 + np.exp(zd))[:, None]/Nd                         # denominator rows, events reused across thetas
 eid = B['den_eid']; ue, inv = np.unique(eid, return_inverse=True)
 bde = np.zeros((len(ue), len(w))); np.add.at(bde, inv, bd)   # per-event sums
 def cov_of_sums(S):
@@ -124,7 +141,7 @@ for name in per:
 sig2 = np.einsum('ni,ij,nj->n', Xn, Cw, Xn)
 print(f'learning uncertainty on log w over the fit set: median {np.sqrt(np.median(sig2)):.4f}, 95th percentile {np.sqrt(np.percentile(sig2, 95)):.4f}')
 np.savez(OUT + '.npz', w=w, C=Cw, V=V, U=U, w_published=w_pub, ens=ENS, K=K, kind=kind)
-json.dump(dict(export=export, basis=bas, n_weights=len(w), loss_published=float(L0), loss_wifi=float(L), newton_iterations=int(it + 1),
+json.dump(dict(export=export, basis=bas, loss=LOSS, n_weights=len(w), loss_published=float(L0), loss_wifi=float(L), newton_iterations=int(it + 1),
                w=w.tolist(), w_err=sd.tolist(), corr_max_offdiag=float(np.abs(corr - np.eye(len(w))).max()),
                closure=res, logw_sigma_median=float(np.sqrt(np.median(sig2))), logw_sigma_p95=float(np.sqrt(np.percentile(sig2, 95))),
                fit_split=int(B['fit_split'])), open(OUT + '.json', 'w'), indent=1)

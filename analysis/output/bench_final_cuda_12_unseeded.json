@@ -1,0 +1,114 @@
+{
+ "device": "cuda",
+ "threads": 12,
+ "reps": 5,
+ "early_reps": 5,
+ "early_warmup": true,
+ "host": "cn113",
+ "model": "MIXGEOV3S9",
+ "grid": "output/thrust_targets_nlo_point.npz",
+ "skip": [],
+ "torch": "2.7.1+cu126",
+ "gpu": "NVIDIA H200",
+ "n_events": 1149840,
+ "n_particles": 47843670,
+ "prep_seconds": 23.968466005055234,
+ "weights_per_network": {
+  "concatenation": 83757,
+  "late": 83757
+ },
+ "one_time_seconds": {
+  "factorized": 0.9254721580073237,
+  "late": 0.9077552610542625,
+  "concatenation": 0.0
+ },
+ "store_GB": {
+  "factorized": 0.88307712,
+  "late": 4.70974464,
+  "concatenation_particles": 1.72237212,
+  "concatenation_kept_features": 9.41948928
+ },
+ "a_weights_seconds": {
+  "factorized": 0.0025388849899172783,
+  "late": 0.043859572149813175,
+  "concatenation": 1.9189660348929465
+ },
+ "a_all": {
+  "factorized": [
+   0.0026551668997853994,
+   0.0025428670924156904,
+   0.0025254569482058287,
+   0.0025307529140263796,
+   0.0025388849899172783
+  ],
+  "late": [
+   0.043881572084501386,
+   0.043859572149813175,
+   0.04387694294564426,
+   0.04383990587666631,
+   0.04383188602514565
+  ],
+  "concatenation": [
+   1.9194770571775734,
+   1.9190338540356606,
+   1.9189660348929465,
+   1.9187897669617087,
+   1.9188429322093725
+  ]
+ },
+ "n_network_step_seconds": {
+  "factorized": 0.005096057895570993,
+  "late": 0.08747185184620321,
+  "concatenation": 5.698283479083329
+ },
+ "n_all": {
+  "factorized": [
+   0.0055506108328700066,
+   0.00503553100861609,
+   0.0049450930673629045,
+   0.005445532966405153,
+   0.005096057895570993
+  ],
+  "late": [
+   0.08753384090960026,
+   0.08747185184620321,
+   0.08745116298086941,
+   0.0874794889241457,
+   0.0874415710568428
+  ],
+  "concatenation": [
+   5.688433087896556,
+   5.695292113116011,
+   5.700592627050355,
+   5.699085009051487,
+   5.698283479083329
+  ]
+ },
+ "gradcheck": {
+  "factorized": {
+   "gradient": -178.20273647751597,
+   "finite_difference": -178.2076699553727,
+   "rel_diff": 2.76838693753177e-05,
+   "passes": true
+  },
+  "late": {
+   "gradient": -17.372003888394936,
+   "finite_difference": -17.372001236799406,
+   "rel_diff": 1.5263615824499206e-07,
+   "passes": true
+  },
+  "concatenation": {
+   "gradient": 4372.6814777472755,
+   "finite_difference": 4371.837357916684,
+   "rel_diff": 0.00019308125199654207,
+   "passes": true
+  },
+  "control_concatenation_one_network_left_out": {
+   "gradient": 3281.0965962447835,
+   "finite_difference": 4371.837357916684,
+   "rel_diff": 0.2494925296561517,
+   "passes": false
+  }
+ },
+ "gradcheck_ok": true
+}

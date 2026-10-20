@@ -96,7 +96,10 @@ if STEPS > CKPTS[-1]:
     # Longer budgets (LADDER_STEPS above 36000) keep checkpointing every 6000 steps up to
     # STEPS, so selection can pick a late checkpoint and the cosine schedule actually ends.
     # Unchanged for STEPS <= 36000, which reproduces the published checkpoint list.
-    CKPTS += list(range(CKPTS[-1] + 6000, STEPS, 6000)) + [STEPS]
+    # LADDER_CKPT_EVERY spaces them more widely for very long budgets, where scoring every 6000
+    # steps would cost more than the training; 6000, the default, is unchanged.
+    _every = int(os.environ.get('LADDER_CKPT_EVERY', '6000'))
+    CKPTS += list(range(CKPTS[-1] + _every, STEPS, _every)) + [STEPS]
 NREF_PER = 12000
 MIN_COUNT = 5          # per-bin occupancy required on BOTH sides
 NBIN = 26
@@ -139,7 +142,37 @@ STAGES = {
 }
 
 
-def _stage_from_csv(data, csv, axes, roles_train=('train',), role_held='held'):
+# LADDER_ABC_DESIGN=<dir> replaces the training runs of the ladder stages A, B and C by those of
+# <dir>/stage{A,B,C}_design_aug.csv (the original grid plus space-filling points in the same box).
+# The held-out points, observables, normalization and everything else stay as registered above.
+_ABC_DESIGN = os.environ.get('LADDER_ABC_DESIGN', '')
+if _ABC_DESIGN:
+    import pandas as _pd
+    for _s in 'ABC':
+        _f = os.path.join(_ABC_DESIGN, f'stage{_s}_design_aug.csv')
+        if os.path.exists(_f):
+            _d = _pd.read_csv(_f); _ax = [c for c in _d.columns if c not in ('run_id', 'role')]
+            assert len(_ax) == STAGES[_s]['ntheta'], f'{_f}: {len(_ax)} parameters for stage {_s}'
+            _held = {int(r.run_id): tuple(float(r[a]) for a in _ax) for _, r in _d[_d.role == 'held'].iterrows()}
+            assert _held.keys() == STAGES[_s]['held'].keys(), f'{_f}: held-out runs differ from the registry'
+            STAGES[_s]['train'] = {int(r.run_id): tuple(float(r[a]) for a in _ax)
+                                   for _, r in _d[_d.role == 'train'].iterrows()}
+# LADDER_HELD_CSV=<csv>, only with LADDER_SCORE_FROM: score a trained model at other points, the
+# runs of the csv (run_id, role and the parameters in the column order of the stage's design file)
+# in place of the registered held-out runs, for the blind test of the paper. Unset, nothing changes.
+_HELD_CSV = os.environ.get('LADDER_HELD_CSV', '')
+if _HELD_CSV:
+    assert os.environ.get('LADDER_SCORE_FROM'), 'LADDER_HELD_CSV only replaces the test points of a trained model'
+    import pandas as _pd
+    _d = _pd.read_csv(_HELD_CSV); _ax = [c for c in _d.columns if c not in ('run_id', 'role')]
+    for _s in os.environ.get('LADDER_STAGES', '').split(','):
+        if _s in STAGES:
+            assert len(_ax) == STAGES[_s]['ntheta'], f'{_HELD_CSV}: {len(_ax)} parameters for stage {_s}'
+            STAGES[_s]['held'] = {int(r.run_id): tuple(float(r[a]) for a in _ax) for _, r in _d.iterrows()}
+
+
+def _stage_from_csv(data, csv, axes, roles_train=('train',), role_held='held', flavor=True,
+                    flav_obs=('nbaryon', 'strange')):
     """Build a STAGES entry from a design CSV instead of hard-coding run ids and thetas.
 
     The redesigned boxes (Stage E, Sherpa, 8 axes; Stage F, Herwig, 8 parameters on a 6-dimensional
@@ -152,11 +185,11 @@ def _stage_from_csv(data, csv, axes, roles_train=('train',), role_held='held'):
     assert len(tr) and len(hd), f'{csv}: train {len(tr)} held {len(hd)}'
     mk = lambda g: {int(r.run_id): tuple(float(r[a]) for a in axes) for _, r in g.iterrows()}
     lo = d[list(axes)].min(); hi = d[list(axes)].max()
-    return dict(data=data, flavor=True, ntheta=len(axes),
+    return dict(data=data, flavor=flavor, ntheta=len(axes),
                 train=mk(tr), held=mk(hd),
                 norm=[(float((lo[a]+hi[a])/2), float((hi[a]-lo[a])/2)) for a in axes],
                 obs=['1_minus_thrust', 'mult_total', 'B_total', 'rho_heavy'],
-                flav_obs=['nbaryon', 'strange'])
+                flav_obs=list(flav_obs))
 
 
 E_AXES = ('alphas', 'pt_max', 'alpha_l', 'gamma_l', 'strange_fraction', 'baryon_fraction',
@@ -177,6 +210,18 @@ for _tag, _data, _csv, _ax in (('E', os.environ.get('STAGEE_DATA', 'data_stageE'
         # is a real error, and staying silent about it once cost a confusing afternoon.
         if os.path.exists(f'{_data}/{_csv}') or os.path.exists(_csv):
             print(f'[stage {_tag}] design {_csv} is present but unusable: {_e}')
+# STAGEW_CSV=<design csv> (with STAGEW_DATA) registers the wide coupling scan as stage W: the
+# coupling alone over a wide range, the inputs and observables of Stage A, the box from the design.
+if os.environ.get('STAGEW_CSV'):
+    STAGES['W'] = _stage_from_csv(os.environ.get('STAGEW_DATA', 'data_widebox'), os.environ['STAGEW_CSV'],
+                                  ('alphas',), flavor=False, flav_obs=())
+# LADDER_REF_RUNS=<run ids, comma separated> draws the pooled reference from those training runs
+# only, and LADDER_NREF_TOTAL=<n> fixes its total size (n divided equally among the runs that
+# supply it), so references of different composition compare at the same statistics. Both need
+# LADDER_LOWMEM=1 (per-run reference draws). Unset, the reference is NREF_PER events of every
+# training run, as published.
+REF_RUNS = [int(x) for x in os.environ.get('LADDER_REF_RUNS', '').split(',') if x.strip()]
+NREF_TOTAL = int(os.environ.get('LADDER_NREF_TOTAL', '0'))
 
 
 def build_feats(p, mask, flavor, eps=1e-6):
@@ -423,7 +468,33 @@ class GeoMixturePFN(MixturePFN):
 
 
 HEAD_KIND = os.environ.get('LADDER_HEAD_KIND', 'cond')    # 'cond' (published), 'mixture' or 'geometric'
-MIXTURE_KINDS = ('mixture', 'geometric')
+MIXTURE_KINDS = ('mixture', 'geometric', 'concat_geometric')
+# 'concat' (one generator) and 'concat_geometric' (the multiplicative mixture) train the
+# concatenation network of DCTR, theta appended to every particle, through exactly the same data,
+# fit split, bootstrap members, reference, checkpoint selection, temperature and closure as the
+# factorized heads, so the two networks differ only in the function class.
+CONCAT_KINDS = ('concat', 'concat_geometric')
+CONCAT = HEAD_KIND in CONCAT_KINDS
+# LADDER_SCORE_FROM=<output/models/..._trunk.pt or ..._concat.pt> scores an ensemble that was
+# already trained instead of training one: the data, reference, feature standardization and
+# held-out split are rebuilt exactly as in training (all deterministic), the saved members and
+# their pooled-sum scales are loaded, and the closure is reported at the temperature fixed in
+# training. Pointing the data at a held-out set with more events gives the sharper test with
+# the same estimator. Nothing is exported.
+SCORE_FROM = os.environ.get('LADDER_SCORE_FROM', '')
+# LADDER_PATIENCE=<steps> ends training once the stop-split width has not improved for that many
+# steps (the selected checkpoint is unchanged whenever no later improvement would have come after
+# such a stretch). 0, the default, trains the full budget.
+PATIENCE = int(os.environ.get('LADDER_PATIENCE', '0'))
+# LADDER_RESUME=<file> writes the whole training state (members, optimizers, schedules, the
+# draw generators, the trajectory and the best snapshot) to <file> at every checkpoint, and a job
+# that finds the file continues from its last checkpoint. A budget longer than one queue slot
+# then runs as a chain of jobs and trains as one job would. Unset, nothing is written or read.
+RESUME = '' if SCORE_FROM else os.environ.get('LADDER_RESUME', '')
+# LADDER_GPU_FETCH=1 (with LADDER_MMAP=1) moves each gathered float16 batch to the device before
+# the float32 standardization instead of after it. The arithmetic is the same and the result is
+# bitwise equal to the CPU path (checked on an H200), only faster when the CPU is the bottleneck.
+GPU_FETCH = os.environ.get('LADDER_GPU_FETCH', '') == '1'
 TARGET_PURE = os.environ.get('LADDER_TARGET_PURE', '') == '1'
 FIT_FRAC = float(os.environ.get('LADDER_FIT_FRAC', '0'))
 BOOTSTRAP = os.environ.get('LADDER_BOOTSTRAP', '') == '1'
@@ -446,7 +517,81 @@ def bootstrap_idx(member, rid, train_idx):
     return np.sort(g.choice(train_idx, len(train_idx), replace=True))
 
 
+class ConcatPFN(nn.Module):
+    """The concatenation network of DCTR: theta appended to every particle's features, the PFN
+    sizes of CondPFN (Phi: (C + d) -> 100 -> 100 -> 256, masked sum, F: 256 -> 100 -> 100 -> 100
+    -> 1), he_uniform initialization and the same pooled-sum scaling. The event side depends on
+    theta, so emb() passes the particles through and f_from() runs the whole network; run_stage
+    evaluates it on the reference once per theta (see _concat_logits)."""
+    def __init__(s, C, ntheta, K=None):
+        super().__init__()
+        s.phi, L = _mlp(C + ntheta, PHI_SIZES)
+        s.head, _ = _mlp(L, F_SIZES, 1)
+        s.ntheta = ntheta; s.additive = False
+        s.emb_auto = (EMB_SCALE == 'auto')
+        s.emb_scale = 1.0 if s.emb_auto else float(EMB_SCALE)
+        for mod in s.modules():
+            if isinstance(mod, nn.Linear):
+                nn.init.kaiming_uniform_(mod.weight, nonlinearity='relu'); nn.init.zeros_(mod.bias)
+    def pooled(s, f, m, th):
+        B, P, _ = f.shape
+        x = torch.cat([f, th.unsqueeze(1).expand(B, P, th.shape[-1])], dim=-1)
+        return (s.phi(x.reshape(B*P, -1)).reshape(B, P, -1) * m.unsqueeze(-1)).sum(1)
+    @torch.no_grad()
+    def autoscale(s, f, m, th=None):
+        """Fix emb_scale once, at initialization, at the centre of the box (theta = 0 in the
+        standardized coordinates), so the head's first layer sees unit-variance inputs."""
+        if not s.emb_auto: return s.emb_scale
+        if th is None: th = f.new_zeros(f.shape[0], s.ntheta)
+        lin0 = [l for l in s.head if isinstance(l, nn.Linear)][0]
+        s.emb_scale = float(lin0(s.pooled(f, m, th)).std()); s.emb_auto = False
+        return s.emb_scale
+    def forward(s, f, m, th):
+        if s.emb_auto: s.autoscale(f, m)
+        E = s.pooled(f, m, th)
+        return s.head(E if s.emb_scale == 1.0 else E/s.emb_scale).squeeze(-1)
+    def emb(s, f, m):
+        return (f, m)
+    def f_from(s, E, th):
+        return s.forward(E[0], E[1], th)
+
+
+class ConcatGeoMixture(nn.Module):
+    """The multiplicative mixture on the concatenation network, as GeoMixturePFN on the factorized
+    one: one network g sees a generator's own parameters, zero-padded to the larger block, and a
+    one-hot generator label, and log w = (1 - f) g(Phi; theta_S, S) + f g(Phi; theta_H, H)."""
+    def __init__(s, C, ntheta, K=None):
+        super().__init__()
+        env = os.environ.get('LADDER_MIX_SPLIT', '')
+        nS, nH = (int(x) for x in env.split(',')) if env else ((ntheta - 1)//2, (ntheta - 1)//2)
+        assert nS + nH + 1 == ntheta, f'mixture blocks {nS} + {nH} + 1 do not make {ntheta} parameters'
+        s.nS, s.nH, s.npad, s.ntheta = nS, nH, max(nS, nH), ntheta
+        s.g = ConcatPFN(C, s.npad + 2); s.additive = False
+    @property
+    def emb_auto(s): return s.g.emb_auto
+    @property
+    def emb_scale(s): return s.g.emb_scale
+    def _arg(s, t, k):
+        lab = t.new_zeros(t.shape[0], 2); lab[:, k] = 1.0
+        return torch.cat([t, t.new_zeros(t.shape[0], s.npad - t.shape[1]), lab], dim=1)
+    @torch.no_grad()
+    def autoscale(s, f, m):
+        return s.g.autoscale(f, m, s._arg(f.new_zeros(f.shape[0], s.nS), 0))
+    def forward(s, f, m, th):
+        lS = s.g(f, m, s._arg(th[:, :s.nS], 0)); lH = s.g(f, m, s._arg(th[:, s.nS:s.nS + s.nH], 1))
+        fr = (0.5 + 0.5*th[:, -1]).clamp(0.0, 1.0)
+        return (1.0 - fr)*lS + fr*lH
+    def emb(s, f, m):
+        return (f, m)
+    def f_from(s, E, th):
+        return s.forward(E[0], E[1], th)
+
+
 def make_model(C, ntheta, K):
+    if HEAD_KIND == 'concat':
+        return ConcatPFN(C, ntheta)
+    if HEAD_KIND == 'concat_geometric':
+        return ConcatGeoMixture(C, ntheta)
     return (GeoMixturePFN(C, ntheta, K=K) if HEAD_KIND == 'geometric' else
             MixturePFN(C, ntheta, K=K) if HEAD_KIND == 'mixture' else CondPFN(C, ntheta, K=K))
 
@@ -623,6 +768,12 @@ def run_stage(tag):
     P = {}; SH = {}; NB = {}; STR = {}
     tf = {}; tm = {}; Psub = {}; SUBIDX = {}; HEAD = {}; FITIDX = {}; TRAINIDX = {}
     assert not (FIT_FRAC > 0 and not LOWMEM), 'the fit split needs LADDER_LOWMEM=1 (per-run reference draws)'
+    assert LOWMEM or not (REF_RUNS or NREF_TOTAL), 'LADDER_REF_RUNS and LADDER_NREF_TOTAL need LADDER_LOWMEM=1'
+    assert set(REF_RUNS) <= set(cfg['train']), f'LADDER_REF_RUNS {REF_RUNS} are not all training runs'
+    _ref_from = REF_RUNS or list(cfg['train'])
+    _nref_per = NREF_TOTAL // len(_ref_from) if NREF_TOTAL else NREF_PER
+    if REF_RUNS or NREF_TOTAL:
+        print(f'[{tag}] reference: {_nref_per} events from each of {len(_ref_from)} training runs', flush=True)
     for rid in list(cfg['train']) + list(cfg['held']):
         d = np.load(f'{DATA}/particles_full_{rid:04d}.npz')
         part, msk = d['particles'], d['mask']
@@ -642,7 +793,7 @@ def run_stage(tag):
                 tf[rid] = np.load(f'{MMAP_DIR}/f_{rid}.npy', mmap_mode='r')
                 tm[rid] = np.load(f'{MMAP_DIR}/m_{rid}.npy', mmap_mode='r')
             n = len(tf[rid])
-            idx = np.random.default_rng(50000 + rid).choice(n, min(NREF_PER, n), replace=False)
+            idx = np.random.default_rng(50000 + rid).choice(n, min(_nref_per if rid in _ref_from else 0, n), replace=False)
             SUBIDX[rid] = idx
             Psub[rid] = (part[idx].copy(), msk[idx].copy())
             if FIT_FRAC > 0:
@@ -665,8 +816,13 @@ def run_stage(tag):
         FMU, FSD = fit_feature_norm([tf[r] for r in cfg['train']], [tm[r] for r in cfg['train']])
         for rid in cfg['train']:
             tf[rid] = apply_feature_norm(tf[rid], tm[rid], FMU, FSD)
+    FMU_D, FSD_D = FMU.to(DEV), FSD.to(DEV)
     def fetch(rid, idx):
         """Normalized (features, mask) rows of a training run; from the memmap under MMAP."""
+        if MMAP and GPU_FETCH:
+            f = torch.from_numpy(np.asarray(tf[rid][idx])).to(DEV).float()
+            m = torch.from_numpy(np.asarray(tm[rid][idx])).to(DEV).float()
+            return apply_feature_norm(f, m, FMU_D, FSD_D), m
         if MMAP:
             f = torch.from_numpy(np.asarray(tf[rid][idx]).astype(np.float32))
             m = torch.from_numpy(np.asarray(tm[rid][idx]).astype(np.float32))
@@ -721,7 +877,7 @@ def run_stage(tag):
               f'({sum(tn_base(cfg["train"][r_])[-1] < 0 for r_ in rids)} at f=0, the rest at f=1); '
               f'the reference pools all {len(cfg["train"])} runs', flush=True)
     POOL = {}                               # (member, rid) -> index pool for the target draws
-    if FIT_FRAC > 0:
+    if FIT_FRAC > 0 and not SCORE_FROM:
         for r_ in rids:
             for mi_ in range(ENS):
                 POOL[(mi_, r_)] = bootstrap_idx(mi_ + SEED_OFFSET, r_, TRAINIDX[r_]) if BOOTSTRAP else TRAINIDX[r_]
@@ -735,7 +891,11 @@ def run_stage(tag):
 
     def embeddings():
         """Reference embeddings do not depend on theta, so they are computed once per pass.
-        Under LADDER_EMB_STORE=a they are reduced at once to the K-vectors a(Phi)."""
+        Under LADDER_EMB_STORE=a they are reduced at once to the K-vectors a(Phi). For the
+        concatenation network nothing is theta-free: each member gets an empty cache of its
+        reference logits per theta, filled by _concat_logits and dropped with the pass."""
+        if CONCAT:
+            return [dict() for _ in models]
         Es = []
         for m in models:
             m.eval(); E = emb_all(m, ref_f, ref_m)
@@ -745,8 +905,22 @@ def run_stage(tag):
             Es.append(E); m.train()
         return Es
 
+    def _concat_logits(m, cache, th):
+        """A concatenation member's log ratio on the whole reference at one theta (th holds the
+        same theta on every row), computed in chunks and cached for the rest of the pass."""
+        key = tuple(np.round(th[0].detach().cpu().numpy().astype(np.float64), 10))
+        if key not in cache:
+            was = m.training; m.eval()
+            with torch.no_grad():
+                cache[key] = torch.cat([m(ref_f[i:i+EMB_CHUNK], ref_m[i:i+EMB_CHUNK], th[i:i+EMB_CHUNK])
+                                        for i in range(0, Nref, EMB_CHUNK)])
+            m.train(was)
+        return cache[key]
+
     def fval(m, E, th):
         """The member's log ratio from what embeddings() stored for it."""
+        if CONCAT:
+            return _concat_logits(m, E, th)
         return m.f_from_a(E, th) if EMB_STORE == 'a' else m.f_from(E, th)
 
     def logits_at(Es, theta):
@@ -800,6 +974,39 @@ def run_stage(tag):
 
     step = 0; best = None; traj = []
     revived = {}
+    SCORE_T = None
+    if SCORE_FROM:
+        _sv = torch.load(SCORE_FROM, map_location=DEV, weights_only=False)
+        assert len(_sv['models']) == len(models), f'{SCORE_FROM} holds {len(_sv["models"])} members, not {len(models)}'
+        if CONCAT:
+            _scales = _sv['emb_scale']
+        else:
+            _scales = list(np.load(SCORE_FROM.replace('_trunk.pt', '_cond.npz'))['emb_scale_used'])
+        for _m, _sc in zip(models, _scales):
+            _tgt = getattr(_m, 'g', _m)
+            _tgt.emb_scale = float(_sc); _tgt.emb_auto = False
+        SCORE_T = float(_sv['temperature'])
+        best = (0.0, 'loaded', float('nan'), _sv['models'])
+        print(f'[{tag}] SCORING {SCORE_FROM}: {len(models)} members, T={SCORE_T} as trained', flush=True)
+    if RESUME and os.path.exists(RESUME):
+        _rs = torch.load(RESUME, map_location='cpu', weights_only=False)
+        assert (_rs['steps'], _rs['ens'], _rs['ckpts']) == (STEPS, len(models), CKPTS), \
+            f'{RESUME} was written by another configuration'
+        for mi, m in enumerate(models):
+            m.load_state_dict(_rs['models'][mi])
+            _tgt = getattr(m, 'g', m); _tgt.emb_scale = float(_rs['emb_scale'][mi]); _tgt.emb_auto = False
+            opts[mi].load_state_dict(_rs['opts'][mi]); schs[mi].load_state_dict(_rs['schs'][mi])
+            gens[mi].set_state(_rs['gens'][mi])
+        step, traj, revived, best = _rs['step'], _rs['traj'], _rs['revived'], _rs['best']
+        print(f'[{tag}] RESUMED from {RESUME} at step {step} (best so far step {best[1] if best else None})', flush=True)
+
+    def save_resume():
+        torch.save(dict(steps=STEPS, ens=len(models), ckpts=CKPTS, step=step, traj=traj, revived=revived,
+                        best=best, models=[m.state_dict() for m in models],
+                        emb_scale=[m.emb_scale for m in models],
+                        opts=[o.state_dict() for o in opts], schs=[s.state_dict() for s in schs],
+                        gens=[g_.get_state() for g_ in gens]), RESUME + '.tmp')
+        os.replace(RESUME + '.tmp', RESUME)
 
     def member_sd(mi, npb=20000):
         npb = min(Nref, npb)
@@ -807,12 +1014,18 @@ def run_stage(tag):
                            device=DEV).float().expand(npb, cfg['ntheta'])
         m = models[mi]; m.eval()
         with torch.no_grad():
-            E = emb_all(m, ref_f[:npb], ref_m[:npb])
-            sd_i = float(m.f_from(E, pth).cpu().numpy().std())
+            if CONCAT:
+                sd_i = float(torch.cat([m(ref_f[i:min(i+EMB_CHUNK, npb)], ref_m[i:min(i+EMB_CHUNK, npb)],
+                                          pth[i:min(i+EMB_CHUNK, npb)]) for i in range(0, npb, EMB_CHUNK)]
+                                       ).cpu().numpy().std())
+            else:
+                E = emb_all(m, ref_f[:npb], ref_m[:npb])
+                sd_i = float(m.f_from(E, pth).cpu().numpy().std())
         m.train()
         return sd_i
 
-    for ck in CKPTS:
+    _done = bool(PATIENCE and best is not None and step - best[1] >= PATIENCE)   # only after a resume
+    for ck in ([] if SCORE_FROM or _done else [c for c in CKPTS if c > step]):
         # revive BEFORE the segment, so a fresh member always trains before it is judged,
         # with a cosine over its REMAINING budget so it actually learns
         if REVIVE and step > 0:
@@ -861,7 +1074,13 @@ def run_stage(tag):
         if np.isfinite(ms) and (best is None or score < best[0]):
             best = (score, ck, ms, [{kk: vv.detach().cpu().clone() for kk, vv in m.state_dict().items()}
                                     for m in models])
-        print(f'[{tag}] step {ck}: stop-width={ms:.3f} (|w-1|={score:.3f})')
+        print(f'[{tag}] step {ck}: stop-width={ms:.3f} (|w-1|={score:.3f})', flush=bool(RESUME))
+        if RESUME:
+            save_resume()
+        if PATIENCE and best is not None and ck - best[1] >= PATIENCE:
+            print(f'[{tag}] stopping at step {ck}: the stop width has not improved for {PATIENCE} steps '
+                  f'(best at step {best[1]})', flush=True)
+            break
     if best is None:                   # only possible if a revival hit the final segment
         best = (abs(traj[-1][1]-1.0), step, traj[-1][1],
                 [{kk: vv.detach().cpu().clone() for kk, vv in m.state_dict().items()}
@@ -871,9 +1090,40 @@ def run_stage(tag):
 
     Es_final = embeddings()
     Traw = master(closure('report', T=1.0, Es=Es_final))
-    T = fit_temperature(Es_final)
-    print(f'[{tag}] temperature T={T} (fit on stop split); raw report width={Traw:.3f}')
+    T = SCORE_T if SCORE_FROM else fit_temperature(Es_final)
+    print(f'[{tag}] temperature T={T} ({"as trained" if SCORE_FROM else "fit on stop split"}); raw report width={Traw:.3f}')
     rep, ctrl = closure('report', T=T, want_controls=True, Es=Es_final)
+    # LADDER_DUMP_WEIGHTS=1 saves the normalized reference weights at every held-out point
+    # (output/models/<stage><suffix>_w_<rid>.npy), for the weight panel of the wide scan
+    if os.environ.get('LADDER_DUMP_WEIGHTS', '') == '1':
+        for rid, theta in cfg['held'].items():
+            np.save(f'output/models/{tag}{SUF}_w_{rid}.npy', weights_from(logits_at(Es_final, theta), T)[0])
+    # LADDER_TRUNCATE=1: the ensemble's log ratio on the reference at the held-out points and at 48
+    # points uniform in the box, truncated to its leading r singular components and scored at the
+    # held-out points as above, with the same temperature (App. C, the concatenation network)
+    trunc = None
+    if os.environ.get('LADDER_TRUNCATE', '') == '1':
+        assert not WHITEN, 'the truncation test takes the box points in the unwhitened convention'
+        held_ids = list(cfg['held'])
+        U48 = np.random.default_rng(0).uniform(-1.0, 1.0, size=(48, cfg['ntheta']))
+        cols = [np.asarray(cfg['held'][r], np.float64) for r in held_ids] + [norm[:, 0] + u*norm[:, 1] for u in U48]
+        Fm = np.stack([logits_at(Es_final, th) for th in cols], 1).astype(np.float64)     # events x points
+        def trunc_closure(F):
+            ws = []
+            for j, rid in enumerate(held_ids):
+                w, _ = weights_from(F[:, j], T)
+                ws.append(np.mean([width_of(pulls(robs[o], w, obsvals(rid, o, rep_idx[rid]), BINS[(rid, o)])[0]) for o in OBS]))
+            return float(np.mean(ws))
+        Uv, Sv, Vt = np.linalg.svd(Fm, full_matrices=False)
+        d_ = cfg['ntheta']; K2_ = 1 + d_ + d_*(d_ + 1)//2
+        ranks = [r for r in range(1, len(Sv) + 1) if r <= 12 or r % 4 == 0 or r in (K2_, d_ + 1)]
+        full_ = trunc_closure(Fm)
+        tc = {r: trunc_closure((Uv[:, :r]*Sv[:r]) @ Vt[:r]) for r in ranks}
+        within = [r for r in ranks if tc[r] - full_ <= 0.02]
+        trunc = dict(n_points=len(cols), K2=K2_, closure_full=full_, closure_truncated={str(r): v for r, v in tc.items()},
+                     singular_values=(Sv/Sv[0]).tolist(), rank_within_0_02=(min(within) if within else None))
+        print(f'[{tag}] truncation: full {full_:.3f}, within 0.02 from r={trunc["rank_within_0_02"]}; '
+              + ' '.join(f'r={r}:{v:.3f}' for r, v in tc.items()), flush=True)
     # calibration check: two disjoint halves of the SAME held run, identical estimator and
     # identical bins. This should also be 1; its deviation is the ruler's own miscalibration.
     calib = {o: [] for o in OBS}
@@ -903,122 +1153,146 @@ def run_stage(tag):
                   pull_mean={o: float(np.mean([ctrl[rid]['per_obs'][o]['pull_mean'] for rid in cfg['held']]))
                              for o in OBS},
                   per_point={str(cfg['held'][rid]): rep[rid] for rid in cfg['held']})
+    if trunc is not None:
+        result['truncation'] = trunc
+    if SCORE_FROM:
+        result.update(scored_from=SCORE_FROM, data=DATA, n_held_events={str(r): int(len(SH[r])) for r in cfg['held']})
+        print(f'[{tag}] RESULT width={result["master"]:.3f} (null 1.0), scored from {SCORE_FROM}')
+        return result
     # export: cached A-vectors + B nets + the conventions needed to rebuild f, plus a checksum
     Es = embeddings()
-    with torch.no_grad():
-        AE = np.stack([E.cpu().numpy() if EMB_STORE == 'a' else
-                       np.concatenate([m.A(E[i:i+EMB_CHUNK]).cpu().numpy()
-                                       for i in range(0, len(E), EMB_CHUNK)])
-                       for m, E in zip(models, Es)])                           # (ENS, Nref, K)
-    if ADDITIVE:
-        # Export the AUGMENTED vectors [a, g, 1] and [b, 1, c] so that every downstream reader,
-        # which forms AE @ b(theta) and knows nothing about the offsets, still reconstructs
-        # f = <a,b> + g + c exactly. K is the CONTRACTION width; K_bilinear is the rank.
-        AE = np.concatenate([AE, np.ones((AE.shape[0], AE.shape[1], 1), AE.dtype)], -1)
-    exp = dict(AE=AE, norm=norm, ntheta=cfg['ntheta'], ens=ENS, K=AE.shape[-1], K_bilinear=K,
-               additive=int(ADDITIVE), phi_norm=PHI_NORM, head_norm=HEAD_NORM,
-               init_gain=INIT_GAIN, weight_decay=WD, emb_scale=str(EMB_SCALE),
-               emb_scale_used=np.array([m.emb_scale for m in models]),
-               act=ACT_NAME, nlayers=len(F_SIZES)+1, combine='mean_logits', temperature=T,
-               feat_mu=FMU.numpy(), feat_sd=FSD.numpy(),
-               phi_sizes=np.array(PHI_SIZES), f_sizes=np.array(F_SIZES),
-               whiten=int(WHITEN))
-    for mi, m in enumerate(models):
-        Ws = [l.weight.detach().cpu().numpy() for l in m.B if isinstance(l, nn.Linear)]
-        bs = [l.bias.detach().cpu().numpy() for l in m.B if isinstance(l, nn.Linear)]
+    if CONCAT:
+        # the concatenation network has no theta-free event vectors to export: save it whole,
+        # with everything needed to evaluate it, and the member logit sds for the dead check
+        chk_theta = list(cfg['held'].values())[0]
+        with torch.no_grad():
+            _th = torch.tensor(tn(chk_theta), device=DEV).float().expand(Nref, cfg['ntheta'])
+            _sds = [float(fval(_m, _E, _th).cpu().numpy().std()) for _m, _E in zip(models, Es)]
+        for _mi, _sd in enumerate(_sds):
+            print(f'[{tag}] member {_mi} logit sd = {_sd:.3e}')
+        torch.save(dict(models=[m.state_dict() for m in models], head_kind=HEAD_KIND,
+                        emb_scale=[float(m.emb_scale) for m in models], feat_mu=FMU, feat_sd=FSD,
+                        phi_sizes=PHI_SIZES, f_sizes=F_SIZES, act=ACT_NAME, ens=ENS,
+                        ntheta=cfg['ntheta'], norm=norm, temperature=T, combine='mean_logits',
+                        train_rids=sorted(cfg['train']), held_rids=sorted(cfg['held']),
+                        fitted_theta=[cfg['train'][r] for r in sorted(cfg['train'])],
+                        member_logit_sd=_sds),
+                   f'output/models/{tag}{SUF}_concat.pt')
+    else:
+        with torch.no_grad():
+            AE = np.stack([E.cpu().numpy() if EMB_STORE == 'a' else
+                           np.concatenate([m.A(E[i:i+EMB_CHUNK]).cpu().numpy()
+                                           for i in range(0, len(E), EMB_CHUNK)])
+                           for m, E in zip(models, Es)])                           # (ENS, Nref, K)
         if ADDITIVE:
-            # insert the constant-1 output between b and c, matching the extra column above
-            Ws[-1] = np.concatenate([Ws[-1][:K], np.zeros((1, Ws[-1].shape[1]), Ws[-1].dtype),
-                                     Ws[-1][K:K+1]], 0)
-            bs[-1] = np.concatenate([bs[-1][:K], np.ones(1, bs[-1].dtype), bs[-1][K:K+1]])
-        if WHITEN:
-            # reader: h = W1' tn_base + b1'.  training: h = W1 (M (tn_base - mu)) + b1.
-            # equal for all theta when W1' = W1 M and b1' = b1 - W1 M mu. float64 because the
-            # rescaling spans a factor of a few and the reader upcasts anyway.
-            _W0 = np.asarray(Ws[0], np.float64)
-            bs[0] = np.asarray(bs[0], np.float64) - _W0 @ (_wm @ _wmu)
-            Ws[0] = _W0 @ _wm
-        for li, (W, b) in enumerate(zip(Ws, bs)):
-            exp[f'B{mi}_W{li}'] = W; exp[f'B{mi}_b{li}'] = b
-        if HEAD_KIND in MIXTURE_KINDS:
-            for li, l in enumerate([l for l in m.BH if isinstance(l, nn.Linear)]):
-                exp[f'BH{mi}_W{li}'] = l.weight.detach().cpu().numpy(); exp[f'BH{mi}_b{li}'] = l.bias.detach().cpu().numpy()
-    exp['head_kind'] = HEAD_KIND
-    chk_theta = list(cfg['held'].values())[0]
-    th = torch.tensor(tn(chk_theta), device=DEV).float().expand(Nref, cfg['ntheta'])
-    with torch.no_grad():
-        exp['f_checksum'] = np.mean([fval(m, E, th).cpu().numpy() for m, E in zip(models, Es)], 0)[:256]
-    exp['f_checksum_theta'] = np.array(chk_theta, dtype=float)
-    # The run ids this head was actually fitted on. Without them nothing downstream can tell
-    # which design an export belongs to, and two designs of the same stage can share a box and
-    # a run count exactly, which is the case for the 64 and 112 point Herwig designs and for the
-    # two mixture data sets. The packager ships the design for support(), so shipping the wrong
-    # one is a head that misreports where it was trained. This makes that checkable.
-    exp['train_rids'] = np.array(sorted(cfg['train']), dtype=np.int64)
-    exp['held_rids'] = np.array(sorted(cfg['held']), dtype=np.int64)
-    # The run ids alone are not enough. The two mixture data sets number their runs identically,
-    # 9700 upward from a fixed base, and hold the same 192 runs at the same reference size, so a
-    # head trained on one and shipped with the other's design would match on every attribute
-    # except the parameter values themselves. Record those.
-    exp['fitted_theta'] = np.array([cfg['train'][r] for r in sorted(cfg['train'])], dtype=float)
-    # Replay the export the way every downstream reader does (AE @ b(theta), numpy, no torch)
-    # and require it to agree with the model. This is what makes the additive offsets safe:
-    # they are folded into the exported vectors, so a reader that knows nothing about them is
-    # still exact, and if that ever stops being true the run fails here rather than silently.
-    _relu = lambda z: np.maximum(z, 0.0)
-    _npact = {'relu': _relu, 'silu': lambda z: z/(1+np.exp(-z)),
-              'gelu': lambda z: 0.5*z*(1+np.tanh(np.sqrt(2/np.pi)*(z+0.044715*z**3)))}[ACT_NAME]
-    _nl = sum(1 for kk in exp if kk.startswith('B0_W'))
-    _fr = np.zeros(256)
-    def _bnet(prefix, mi, xin):
-        x = xin
-        for li in range(_nl):
-            x = x @ exp[f'{prefix}{mi}_W{li}'].T + exp[f'{prefix}{mi}_b{li}']
-            if li < _nl-1: x = _npact(x)
-        return x.ravel()
-    for mi in range(ENS):
-        # tn_base, not tn: the replay exists to verify that a reader knowing only the
-        # exported arrays reproduces the model, so it must use the reader's convention. With
-        # whitening off the two are identical, so this changes nothing for the published path.
-        x0 = tn_base(chk_theta).reshape(1, -1).astype(np.float64)
-        if HEAD_KIND in MIXTURE_KINDS:
-            # block sizes from the networks themselves: the old literal 0:3 and 3:6 were the
-            # seven-parameter mixture and would silently mis-slice any other one.
-            _ns = exp['B0_W0'].shape[1]; _nh = exp['BH0_W0'].shape[1]
-            assert _ns + _nh + 1 == cfg['ntheta'], f'{_ns}+{_nh}+1 is not {cfg["ntheta"]}'
-            lS = exp['AE'][mi, :256] @ _bnet('B', mi, x0[:, :_ns])
-            lH = exp['AE'][mi, :256] @ _bnet('BH', mi, x0[:, _ns:_ns+_nh])
-            fmix = float(np.clip(0.5 + 0.5*x0[0, -1], 0.0, 1.0))
-            if HEAD_KIND == 'geometric':
-                _fr += (1.0 - fmix)*lS + fmix*lH
+            # Export the AUGMENTED vectors [a, g, 1] and [b, 1, c] so that every downstream reader,
+            # which forms AE @ b(theta) and knows nothing about the offsets, still reconstructs
+            # f = <a,b> + g + c exactly. K is the CONTRACTION width; K_bilinear is the rank.
+            AE = np.concatenate([AE, np.ones((AE.shape[0], AE.shape[1], 1), AE.dtype)], -1)
+        exp = dict(AE=AE, norm=norm, ntheta=cfg['ntheta'], ens=ENS, K=AE.shape[-1], K_bilinear=K,
+                   additive=int(ADDITIVE), phi_norm=PHI_NORM, head_norm=HEAD_NORM,
+                   init_gain=INIT_GAIN, weight_decay=WD, emb_scale=str(EMB_SCALE),
+                   emb_scale_used=np.array([m.emb_scale for m in models]),
+                   act=ACT_NAME, nlayers=len(F_SIZES)+1, combine='mean_logits', temperature=T,
+                   feat_mu=FMU.numpy(), feat_sd=FSD.numpy(),
+                   phi_sizes=np.array(PHI_SIZES), f_sizes=np.array(F_SIZES),
+                   whiten=int(WHITEN))
+        for mi, m in enumerate(models):
+            Ws = [l.weight.detach().cpu().numpy() for l in m.B if isinstance(l, nn.Linear)]
+            bs = [l.bias.detach().cpu().numpy() for l in m.B if isinstance(l, nn.Linear)]
+            if ADDITIVE:
+                # insert the constant-1 output between b and c, matching the extra column above
+                Ws[-1] = np.concatenate([Ws[-1][:K], np.zeros((1, Ws[-1].shape[1]), Ws[-1].dtype),
+                                         Ws[-1][K:K+1]], 0)
+                bs[-1] = np.concatenate([bs[-1][:K], np.ones(1, bs[-1].dtype), bs[-1][K:K+1]])
+            if WHITEN:
+                # reader: h = W1' tn_base + b1'.  training: h = W1 (M (tn_base - mu)) + b1.
+                # equal for all theta when W1' = W1 M and b1' = b1 - W1 M mu. float64 because the
+                # rescaling spans a factor of a few and the reader upcasts anyway.
+                _W0 = np.asarray(Ws[0], np.float64)
+                bs[0] = np.asarray(bs[0], np.float64) - _W0 @ (_wm @ _wmu)
+                Ws[0] = _W0 @ _wm
+            for li, (W, b) in enumerate(zip(Ws, bs)):
+                exp[f'B{mi}_W{li}'] = W; exp[f'B{mi}_b{li}'] = b
+            if HEAD_KIND in MIXTURE_KINDS:
+                for li, l in enumerate([l for l in m.BH if isinstance(l, nn.Linear)]):
+                    exp[f'BH{mi}_W{li}'] = l.weight.detach().cpu().numpy(); exp[f'BH{mi}_b{li}'] = l.bias.detach().cpu().numpy()
+        exp['head_kind'] = HEAD_KIND
+        chk_theta = list(cfg['held'].values())[0]
+        th = torch.tensor(tn(chk_theta), device=DEV).float().expand(Nref, cfg['ntheta'])
+        with torch.no_grad():
+            exp['f_checksum'] = np.mean([fval(m, E, th).cpu().numpy() for m, E in zip(models, Es)], 0)[:256]
+        exp['f_checksum_theta'] = np.array(chk_theta, dtype=float)
+        # The run ids this head was actually fitted on. Without them nothing downstream can tell
+        # which design an export belongs to, and two designs of the same stage can share a box and
+        # a run count exactly, which is the case for the 64 and 112 point Herwig designs and for the
+        # two mixture data sets. The packager ships the design for support(), so shipping the wrong
+        # one is a head that misreports where it was trained. This makes that checkable.
+        exp['train_rids'] = np.array(sorted(cfg['train']), dtype=np.int64)
+        exp['held_rids'] = np.array(sorted(cfg['held']), dtype=np.int64)
+        # The run ids alone are not enough. The two mixture data sets number their runs identically,
+        # 9700 upward from a fixed base, and hold the same 192 runs at the same reference size, so a
+        # head trained on one and shipped with the other's design would match on every attribute
+        # except the parameter values themselves. Record those.
+        exp['fitted_theta'] = np.array([cfg['train'][r] for r in sorted(cfg['train'])], dtype=float)
+        # Replay the export the way every downstream reader does (AE @ b(theta), numpy, no torch)
+        # and require it to agree with the model. This is what makes the additive offsets safe:
+        # they are folded into the exported vectors, so a reader that knows nothing about them is
+        # still exact, and if that ever stops being true the run fails here rather than silently.
+        _relu = lambda z: np.maximum(z, 0.0)
+        _npact = {'relu': _relu, 'silu': lambda z: z/(1+np.exp(-z)),
+                  'gelu': lambda z: 0.5*z*(1+np.tanh(np.sqrt(2/np.pi)*(z+0.044715*z**3)))}[ACT_NAME]
+        _nl = sum(1 for kk in exp if kk.startswith('B0_W'))
+        _fr = np.zeros(256)
+        def _bnet(prefix, mi, xin):
+            x = xin
+            for li in range(_nl):
+                x = x @ exp[f'{prefix}{mi}_W{li}'].T + exp[f'{prefix}{mi}_b{li}']
+                if li < _nl-1: x = _npact(x)
+            return x.ravel()
+        for mi in range(ENS):
+            # tn_base, not tn: the replay exists to verify that a reader knowing only the
+            # exported arrays reproduces the model, so it must use the reader's convention. With
+            # whitening off the two are identical, so this changes nothing for the published path.
+            x0 = tn_base(chk_theta).reshape(1, -1).astype(np.float64)
+            if HEAD_KIND in MIXTURE_KINDS:
+                # block sizes from the networks themselves: the old literal 0:3 and 3:6 were the
+                # seven-parameter mixture and would silently mis-slice any other one.
+                _ns = exp['B0_W0'].shape[1]; _nh = exp['BH0_W0'].shape[1]
+                assert _ns + _nh + 1 == cfg['ntheta'], f'{_ns}+{_nh}+1 is not {cfg["ntheta"]}'
+                lS = exp['AE'][mi, :256] @ _bnet('B', mi, x0[:, :_ns])
+                lH = exp['AE'][mi, :256] @ _bnet('BH', mi, x0[:, _ns:_ns+_nh])
+                fmix = float(np.clip(0.5 + 0.5*x0[0, -1], 0.0, 1.0))
+                if HEAD_KIND == 'geometric':
+                    _fr += (1.0 - fmix)*lS + fmix*lH
+                else:
+                    with np.errstate(divide='ignore'):
+                        _fr += np.logaddexp(np.log1p(-fmix) + lS, np.log(fmix) + lH)
             else:
-                with np.errstate(divide='ignore'):
-                    _fr += np.logaddexp(np.log1p(-fmix) + lS, np.log(fmix) + lH)
-        else:
-            _fr += exp['AE'][mi, :256] @ _bnet('B', mi, x0)
-    _fr /= ENS
-    _err = float(np.max(np.abs(_fr - exp['f_checksum'])))
-    print(f'[{tag}] export replay max|df| = {_err:.2e}')
-    assert _err < 1e-3, f'{tag}: exported AE @ b(theta) does not reproduce f (max err {_err:.2e})'
-    # A member whose logit is constant is a dead network. Averaging it into the ensemble
-    # divides the live signal by ENS/(live members), which the temperature then silently
-    # absorbs. Stage B shipped with one such member once; never again unnoticed. The sds are
-    # always recorded, and the artifact is saved before we raise, so nothing is lost.
-    with torch.no_grad():
-        _th = torch.tensor(tn(chk_theta), device=DEV).float().expand(Nref, cfg['ntheta'])
-        _sds = [float(fval(_m, _E, _th).cpu().numpy().std()) for _m, _E in zip(models, Es)]
-    exp['member_logit_sd'] = np.array(_sds)
-    for _mi, _sd in enumerate(_sds):
-        print(f'[{tag}] member {_mi} logit sd = {_sd:.3e}')
-    np.savez_compressed(f'output/models/{tag}{SUF}_cond.npz', **exp)
-    # Full event-side weights, so FUTURE reference events can be embedded with a
-    # forward pass instead of a retrain. The 324k-era exports lacked this, which is
-    # why growing the reference once forced a retrain; never again.
-    torch.save(dict(models=[m.state_dict() for m in models],
-                    feat_mu=FMU, feat_sd=FSD,
-                    phi_sizes=PHI_SIZES, f_sizes=F_SIZES, K=K, ens=ENS,
-                    ntheta=cfg['ntheta'], norm=norm, temperature=T),
-               f'output/models/{tag}{SUF}_trunk.pt')
+                _fr += exp['AE'][mi, :256] @ _bnet('B', mi, x0)
+        _fr /= ENS
+        _err = float(np.max(np.abs(_fr - exp['f_checksum'])))
+        print(f'[{tag}] export replay max|df| = {_err:.2e}')
+        assert _err < 1e-3, f'{tag}: exported AE @ b(theta) does not reproduce f (max err {_err:.2e})'
+        # A member whose logit is constant is a dead network. Averaging it into the ensemble
+        # divides the live signal by ENS/(live members), which the temperature then silently
+        # absorbs. Stage B shipped with one such member once; never again unnoticed. The sds are
+        # always recorded, and the artifact is saved before we raise, so nothing is lost.
+        with torch.no_grad():
+            _th = torch.tensor(tn(chk_theta), device=DEV).float().expand(Nref, cfg['ntheta'])
+            _sds = [float(fval(_m, _E, _th).cpu().numpy().std()) for _m, _E in zip(models, Es)]
+        exp['member_logit_sd'] = np.array(_sds)
+        for _mi, _sd in enumerate(_sds):
+            print(f'[{tag}] member {_mi} logit sd = {_sd:.3e}')
+        np.savez_compressed(f'output/models/{tag}{SUF}_cond.npz', **exp)
+        # Full event-side weights, so FUTURE reference events can be embedded with a
+        # forward pass instead of a retrain. The 324k-era exports lacked this, which is
+        # why growing the reference once forced a retrain; never again.
+        torch.save(dict(models=[m.state_dict() for m in models],
+                        feat_mu=FMU, feat_sd=FSD,
+                        phi_sizes=PHI_SIZES, f_sizes=F_SIZES, K=K, ens=ENS,
+                        ntheta=cfg['ntheta'], norm=norm, temperature=T),
+                   f'output/models/{tag}{SUF}_trunk.pt')
     _dead = [i for i, v in enumerate(_sds) if v < 1e-4]
     if _dead and os.environ.get('LADDER_DEAD', 'raise') != 'report':
         raise RuntimeError(

@@ -26,17 +26,28 @@ h = (MixtureHead if kind in ('mixture', 'geometric') else Head)(export)
 A = h.pack(np.asarray(np.load(export, mmap_mode='r')['AE']))
 ref = np.load(refpath); robs = {o: np.asarray(ref[o], np.float64) for o in OBS}
 assert len(robs[OBS[0]]) == A.shape[0]
+# REF_PER_RUN=k scores against the first k stored reference events of every training run, a smaller
+# reference with the same density (the stored reference holds nper random events of each run, run by
+# run in the order of 'order'). The closure width grows with the size of the reference, so models
+# trained on different numbers of runs are compared at equal reference size this way.
+KPER = int(os.environ.get('REF_PER_RUN', '0'))
+if KPER:
+    nper, nrun = int(ref['nper']), len(ref['order'])
+    assert nper*nrun == A.shape[0] and KPER <= nper, (nper, nrun, A.shape)
+    keep = (np.arange(nrun)[:, None]*nper + np.arange(KPER)[None, :]).ravel()
+    A = A[keep]; robs = {o: v[keep] for o, v in robs.items()}
+    print(f'reference: {KPER} of {nper} events of each of {nrun} runs, {len(keep)} in all', flush=True)
 def target(rid, o):
     if o in ('nbaryon', 'strange'):
         d = np.load(f'{DATA}/particles_full_{rid:04d}.npz')
         return d['nbaryon'].astype(float) if o == 'nbaryon' else strange_frac(d['particles'], d['mask']).astype(float)
     return pd.read_csv(f'{DATA}/shapes_run_{rid:04d}.csv')[o].values.astype(float)
 uni = np.full(len(robs[OBS[0]]), 1.0/len(robs[OBS[0]]))
-per = {}; uper = {}; neffs = {}
+per = {}; uper = {}; neffs = {}; nrep = {}
 for rid, th in cfg['held'].items():
     T_ = {o: target(rid, o) for o in OBS}; n = len(T_[OBS[0]])
     perm = np.random.default_rng(1000 + rid).permutation(n); rep = perm[n//2:]
-    w = h.weights(A, np.array(th)); neffs[rid] = h.n_eff(w)/len(w)
+    w = h.weights(A, np.array(th)); neffs[rid] = h.n_eff(w)/len(w); nrep[rid] = len(rep)
     for o in OBS:
         b = R.make_bins(np.r_[robs[o], T_[o][rep]], o)
         p, nb = R.pulls(robs[o], w, T_[o][rep], b); per[rid, o] = R.width_of(p)
@@ -47,6 +58,13 @@ print(f'{tag} ({os.path.basename(export)}) on {DATA}, T={h.T}: report-split widt
 res = dict(tag=tag, export=export, T=h.T, master=master, uniform=umaster, neff=[min(neffs.values()), max(neffs.values())],
            per_obs={o: float(np.mean([per[r, o] for r in cfg['held']])) for o in OBS},
            per_obs_uniform={o: float(np.mean([uper[r, o] for r in cfg['held']])) for o in OBS},
-           per_run={str(r): {o: float(per[r, o]) for o in OBS} for r in cfg['held']})
+           per_run={str(r): {o: float(per[r, o]) for o in OBS} for r in cfg['held']},
+           # per held run: the effective reference size and the report-split size, which set how
+           # sharp the test is (phase2/bias_scale.py turns the widths into a size-free bias)
+           n_eff_ref={str(r): float(neffs[r]*len(robs[OBS[0]])) for r in cfg['held']},
+           n_report={str(r): int(nrep[r]) for r in cfg['held']})
 for o in OBS: print(f'   {o:16s} width {res["per_obs"][o]:.3f}   uniform {res["per_obs_uniform"][o]:.2f}', flush=True)
-json.dump(res, open(f'output/widths_v2_{os.path.basename(export).replace("_cond.npz", "")}.json', 'w'), indent=1)
+if KPER:
+    res['ref_per_run'] = KPER
+json.dump(res, open(f'output/widths_v2_{os.path.basename(export).replace("_cond.npz", "")}'
+                    f'{os.environ.get("WIDTHS_SUFFIX", "")}.json', 'w'), indent=1)

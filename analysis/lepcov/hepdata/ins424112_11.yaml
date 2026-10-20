@@ -1,0 +1,196 @@
+dependent_variables:
+- header: {name: (1/N)*D(N)/D(1-THRUST)}
+  qualifiers:
+  - {name: RE, value: E+ E- --> CHARGED X}
+  - {name: SQRT(S), units: GeV, value: '91.2'}
+  - {name: SQRT(S), units: GeV, value: '91.2'}
+  values:
+  - errors:
+    - {label: stat, symerror: 0.028}
+    - {label: sys, symerror: 0.132}
+    value: 3.386
+  - errors:
+    - {label: stat, symerror: 0.057}
+    - {label: sys, symerror: 0.249}
+    value: 13.901
+  - errors:
+    - {label: stat, symerror: 0.061}
+    - {label: sys, symerror: 0.157}
+    value: 15.733
+  - errors:
+    - {label: stat, symerror: 0.055}
+    - {label: sys, symerror: 0.125}
+    value: 12.535
+  - errors:
+    - {label: stat, symerror: 0.048}
+    - {label: sys, symerror: 0.095}
+    value: 9.494
+  - errors:
+    - {label: stat, symerror: 0.042}
+    - {label: sys, symerror: 0.072}
+    value: 7.248
+  - errors:
+    - {label: stat, symerror: 0.037}
+    - {label: sys, symerror: 0.057}
+    value: 5.665
+  - errors:
+    - {label: stat, symerror: 0.033}
+    - {label: sys, symerror: 0.045}
+    value: 4.544
+  - errors:
+    - {label: stat, symerror: 0.03}
+    - {label: sys, symerror: 0.04}
+    value: 3.722
+  - errors:
+    - {label: stat, symerror: 0.027}
+    - {label: sys, symerror: 0.038}
+    value: 3.085
+  - errors:
+    - {label: stat, symerror: 0.017}
+    - {label: sys, symerror: 0.027}
+    value: 2.413
+  - errors:
+    - {label: stat, symerror: 0.015}
+    - {label: sys, symerror: 0.018}
+    value: 1.8
+  - errors:
+    - {label: stat, symerror: 0.013}
+    - {label: sys, symerror: 0.014}
+    value: 1.387
+  - errors:
+    - {label: stat, symerror: 0.011}
+    - {label: sys, symerror: 0.011}
+    value: 1.074
+  - errors:
+    - {label: stat, symerror: 0.0099}
+    - {label: sys, symerror: 0.0096}
+    value: 0.8362
+  - errors:
+    - {label: stat, symerror: 0.0051}
+    - {label: sys, symerror: 0.0101}
+    value: 0.5683
+  - errors:
+    - {label: stat, symerror: 0.0038}
+    - {label: sys, symerror: 0.0077}
+    value: 0.3138
+  - errors:
+    - {label: stat, symerror: 0.0024}
+    - {label: sys, symerror: 0.0045}
+    value: 0.1286
+  - errors:
+    - {label: stat, symerror: 0.0009}
+    - {label: sys, symerror: 0.0011}
+    value: 0.018
+  - errors:
+    - {label: stat, symerror: 0.0001}
+    - {label: sys, symerror: 0.0001}
+    value: 0.0004
+- header: {name: (1/N)*D(N)/D(1-THRUST)}
+  qualifiers:
+  - {name: RE, value: E+ E- --> (CHARGED + NEUTRAL) X}
+  - {name: SQRT(S), units: GeV, value: '91.2'}
+  - {name: SQRT(S), units: GeV, value: '91.2'}
+  values:
+  - errors:
+    - {label: stat, symerror: 0.019}
+    - {label: sys, symerror: 0.076}
+    value: 1.03
+  - errors:
+    - {label: stat, symerror: 0.051}
+    - {label: sys, symerror: 0.527}
+    value: 10.951
+  - errors:
+    - {label: stat, symerror: 0.066}
+    - {label: sys, symerror: 0.547}
+    value: 17.645
+  - errors:
+    - {label: stat, symerror: 0.061}
+    - {label: sys, symerror: 0.292}
+    value: 14.192
+  - errors:
+    - {label: stat, symerror: 0.05}
+    - {label: sys, symerror: 0.152}
+    value: 10.009
+  - errors:
+    - {label: stat, symerror: 0.044}
+    - {label: sys, symerror: 0.101}
+    value: 7.572
+  - errors:
+    - {label: stat, symerror: 0.038}
+    - {label: sys, symerror: 0.076}
+    value: 5.76
+  - errors:
+    - {label: stat, symerror: 0.034}
+    - {label: sys, symerror: 0.062}
+    value: 4.619
+  - errors:
+    - {label: stat, symerror: 0.031}
+    - {label: sys, symerror: 0.051}
+    value: 3.792
+  - errors:
+    - {label: stat, symerror: 0.028}
+    - {label: sys, symerror: 0.042}
+    value: 3.176
+  - errors:
+    - {label: stat, symerror: 0.018}
+    - {label: sys, symerror: 0.032}
+    value: 2.456
+  - errors:
+    - {label: stat, symerror: 0.015}
+    - {label: sys, symerror: 0.022}
+    value: 1.825
+  - errors:
+    - {label: stat, symerror: 0.013}
+    - {label: sys, symerror: 0.016}
+    value: 1.401
+  - errors:
+    - {label: stat, symerror: 0.011}
+    - {label: sys, symerror: 0.011}
+    value: 1.074
+  - errors:
+    - {label: stat, symerror: 0.01}
+    - {label: sys, symerror: 0.0083}
+    value: 0.8262
+  - errors:
+    - {label: stat, symerror: 0.0051}
+    - {label: sys, symerror: 0.0065}
+    value: 0.5525
+  - errors:
+    - {label: stat, symerror: 0.0038}
+    - {label: sys, symerror: 0.0058}
+    value: 0.303
+  - errors:
+    - {label: stat, symerror: 0.0025}
+    - {label: sys, symerror: 0.0044}
+    value: 0.1312
+  - errors:
+    - {label: stat, symerror: 0.0012}
+    - {label: sys, symerror: 0.0014}
+    value: 0.0238
+  - errors:
+    - {label: stat, symerror: 0.0002}
+    - {label: sys, symerror: 0.0001}
+    value: 0.0007
+independent_variables:
+- header: {name: 1-THRUST}
+  values:
+  - {high: 0.01, low: 0.0}
+  - {high: 0.02, low: 0.01}
+  - {high: 0.03, low: 0.02}
+  - {high: 0.04, low: 0.03}
+  - {high: 0.05, low: 0.04}
+  - {high: 0.06, low: 0.05}
+  - {high: 0.07, low: 0.06}
+  - {high: 0.08, low: 0.07}
+  - {high: 0.09, low: 0.08}
+  - {high: 0.1, low: 0.09}
+  - {high: 0.12, low: 0.1}
+  - {high: 0.14, low: 0.12}
+  - {high: 0.16, low: 0.14}
+  - {high: 0.18, low: 0.16}
+  - {high: 0.2, low: 0.18}
+  - {high: 0.25, low: 0.2}
+  - {high: 0.3, low: 0.25}
+  - {high: 0.35, low: 0.3}
+  - {high: 0.4, low: 0.35}
+  - {high: 0.5, low: 0.4}

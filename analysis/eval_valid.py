@@ -8,14 +8,29 @@ Ways: the six scalar observables of the ladder (event shapes, multiplicity, bary
 strangeness), the x_p fragmentation spectrum, and a JOINT 2D closure in (1-T, mult) which is
 sensitive to correlations that every 1D histogram integrates out. Controls: N_eff of the
 weights and the uniform-weight width per point.
-Writes output/valid_map.json."""
+Writes output/valid_map.json.
+VALID_MODEL=<tag> scores output/models/<tag>_cond.npz with <tag>_ref.npz instead of the C model,
+VALID_DATA and VALID_BLIND_DATA give the folders of the held-out and the validation runs, and
+VALID_OUT the output file (the final densified Stage C model: C_P2augfullfac0, gen/data_abc and
+gen/data_abc_blind), VALID_HALF=report the report half of each run."""
 import json, os
 import numpy as np
 from ab_analysis import Cond
 from r2_ladder import make_bins, pulls, width_of, strange_frac
 from xp_closure import per_event_bincontents, width_xp, XP_BINS
 
-DATA = 'data_stageC'
+DATA = os.environ.get('VALID_DATA', 'data_stageC')
+BLIND_DATA = os.environ.get('VALID_BLIND_DATA', DATA)
+MODEL = os.environ.get('VALID_MODEL', 'C')
+OUT = os.environ.get('VALID_OUT', 'output/valid_map.json')
+# VALID_HALF=report scores the report half of every run, the split and the test of the paper's
+# closure width (r2_ladder.py); unset, the whole run as before
+HALF = os.environ.get('VALID_HALF', '') == 'report'
+
+
+def report_half(rid, n):
+    """The report half of a held-out run, as r2_ladder.py draws it."""
+    return np.random.default_rng(1000 + rid).permutation(n)[n//2:]
 POINTS = {
     6950: (0.1130, 0.33, 0.90), 6951: (0.1150, 0.52, 1.65), 6952: (0.1170, 0.62, 1.10),
     6953: (0.1190, 0.36, 1.40), 6954: (0.1210, 0.58, 0.85), 6955: (0.1230, 0.42, 1.70),
@@ -53,20 +68,24 @@ def joint_width(x_ref, y_ref, w, x_t, y_t):
 
 
 def main():
-    cond = Cond('C'); ref = np.load('output/models/C_ref.npz')
+    cond = Cond(MODEL); ref = np.load(f'output/models/{MODEL}_ref.npz')
     robs = {o: ref[o].astype(float) for o in CSV_OBS + ['nbaryon', 'strange']}
     ref_counts = per_event_bincontents(ref['particles'][:, :, 0], ref['mask'], XP_BINS)
     out = {}
     for rid, th in {**ANCHOR, **POINTS}.items():
-        fnpz = f'{DATA}/particles_full_{rid:04d}.npz'
-        fcsv = f'{DATA}/shapes_run_{rid:04d}.csv'
+        src = DATA if rid in ANCHOR else BLIND_DATA
+        fnpz = f'{src}/particles_full_{rid:04d}.npz'
+        fcsv = f'{src}/shapes_run_{rid:04d}.csv'
         if not (os.path.exists(fnpz) and os.path.exists(fcsv)):
             continue
         import pandas as pd
         d = np.load(fnpz); sh = pd.read_csv(fcsv)
-        tobs = {o: sh[o].values for o in CSV_OBS}
-        tobs['nbaryon'] = d['nbaryon'].astype(float)
-        tobs['strange'] = strange_frac(d['particles'], d['mask']).astype(float)
+        parts, mask, nbar = d['particles'], d['mask'], d['nbaryon']
+        sel = report_half(rid, len(sh)) if HALF else np.arange(len(sh))
+        parts, mask, nbar = parts[sel], mask[sel], nbar[sel]
+        tobs = {o: sh[o].values[sel] for o in CSV_OBS}
+        tobs['nbaryon'] = nbar.astype(float)
+        tobs['strange'] = strange_frac(parts, mask).astype(float)
         f = cond.f_at(np.array(th))
         w = np.exp((f-f.max())/cond.T); w /= w.sum()
         neff = 1.0/np.sum(w**2)
@@ -84,7 +103,7 @@ def main():
             mu_t = tobs[o].mean();    var_t = tobs[o].var()/len(tobs[o])
             row[f'{o}_z'] = round(float((mu_r-mu_t)/np.sqrt(var_r+var_t)), 2)
         # x_p spectrum
-        tgt_counts = per_event_bincontents(d['particles'][:, :, 0], d['mask'], XP_BINS)
+        tgt_counts = per_event_bincontents(parts[:, :, 0], mask, XP_BINS)
         row['x_p'], _ = width_xp(ref_counts, w, tgt_counts)
         row['x_p'] = round(row['x_p'], 3)
         # joint 2D (1-T, mult)
@@ -109,7 +128,7 @@ def main():
             summ[f'{o}_absz_max'] = round(float(np.max(zz)), 2)
         print('SUMMARY over validation points:', summ)
         out['summary'] = summ
-    json.dump(out, open('output/valid_map.json', 'w'), indent=1)
+    json.dump(out, open(OUT, 'w'), indent=1)
     print('VALID MAP DONE')
 
 

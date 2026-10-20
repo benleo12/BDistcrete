@@ -49,7 +49,7 @@ K1 = 1 + d
 K2 = 1 + d + d*(d + 1)//2
 os.environ.setdefault('LADDER_HEAD_KIND', 'geometric')
 os.environ.setdefault('LADDER_MIX_SPLIT', f'{len(s_box)},{len(h_box)}')
-if os.environ['LADDER_HEAD_KIND'] == 'geometric':
+if os.environ['LADDER_HEAD_KIND'] in ('geometric', 'concat_geometric'):
     # the wifi protocol: pure-run targets, a fit set held out of training, bootstrap members.
     # The fit split needs the per-run reference draws of the low-memory path.
     for _k, _v in (('LADDER_TARGET_PURE', '1'), ('LADDER_FIT_FRAC', '0.2'),
@@ -125,8 +125,9 @@ if os.environ.get('DM_DRYRUN', '') == '1':
 
 result = R.run_stage(STAGE_KEY)
 # The export must be where the rest of the pipeline looks for it.
-_want = f'output/models/{STAGE_KEY}{os.environ["LADDER_SUFFIX"]}_cond.npz'
-assert os.path.exists(_want), (
+_want = (f'output/models/{STAGE_KEY}{os.environ["LADDER_SUFFIX"]}'
+         + ('_concat.pt' if os.environ['LADDER_HEAD_KIND'].startswith('concat') else '_cond.npz'))
+assert os.environ.get('LADDER_SCORE_FROM') or os.path.exists(_want), (
     f'the run finished but wrote no export at {_want}. LADDER_SUFFIX is '
     f'{os.environ["LADDER_SUFFIX"]!r} and the stage key is {STAGE_KEY!r}, so check DM_TAG.')
 print(f'export written to {_want}')

@@ -19,7 +19,7 @@ import numpy as np, pickle, re, sys, json
 import np_shift as N
 
 MATCH = sys.argv[1] if len(sys.argv) > 1 else 'output/matched_v3.pkl'
-RIVET = os.environ.get('RIVET_REF', 'rivet_ref')   # the Rivet reference tables
+RIVET = os.environ.get('RIVET_REF', '/opt/homebrew/share/Rivet')   # the Rivet reference tables
 YODA = f'{RIVET}/ALEPH_2004_S5765862.yoda'
 
 

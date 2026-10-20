@@ -14,3 +14,8 @@ analysis/logs/*
 *.hepmc.gz
 *.tar
 *.tar.part*
+
+# generated samples and batch logs of gen/ live on the cluster, not in git
+gen/data*/
+gen/logs/
+gen/tasks/

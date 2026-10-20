@@ -19,6 +19,48 @@ bands of the thrust distribution and of other observables, separately and combin
 data. The sections below marked "earlier draft" document the strong-coupling fit of the earlier
 version, whose code remains in the repository.
 
+## The current version (19 October 2026): every result rerun at one standard
+
+Every number and figure of the current draft comes from one training standard: the factorized network
+with K = 48 terms, four members trained from different starting values on resamples of the training
+runs, 3.24×10^5 steps on the full cosine schedule without early stopping, and 8×10^4 events per run,
+with 720 pure Sherpa and Herwig runs for the seventeen-parameter mixture. The concatenation network is
+trained the same way, through the same code. Every model is trained three times with new seeds and
+scored on the standard test and on a strict test with five times the statistics. Every quoted number
+is written by `analysis/phase2tools/make_numbers.py` from the result files in `analysis/output/`.
+
+| what | where |
+|---|---|
+| training, both networks, every stage | `analysis/r2_ladder.py`, `analysis/symmetry/train_p2.sbatch` (stages), `analysis/symmetry/train_mixgeo.sbatch` (mixture) |
+| closure on the standard and strict tests | `analysis/symmetry/score_p2_array.sbatch`, `analysis/symmetry/strict_closure.sbatch`, `analysis/ladder_widths_big.py` |
+| the learning band and the check that it covers the errors | `analysis/wifi_fit.py`, `analysis/wifi_coverage.py`, `analysis/symmetry/wifi_cov.sbatch` |
+| the three bands of Sec. 4 (signed theory band, statistical error of the sample) | `analysis/three_bands.py`, `analysis/theory_variations.py`, `analysis/band_checks.py` |
+| the calculation against ALEPH and DELPHI | `analysis/calc_bins.py`, `analysis/calc_vs_delphi.py`, `analysis/lepcov/` |
+| the toy, the cost benchmark, the number-of-terms and wide-coupling scans | `analysis/toy_final.py`, `analysis/bench_cost_final.py`, `analysis/kscan_submit.sh`, `analysis/widebox_submit.sh` |
+| every quoted number | `analysis/phase2tools/make_numbers.py`, which writes `numbers.tex` and `numbers.json` |
+| every data figure, in one style | `analysis/figs_r8.py` |
+| the released networks (numpy only) | `analysis/release/models/` `E`, `F` and `MIX17`, packaged by `analysis/package_release.py` (`analysis/symmetry/package_r8.sbatch`) |
+
+The released `E` is Stage D of the paper (Sherpa, eight parameters, 352 training runs), `F` is Stage E
+(Herwig, eight parameters, 368 training runs) and `MIX17` is the seventeen-parameter multiplicative
+mixture of Sec. 4 (720 pure runs). Each is checked at packaging against the trained network.
+
+### Training times
+
+On one NVIDIA H200 with 12 CPU cores, all members of a model in one job:
+
+| model | wall time |
+|---|---|
+| Stages A to C (one to three parameters) | about 1 to 1.5 h each |
+| Stage D, Sherpa (`E` in the code) | about 2.5 h |
+| Stage E, Herwig (`F` in the code) | about 2 h |
+| the seventeen-parameter mixture, 720 runs of 8×10^4 events | about 4 h, with four or with eight members |
+| the same mixture with the concatenation network | about 5 h |
+
+Scoring a model on the strict test takes about 15 minutes, the fit of the learning band about ten
+minutes, and the three bands at one point under a minute on 80 CPU cores. The whole rerun, with the
+scans and three seeds of every model, took about 400 GPU-hours.
+
 ## The revision of October 2026 in short
 
 | what | where |
@@ -38,7 +80,11 @@ version, whose code remains in the repository.
 |---|---|
 | `analysis/` | every script that produces a figure, table or number of the paper, run from this directory |
 | `analysis/output/` | the small result files the figures and numbers are made from, and the paper's figures |
-| `analysis/release/` | the trained models (`C_1M`, `E`, `F`, `MIX17`) with a numpy-only reader, `gentune`, the generator cards and run scripts, examples and closure tables |
+| `analysis/release/` | the trained networks of the current version (`E`, `F`, `MIX17`) and of an earlier draft (`C_1M`) with a numpy-only reader, `gentune`, the generator cards and run scripts, examples and closure tables |
+| `analysis/symmetry/` | the batch scripts of the rerun, as run on the Symmetry cluster at Perimeter |
+| `gen/` | the scripts and designs that generated every sample of the current version on the same cluster |
+| `analysis/phase2tools/` | `make_numbers.py`, which writes every quoted number of the current version, and its output |
+| `analysis/lepcov/` | the reader of the LEP thrust tables with statistical and systematic errors kept apart, and its HEPData cache |
 | `analysis/perlmutter/` | the batch scripts as run at NERSC |
 | `analysis/farm/` | the GPU farm of the term-count scan and the wide coupling range, with the script versions it ran |
 | `analysis/ares_recovered/`, `analysis/eerad3/` | our drivers and patches for ARES and EERAD3, and the tables they produced |

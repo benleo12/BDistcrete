@@ -1,0 +1,78 @@
+{
+ "W": {
+  "master": 0.9204498866197949,
+  "master_raw": 0.9244964863147098,
+  "temperature": 0.95,
+  "rank_K": 48,
+  "best_step": 18000,
+  "stop_trajectory": [
+   [
+    6000,
+    1.2231456459268255
+   ],
+   [
+    12000,
+    1.084367014527363
+   ],
+   [
+    18000,
+    1.0453851542225407
+   ]
+  ],
+  "per_obs": {
+   "1_minus_thrust": 0.7525726587472196,
+   "mult_total": 1.1645326208923772,
+   "B_total": 0.9835728923996728,
+   "rho_heavy": 0.7811213744399099
+  },
+  "width_uniform": {
+   "1_minus_thrust": 2.7193180550092064,
+   "mult_total": 1.8925379791359493,
+   "B_total": 3.0191915946907453,
+   "rho_heavy": 2.4760103408471044
+  },
+  "gain_over_uniform": {
+   "1_minus_thrust": 3.61,
+   "mult_total": 1.63,
+   "B_total": 3.07,
+   "rho_heavy": 3.17
+  },
+  "calibration_check": {
+   "1_minus_thrust": 0.878916685058042,
+   "mult_total": 1.00977887196583,
+   "B_total": 1.0498584937155255,
+   "rho_heavy": 1.0094913573089224
+  },
+  "calibration_spread": {
+   "1_minus_thrust": 0.10273668988472087,
+   "mult_total": 0.03549971637368993,
+   "B_total": 0.08371130885459274,
+   "rho_heavy": 0.18056832405202067
+  },
+  "N_eff": {
+   "(0.155,)": 61138.140449528015
+  },
+  "N_ref": 63000,
+  "min_count": 5,
+  "nbins_used": {
+   "1_minus_thrust": 25,
+   "mult_total": 66,
+   "B_total": 25,
+   "rho_heavy": 25
+  },
+  "pull_mean": {
+   "1_minus_thrust": -0.081346104488442,
+   "mult_total": -0.004445294353679187,
+   "B_total": 0.010548251491286525,
+   "rho_heavy": -0.0903517550511615
+  },
+  "per_point": {
+   "(0.155,)": {
+    "1_minus_thrust": 0.7525726587472196,
+    "mult_total": 1.1645326208923772,
+    "B_total": 0.9835728923996728,
+    "rho_heavy": 0.7811213744399099
+   }
+  }
+ }
+}

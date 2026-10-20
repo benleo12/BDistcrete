@@ -1,0 +1,2 @@
+run_id,seed,reason
+32077,5032077,seed 32077 sends Sherpa 3.0.4 (Ahadic) into an endless loop after event 60000; regenerated with this seed

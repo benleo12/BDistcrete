@@ -1,0 +1,66 @@
+{
+ "device": "cpu",
+ "threads": 4,
+ "reps": 1,
+ "early_reps": 1,
+ "early_warmup": true,
+ "host": "cn072",
+ "model": "MIXGEOV3S9",
+ "grid": "output/thrust_targets_nlo_point.npz",
+ "skip": [
+  "c",
+  "early"
+ ],
+ "torch": "2.7.1+cu126",
+ "cpu": "Intel(R) Xeon(R) Gold 6148 CPU @ 2.40GHz",
+ "n_events": 1149840,
+ "n_particles": 47843670,
+ "prep_seconds": 19.830024566035718,
+ "weights_per_network": {
+  "concatenation": 83757,
+  "late": 83757
+ },
+ "store_GB": {
+  "factorized": 0.88307712,
+  "late": 4.70974464,
+  "concatenation_particles": 1.72237212,
+  "concatenation_kept_features": 9.41948928
+ },
+ "a_weights_seconds": {
+  "factorized": 0.033666420029476285,
+  "late": 9.022061562980525
+ },
+ "a_all": {
+  "factorized": [
+   0.033666420029476285
+  ],
+  "late": [
+   9.022061562980525
+  ]
+ },
+ "n_network_step_seconds": {
+  "factorized": 0.055449859937652946,
+  "late": 17.986981362104416
+ },
+ "n_all": {
+  "factorized": [
+   0.055449859937652946
+  ],
+  "late": [
+   17.986981362104416
+  ]
+ },
+ "b_fit_step_seconds": {
+  "factorized": 0.26635749207343906,
+  "late": 18.365601013065316
+ },
+ "b_all": {
+  "factorized": [
+   0.26635749207343906
+  ],
+  "late": [
+   18.365601013065316
+  ]
+ },
+ "b_tilt_and_chi2_seconds": 0.22149708098731935
+}

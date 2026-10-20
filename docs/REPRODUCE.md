@@ -29,6 +29,34 @@ group of `tools/get_data.sh` that downloads them, for example `../tools/get_data
 - Batch scripts: set the account placeholders, and check the `#SBATCH -o` and `-e` lines, because
   Slurm does not expand variables there.
 
+## The current version (19 October 2026)
+
+This section covers the current draft, with its own numbering of sections, figures and tables, and the
+sections after it document earlier drafts. Training and scoring ran on the Symmetry cluster at
+Perimeter, one H200 per job, with the batch scripts in `symmetry/` (they set the production
+settings). Every other step runs on a laptop from the result files in `output/`, which are in the
+repository. The training times are in the README.
+
+| object | from | command |
+|---|---|---|
+| every quoted number | `output/` | `python phase2tools/make_numbers.py output`, which writes `numbers.tex` and `numbers.json` |
+| Fig. 3, the mixture at a Sherpa and a Herwig held-out point | network export, fresh runs **(data)** | `DM_DATA=data_stagePURE17_v3 python fig_closure_mix.py 7214 8211`, then `python figs_r8.py closure_mix` |
+| Fig. 4 and Sec. 3.3, the toy | `output/toy_final_K48_s0.*` | `sbatch symmetry/toy_final.sbatch`, then `python figs_r8.py toy` |
+| Tables 1 and 2, closure widths of every model | `output/p2*_*.json`, `output/stage_mixture_MIXGEOV3S9*.json` | `sbatch symmetry/train_p2.sbatch` (see its header for `SPECS`), `symmetry/train_mixgeo.sbatch`, `symmetry/score_p2_array.sbatch`, `symmetry/strict_closure.sbatch` |
+| Fig. 5, Stage C across its box | `output/valid_map_C_P2augfullfac0_report.json`, `output/xp_null.json` | `VALID_MODEL=C_P2augfullfac0 VALID_DATA=../gen/data_abc VALID_BLIND_DATA=../gen/data_abc_blind VALID_HALF=report python eval_valid.py` **(data)**, `python xp_null.py ../gen/data_abc`, then `XP_NULL=0.874 python figs_r8.py map` |
+| Fig. 6, the wide coupling scan | `output/widebox_wb18.json`, `output/wb/` | `bash widebox_submit.sh` **(data)**, `python widebox_collect.py`, then `python figs_r8.py widebox` |
+| Fig. 7 and Sec. 3.6, coverage of the learning band | `output/wifi_coverage_MIXGEOV3S9*.json` | `TAG=MIXGEOV3S9 sbatch symmetry/wifi_cov.sbatch` **(data)**, then `python figs_r8.py coverage` |
+| Fig. 8, the number of terms | `output/rank_scan_final.json` | `bash kscan_submit.sh` **(data)**, `python kscan_collect.py`, then `python figs_r8.py kscan` |
+| Fig. 9, the cost of a fit step | `output/bench_final_cpu_4.json`, `output/bench_final_cuda_12.json` | `sbatch symmetry/bench_final_cpu.sbatch` and `symmetry/bench_final_gpu.sbatch` **(data)**, then `python figs_r8.py cost` |
+| Figs. 10 and 11, Table 3, the three bands | `output/three_bands_MIXGEOV3S9.*`, `output/theory_variations_MIX.json` | `TAG=MIXGEOV3S9 sbatch symmetry/three_bands.sbatch` and `sbatch symmetry/theory_variations.sbatch` **(data)**, then `python figs_r8.py bands obs` |
+| the checks of Sec. 4.3 (box mean, mixing fraction, largest weights) | `output/band_checks_MIXGEOV3S9.json` | `TAG=MIXGEOV3S9 sbatch symmetry/band_checks.sbatch` **(data)** |
+| Fig. 12 and Sec. 4.2, the calculation against ALEPH and DELPHI | `output/calc_bins_nlo_point.json`, `output/calc_vs_delphi_MIXGEOV3S9.json` | `python calc_bins.py`, `NPZ=output/three_bands_MIXGEOV3S9.npz python calc_vs_delphi.py MIXGEOV3S9`, then `python figs_r8.py aleph` |
+| Table 6, the fit of the basis weights | `output/wifi_MIXGEOV3S9*_fit.npz` | `wifi_fit.py`, run by `symmetry/wifi_cov.sbatch` **(data)** |
+| the released networks `E`, `F`, `MIX17` | network exports **(data)** | `sbatch symmetry/package_r8.sbatch` |
+
+`figs_r8.py` draws every data figure at its printed size with one palette, in which each color has one
+meaning across the paper (its header lists them). It reads `output/` and writes `output/r8_<name>.pdf`.
+
 ## The revision of October 2026: three uncertainties on one sample
 
 The paper now shows a generator band, a learning band and a theory band on the thrust

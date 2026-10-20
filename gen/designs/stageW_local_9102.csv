@@ -1,0 +1,9 @@
+run_id,role,alphas
+9006,train,0.1160
+9007,train,0.1220
+9008,train,0.1280
+9009,train,0.1340
+9010,train,0.1400
+9011,train,0.1460
+9012,train,0.1520
+9102,held,0.1310

@@ -307,6 +307,17 @@ if os.path.exists(f3 + '.json') and os.path.exists(f3 + '.npz'):
     deficit = 100*(1 - hc/dat)
     tb['top_deficit_percent'] = [float(deficit[top].min()), float(deficit[top].max())]
     textmacro('TbDeficitTopMin', sig(tb['top_deficit_percent'][0])); textmacro('TbDeficitTopMax', sig(tb['top_deficit_percent'][1]))
+    # the bins below the window, which three_bands.py writes under _low with the same normalization: the
+    # combined band there (the larger side, in percent of the prediction) and the largest pull of DELPHI
+    if 'lo_low' in z3.files and len(z3['lo_low']):
+        hl, dl, el = z3['h_central_low'], z3['data_low'], z3['err_low']
+        band_below = 100*np.maximum(z3['comb_hist_up_low'], z3['comb_hist_down_low'])/hl
+        pull_below = np.abs(hl - dl)/np.sqrt(el**2 + np.where(dl > hl, z3['comb_hist_up_low'], z3['comb_hist_down_low'])**2)
+        tb['below_window'] = dict(lo=float(z3['lo_low'][0]), hi=float(z3['hi_low'][-1]),
+                                  band_percent=[float(band_below.min()), float(band_below.max())],
+                                  max_pull_with_band=float(pull_below.max()))
+        textmacro('TbBelowBandMin', sig(band_below.min())); textmacro('TbBelowBandMax', sig(band_below.max()))
+        textmacro('TbPullBelowMax', sig(pull_below.max()))
     # the displacement of the change of scheme in the top bins, and the largest upward displacement there
     vl = [str(l) for l in z3['theory_var_labels']]; vh = z3['theory_var_hist']
     scheme = -100*vh[vl.index("(1.0, 1.0, 'modR', 1.0)")][top]/hc[top]

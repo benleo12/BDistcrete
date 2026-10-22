@@ -358,20 +358,27 @@ def bands():
     D = np.load(os.environ.get('BANDS_NPZ', 'output/three_bands_MIXGEOV3S9.npz'))
     J = json.load(open(os.environ.get('BANDS_JSON', 'output/three_bands_MIXGEOV3S9.json')))
     V = json.load(open(os.environ.get('VARS_JSON', 'output/theory_variations_MIX.json')))
-    lo, hi, y, e = D['lo'], D['hi'], D['data'], D['err']; edges = np.r_[lo, hi[-1]]
-    assert np.allclose(V['lo'], lo) and np.allclose(V['data'], y)
+    # the bins below the window come first when the files have them (keys ending in _low), with the
+    # normalization over the bins above tau = 0.05 unchanged
+    low = 'lo_low' in D.files and len(D['lo_low']) > 0 and 'lo_low' in V
+    cat = (lambda k: np.r_[D[k + '_low'], D[k]]) if low else (lambda k: D[k])
+    vcat = (lambda d, k: np.r_[d[k + '_low'], d[k]]) if low else (lambda d, k: np.asarray(d[k]))
+    lo, hi, y, e = cat('lo'), cat('hi'), cat('data'), cat('err'); edges = np.r_[lo, hi[-1]]
+    assert np.allclose(vcat(V, 'lo'), lo) and np.allclose(vcat(V, 'data'), y)
     WLO, WHI = J['calc']['window']; TEST = J['test'].upper()
-    h0, h1 = D['h_central_before'], D['h_central']
-    g0, g1, le, le0 = D['gen_hist_before'], D['gen_hist'], D['learn_hist'], D['learn_hist_before']
-    thu, thd = D['theory_hist_up'], D['theory_hist_down']
-    c0, cu, cd = D['comb_hist_before'], D['comb_hist_up'], D['comb_hist_down']
-    single = {xi: (np.asarray(V[f'xi{xi}']['h_gen_only']), np.asarray(V[f'xi{xi}']['h_imposed'])) for xi in (0, 1)}
+    h0, h1 = cat('h_central_before'), cat('h_central')
+    g0, g1, le, le0 = cat('gen_hist_before'), cat('gen_hist'), cat('learn_hist'), cat('learn_hist_before')
+    thu, thd = cat('theory_hist_up'), cat('theory_hist_down')
+    c0, cu, cd = cat('comb_hist_before'), cat('comb_hist_up'), cat('comb_hist_down')
+    st = cat('stat_hist')
+    single = {xi: (vcat(V[f'xi{xi}'], 'h_gen_only'), vcat(V[f'xi{xi}'], 'h_imposed')) for xi in (0, 1)}
     fig = plt.figure(figsize=(TW, 5.7))
     gs = GridSpec(3, 3, figure=fig, height_ratios=[1, 1, 1.05], hspace=0.62, wspace=0.12, left=0.085, right=0.99,
                   top=0.955, bottom=0.065)
     from matplotlib.patches import Patch
     from matplotlib.lines import Line2D
-    YL = (0.68, 1.42)
+    # the bins below the window reach 0.46 to 1.29 of DELPHI, so the range takes them in
+    YL = (0.42, 1.42) if low else (0.68, 1.42)
     for row, (ttl, h, up, dn, col, k) in enumerate((
             ('(a) generators alone', h0, c0, c0, BASE, 0),
             ('(b) calculation imposed', h1, cu, cd, METHOD, 1))):
@@ -384,7 +391,7 @@ def bands():
         ax.stairs(single[1][k]/y, edges, baseline=None, color=lc, lw=1.2, ls=(0, (1, 1)))
         eb = ax.errorbar(0.5*(lo + hi), y/y, yerr=e/y, fmt='o', ms=2.6, lw=0.8, color=DATA, zorder=5)
         ax.set_xlim(0, edges[-1]); ax.set_ylim(*YL)
-        ax.set_yticks([0.8, 0.9, 1.0, 1.1, 1.2])
+        ax.set_yticks([0.6, 0.8, 1.0, 1.2] if low else [0.8, 0.9, 1.0, 1.1, 1.2])
         ax.set_ylabel(f'ratio to {TEST}')
         if row == 0:
             ax.text(0.5*(WLO + WHI), YL[0] + 0.012, 'window of the calculation', ha='center', va='bottom', fontsize=7, color=REF)
@@ -392,8 +399,9 @@ def bands():
               Line2D([], [], color=lc, lw=1.0, ls=(0, (4, 2))), Line2D([], [], color=lc, lw=1.2, ls=(0, (1, 1))), eb]
         ls_ = [r'mixture at $\xi=\frac12$ with its band',
                'Sherpa alone', 'Herwig alone', TEST]
-        ax.legend(hs, ls_, loc='upper left', fontsize=7, ncol=4, handlelength=1.9, bbox_to_anchor=(0.0, 1.0),
-                  columnspacing=1.2)
+        # in two columns at the top of the window, the one region that no curve or band reaches
+        ax.legend(hs, ls_, loc='upper left', fontsize=7, ncol=2, handlelength=1.9,
+                  bbox_to_anchor=((0.095 if low else 0.0)/edges[-1], 1.0), columnspacing=1.2, frameon=False)
         title(ax, ttl); trim(ax)
         ax.set_xlabel(r'$\tau=1-T$', labelpad=1.5)
     rel = lambda b, p: 100*b/np.maximum(p, 1e-12)
@@ -402,7 +410,7 @@ def bands():
         ('(c) generator band', [(rel(g0, h0), BASE, '-', 'generators alone'), (rel(g1, h1), GEN, '-', 'calculation imposed')]),
         ('(d) theory band', [(rel(thu, h1), THEORY, '-', 'above the prediction'), (rel(thd, h1), THEORY, (0, (3, 1.5)), 'below the prediction')]),
         ('(e) learning band', [(rel(le0, h0), BASE, '-', 'generators alone'), (rel(le, h1), LEARN, '-', 'calculation imposed'),
-                               (rel(D['stat_hist'], h1), METHOD, (0, (1, 1.2)), 'statistical error')])]
+                               (rel(st, h1), METHOD, (0, (1, 1.2)), 'statistical error')])]
     for j, (a, (ttl, cs)) in enumerate(zip(axes, curves)):
         window(a, WLO, WHI)
         for v, col, ls, lab in cs:

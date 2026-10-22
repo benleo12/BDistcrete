@@ -22,7 +22,8 @@ of one point (targets_nlo_point.py):
 Observables: the mean of tau inside the window and the window fraction, the full means of 1-T,
 B_tot, rho_H, the mean charged multiplicity and the mean baryon count, and the thrust distribution
 in the bins of TEST_DATA (DELPHI by default), normalized over the bins above FIRST_BIN as in the
-paper's figure.
+paper's figure. The bins below FIRST_BIN, outside the window, are evaluated too with the same
+normalization and written under keys ending in _low, so the bins above it are unchanged.
 
     python three_bands.py MIX output/models/MIXGEO_cond.npz output/models/MIXGEO_ref_v2_slim.npz \\
         output/thrust_targets_nlo_point.npz output/wifi_MIXGEO_fit.npz
@@ -54,6 +55,9 @@ print(f'[{tag}] {M.N} reference events, d={NT}, head {M.kind} ({M.mix_form}), wi
       f'calculation at alpha_s={float(G["alphas"][0]):.4f} alpha_0={float(G["alpha0"][0]):.4f} [{time.time()-t0:.0f} s]', flush=True)
 OBK = ['tau_win', 'pwin', 'thrust', 'B_total', 'rho_heavy', 'nch', 'nbaryon']
 x = M.exp[0]; edges = np.r_[x['lo'], x['hi'][-1]]; use = x['use'].numpy(); wid = x['wid'].numpy()
+# every histogram runs over the bins below the fitted ones as well (ext), still normalized over the
+# fitted bins (use), so the fitted bins come out exactly as before; nlow of them lie below
+low = np.where(x['lo'] < x['lo'][use].min() - 1e-12)[0]; ext = np.r_[low, use]; nlow = len(low)
 _DEFAULT = object()
 
 
@@ -64,7 +68,7 @@ def predict(theta, which='central', anchored=True, wifi=_DEFAULT):
         lw, lw0, lam, Pw, its = M.weights(torch.as_tensor(theta, dtype=torch.float64), 0, 0, which=which, anchored=anchored)
         w = torch.exp(lw); o = M.observables(w); o = {k: float(o[k]) for k in OBK if k in o}
         cnt = torch.zeros(x['nb']).index_add(0, x['idx'], w[x['ins']]).numpy()
-        h = cnt[use]/(wid[use]*cnt[use].sum())
+        h = cnt[ext]/(wid[ext]*cnt[use].sum())
     M.set_wifi(None)
     return o, h, float(torch.exp(torch.logsumexp(lw0[M.IW], 0))) if anchored else None
 
@@ -74,7 +78,7 @@ def jac_wifi(theta, w, anchored=True):
     wt = torch.tensor(np.asarray(w, np.float64), requires_grad=True); M.set_wifi(wt)
     lw, _, _, _, _ = M.weights(torch.as_tensor(theta, dtype=torch.float64), 0, 0, anchored=anchored)
     wv = torch.exp(lw); o = M.observables(wv)
-    cnt = torch.zeros(x['nb']).index_add(0, x['idx'], wv[x['ins']]); h = cnt[use]/(torch.as_tensor(wid[use])*cnt[use].sum())
+    cnt = torch.zeros(x['nb']).index_add(0, x['idx'], wv[x['ins']]); h = cnt[ext]/(torch.as_tensor(wid[ext])*cnt[use].sum())
     J = {}
     for k in OBK:
         if k in o:
@@ -123,7 +127,7 @@ def stat_errors(theta, anchored=True):
     ins = x['ins'].numpy(); idx = x['idx'].numpy(); ub = np.asarray(use)          # use is an index array of bins
     binof = np.full(M.N, -1); binof[ins] = idx
     inuse = np.isin(binof, ub); Wt = float(w[inuse].sum()); hb = []
-    for bb in ub:
+    for bb in ext:
         ind = (binof == bb).astype(float); pb = float(w @ ind)/Wt
         hb.append(err_of((ind - pb*inuse)/Wt)/wid[bb])
     return err, np.array(hb)
@@ -234,12 +238,17 @@ out = dict(tag=tag, export=export, grid=grid, wifi=wfit, wifi_central=bool(CENW 
                         theory_variations={lab: dv[lab] for lab in dv}),
            generator_band=gen)
 json.dump(out, open(OUT + '.json', 'w'), indent=1)
+S = lambda a: np.asarray(a)[..., nlow:]          # the fitted bins, exactly as before
+L = lambda a: np.asarray(a)[..., :nlow]          # the bins below them
+hists = dict(h_central_before=h_c0, h_central=h_c, h_central_wifi=h_c, h_published_before=h_p0, h_published=h_p,
+             theory_hist=th_hist, np_hist=np_hist, learn_hist=learn_hist, learn_hist_before=learn_hist0,
+             gen_hist_before=g0_hist, gen_hist=g1_hist, comb_hist=comb_hist, comb_hist_before=comb_hist0,
+             theory_hist_up=th_hist_up, theory_hist_down=th_hist_dn, comb_hist_up=comb_hist_up, comb_hist_down=comb_hist_dn,
+             stat_hist=stat_hist, stat_hist_before=stat_hist0)
 np.savez(OUT + '.npz', lo=x['lo'][use], hi=x['hi'][use], data=x['y'].numpy()[use], err=x['e'].numpy()[use],
-         h_central_before=h_c0, h_central=h_c, h_central_wifi=h_c, h_published_before=h_p0, h_published=h_p,
-         theory_hist=th_hist, np_hist=np_hist, learn_hist=learn_hist, learn_hist_before=learn_hist0,
-         gen_hist_before=g0_hist, gen_hist=g1_hist, comb_hist=comb_hist, comb_hist_before=comb_hist0,
-         theory_hist_up=th_hist_up, theory_hist_down=th_hist_dn, comb_hist_up=comb_hist_up, comb_hist_down=comb_hist_dn,
-         stat_hist=stat_hist, stat_hist_before=stat_hist0,
-         theory_var_hist=np.array([dh[lab] for lab in labels]), theory_var_labels=np.array(labels),
-         H_before=H0, H_after=H1, rows_before=rows0, rows_after=rows1, nodes=nodes, obs=np.array(OBK))
+         **{k: S(v) for k, v in hists.items()},
+         theory_var_hist=S(np.array([dh[lab] for lab in labels])), theory_var_labels=np.array(labels),
+         H_before=S(H0), H_after=S(H1), rows_before=rows0, rows_after=rows1, nodes=nodes, obs=np.array(OBK),
+         lo_low=x['lo'][low], hi_low=x['hi'][low], data_low=x['y'].numpy()[low], err_low=x['e'].numpy()[low],
+         **{k + '_low': L(v) for k, v in hists.items()})
 print(f'wrote {OUT}.json and {OUT}.npz [{time.time()-t0:.0f} s]')

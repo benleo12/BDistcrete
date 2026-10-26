@@ -3,12 +3,17 @@
 
 Figures are drawn at the width they have on the page (TW = 5.95 in, the JHEP text width, or a stated
 fraction of it), so the fonts are the printed fonts: 9 pt axis labels and panel titles, 8 pt tick
-labels, 7.5 pt legends and annotations. Colors keep one meaning across the paper (money_style):
-blue for the reweighted sample, the factorized network and the theory band, red for the generator
-band and the single reference run, ochre for the second series, grey for the unweighted sample and
-for everything "before", black for data, fresh runs and the learning band.
+labels, 7.5 pt legends and annotations. Each color keeps one meaning across the paper, as set out
+in the block of constants below.
 
-    python figs_r8.py closure map widebox kscan cost bands obs toy      # writes output/r8_<name>.pdf
+    python figs_r8.py               # the ten data figures of the paper, output/r8_<name>.pdf
+    python figs_r8.py bands obs     # only the figures named
+
+The ten, in the order of the paper: closure_mix (Fig. 3), toy (Fig. 4), map (Fig. 5), widebox
+(Fig. 6), coverage (Fig. 7), kscan (Fig. 8), cost (Fig. 9), bands (Fig. 10), obs (Fig. 11) and
+aleph (Fig. 12). closure (Stage C reweighted to a held-out point) is not in the paper and is drawn
+only when named. R8_OUT sets the output folder (default output). XP_NULL sets the dotted tick of
+Fig. 5 (default the mean of output/xp_null.json).
 """
 import os, sys, json
 import numpy as np
@@ -202,7 +207,10 @@ def closure_mix():
 # ---- Fig. map: Stage C across its box ------------------------------------------------------------
 def map_():
     d = json.load(open(os.environ.get('MAP_IN', 'output/valid_map_C_P2augfullfac0_report.json')))
-    xp_null = float(os.environ.get('XP_NULL', 'nan'))
+    xp_null = os.environ.get('XP_NULL')   # the dotted tick, default the mean of output/xp_null.json
+    if xp_null is None and os.path.exists('output/xp_null.json'):
+        xp_null = json.load(open('output/xp_null.json'))['mean']
+    xp_null = float(xp_null if xp_null is not None else 'nan')
     pts = {int(k): v for k, v in d.items() if k != 'summary' and v.get('kind') == 'valid'}
     anc = {int(k): v for k, v in d.items() if k != 'summary' and v.get('kind') == 'anchor'}
     OBS = [('1_minus_thrust', r'$1-T$'), ('B_total', r'$B_{\rm tot}$'), ('rho_heavy', r'$\rho_H$'),
@@ -588,10 +596,19 @@ def toy():
     save(fig, 'toy')
 
 
+# the data figures of the paper, Figs. 3 to 12 in order: what runs without arguments
+PAPER = ['closure_mix', 'toy', 'map', 'widebox', 'coverage', 'kscan', 'cost', 'bands', 'obs', 'aleph']
+
+
 if __name__ == '__main__':
-    style()
-    names = sys.argv[1:] or ['closure', 'map', 'widebox', 'kscan', 'cost', 'bands', 'obs', 'toy']
     funcs = {'closure': closure, 'map': map_, 'widebox': widebox, 'kscan': kscan, 'cost': cost, 'bands': bands, 'obs': obs, 'coverage': coverage, 'closure_mix': closure_mix,
              'toy': toy, 'aleph': aleph}
+    if {'-h', '--help'} & set(sys.argv[1:]):
+        print(__doc__); sys.exit(0)
+    names = sys.argv[1:] or PAPER
+    bad = [n for n in names if n not in funcs]
+    if bad:
+        sys.exit(f'figs_r8.py: no figure {", ".join(bad)}. The figures are {", ".join(funcs)}.')
+    style()
     for n in names:
         funcs[n]()

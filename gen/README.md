@@ -4,8 +4,12 @@ These are the scripts that generated every event sample of the paper on the Peri
 cluster, as they ran there. Each run uses the published recipe of `analysis/release/generators/`
 (`gen_stageE.sh` for Sherpa, `gen_stageF.sh` for Herwig, the pinned environment `cvmfs_env.sh`).
 This folder adds the designs, the task lists and the batch wrapper that ran a few thousand of
-them. The paths start at `/mnt/beegfs/bassi/reweighting`, the parent of `gen/` and of the
-analysis folder, so set `R` in the scripts to your own copy. The layout is the same here, so
+them. The paths start at `R`, the parent of `gen/` and of the analysis folder. `gen_batch.sbatch`
+takes it as the parent of `MAXENT_DIR`, the analysis folder, which defaults to the Symmetry copy
+`/mnt/beegfs/bassi/reweighting/maxent_code`. Set `MAXENT_DIR` to the `analysis/` folder of your
+copy to run elsewhere. `gen_one.sh` and `run_el9.sh` find `R` from their own place in `gen/`.
+`R` also holds the cvmfsexec install (`tools/cvmfsexec/`) and the EL9 image
+(`containers/almalinux9.sif`), which are not in this repository. The layout is the same here, so
 `../gen` from `analysis/` is this folder.
 
 | file | what it is |

@@ -5,7 +5,8 @@
 """
 import os, glob
 import numpy as np
-R = '/mnt/beegfs/bassi/reweighting'; SRC = f'{R}/gen/data_abc'; DST = f'{R}/maxent_code/data_abc_h400'
+MAXENT_DIR = os.environ.get('MAXENT_DIR', '/mnt/beegfs/bassi/reweighting/maxent_code')
+R = os.path.dirname(MAXENT_DIR); SRC = f'{R}/gen/data_abc'; DST = f'{MAXENT_DIR}/data_abc_h400'
 HELD = list(range(6200, 6206)) + list(range(6700, 6705)) + list(range(6900, 6905))
 os.makedirs(DST, exist_ok=True)
 for f in sorted(glob.glob(f'{SRC}/*')):

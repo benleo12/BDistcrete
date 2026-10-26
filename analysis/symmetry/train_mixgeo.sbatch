@@ -5,15 +5,15 @@
 #SBATCH -N 1
 #SBATCH -t 1-00:00:00
 #SBATCH -J mixgeo
-#SBATCH -o /mnt/beegfs/bassi/reweighting/maxent_code/logs/mixgeo_%j.out
+#SBATCH -o logs/mixgeo_%j.out
 # The multiplicative seventeen-parameter mixture on one H200, the same pipeline and settings as
-# perlmutter/train_mixgeo_var.sbatch (train, reference bundle, closure, wifi basis). TAG, DATA,
+# perlmutter/train_mixgeo_ens.sbatch (train, reference bundle, closure, wifi basis). TAG, DATA,
 # STEPS, K and ENS come from the environment:
 #   sbatch --export=ALL,TAG=MIXGEOV3S3,DATA=data_stagePURE17_v3,STEPS=108000,ENS=4 train_mixgeo.sbatch
 set -uo pipefail
-R=/mnt/beegfs/bassi/reweighting
-cd $R/maxent_code
-source $R/env/torch/bin/activate
+MAXENT_DIR=${MAXENT_DIR:-/mnt/beegfs/bassi/reweighting/maxent_code}; R=$(dirname "$MAXENT_DIR")   # analysis/ in the repository, R its parent
+cd "$MAXENT_DIR" || exit 1
+[ -f $R/env/torch/bin/activate ] && source $R/env/torch/bin/activate
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-12}
 ENS=${ENS:-4}; TAG=${TAG:?}; DATA=${DATA:?}
 # CHAIN=1 saves the whole training state at every checkpoint (LADDER_RESUME) and continues from it,
@@ -36,9 +36,9 @@ MMAP_BASE=${MMAP_BASE:-/tmp}; mkdir -p $MMAP_BASE
 # working memory maps in RAM (MMAP_BASE=/dev/shm) outlive a job that is killed without its EXIT trap:
 # remove those of our own jobs that are no longer running before adding one (skipped if squeue fails)
 if [ "$MMAP_BASE" = /dev/shm ] && LIVE=" $(squeue -h -u $USER -o %A 2>/dev/null | tr '\n' ' ') " && [ "$LIVE" != "  " ]; then
-  for d in /dev/shm/bassi_mmap_*; do [ -e "$d" ] || continue; j=${d##*_}; case "$LIVE" in *" $j "*) ;; *) rm -rf "$d" ;; esac; done
+  for d in /dev/shm/${USER}_mmap_*; do [ -e "$d" ] || continue; j=${d##*_}; case "$LIVE" in *" $j "*) ;; *) rm -rf "$d" ;; esac; done
 fi
-export LADDER_MMAP_DIR=$MMAP_BASE/bassi_mmap_${TAG}_$SLURM_JOB_ID STAGED_OUT=output/stage_mixture_${TAG}.json
+export LADDER_MMAP_DIR=$MMAP_BASE/${USER}_mmap_${TAG}_$SLURM_JOB_ID STAGED_OUT=output/stage_mixture_${TAG}.json
 trap 'rm -rf $LADDER_MMAP_DIR' EXIT
 echo "=== $TAG on $(hostname), $(nvidia-smi --query-gpu=name --format=csv,noheader -i ${CUDA_VISIBLE_DEVICES:-0}), data $DATA, $ENS members, ${LADDER_STEPS} steps, mmap $LADDER_MMAP_DIR $(date)"
 if [ "${CHAIN:-0}" = 1 ] && [ -f $STAGED_OUT ] && [ -f output/models/${TAG}_trunk.pt ] && [ output/models/${TAG}_trunk.pt -nt $LADDER_RESUME ]; then

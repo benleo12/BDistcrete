@@ -21,8 +21,9 @@ Options (environment):
 import os, csv, json
 import numpy as np
 
-R = '/mnt/beegfs/bassi/reweighting'
-DST = os.environ.get('V3_DST', f'{R}/maxent_code/data_stagePURE17_v3')
+MAXENT_DIR = os.environ.get('MAXENT_DIR', '/mnt/beegfs/bassi/reweighting/maxent_code')
+R = os.path.dirname(MAXENT_DIR)
+DST = os.environ.get('V3_DST', f'{MAXENT_DIR}/data_stagePURE17_v3')
 ref = json.load(open(f'{R}/gen/designs/PURE17_meta.json'))
 s_axes, h_axes, s_box, h_box = ref['s_axes'], ref['h_axes'], ref['s_box'], ref['h_box']
 s_cen = [0.5*(lo + hi) for lo, hi in s_box]; h_cen = [0.5*(lo + hi) for lo, hi in h_box]

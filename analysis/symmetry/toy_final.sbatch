@@ -6,11 +6,12 @@
 #SBATCH -t 3:00:00
 #SBATCH -J toyfinal
 #SBATCH --array=0-8
-#SBATCH -o /mnt/beegfs/bassi/reweighting/maxent_code/logs/toy_final_%A_%a.out
+#SBATCH -o logs/toy_final_%A_%a.out
 # The Gaussian toy with the paper's network and training (toy_final.py): three trainings at K=48 and
 # one at each K of the scan.
 set -uo pipefail
-R=/mnt/beegfs/bassi/reweighting; cd $R/maxent_code; source $R/env/torch/bin/activate
+MAXENT_DIR=${MAXENT_DIR:-/mnt/beegfs/bassi/reweighting/maxent_code}; R=$(dirname "$MAXENT_DIR")   # analysis/ in the repository, R its parent
+cd "$MAXENT_DIR" || exit 1; [ -f $R/env/torch/bin/activate ] && source $R/env/torch/bin/activate
 SPECS=(48:0 48:1 48:2 1:0 2:0 3:0 4:0 8:0 16:0)
 IFS=: read -r TOY_K TOY_SEED <<< "${SPECS[$SLURM_ARRAY_TASK_ID]}"
 export TOY_K TOY_SEED LADDER_ACT=silu LADDER_EMB_SCALE=auto OMP_NUM_THREADS=4

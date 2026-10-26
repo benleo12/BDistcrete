@@ -5,7 +5,7 @@
 #SBATCH --mem=128G
 #SBATCH -t 12:00:00
 #SBATCH -J p2score
-#SBATCH -o /mnt/beegfs/bassi/reweighting/maxent_code/logs/p2score_%A_%a.out
+#SBATCH -o logs/p2score_%A_%a.out
 # The strict test (400k events per held-out point) of every model of a train_p2.sbatch array, one
 # element per "STAGE:NET:SEED" in SPECS, the same SPECS and DESIGN_TAG as the training array.
 # Submit with --dependency=aftercorr:<training array> so element i scores model i once it exists.
@@ -13,7 +13,8 @@
 # runs and the 16 single-generator held-out points at 400k), data_stagePURE17_orig_h400 for MIX
 # (data_stagePURE17_v3_h400 for the mixture of the 720 runs, DESIGN_TAG v3full: its 48 points).
 set -uo pipefail
-R=/mnt/beegfs/bassi/reweighting; cd $R/maxent_code
+MAXENT_DIR=${MAXENT_DIR:-/mnt/beegfs/bassi/reweighting/maxent_code}; R=$(dirname "$MAXENT_DIR")   # analysis/ in the repository, R its parent
+cd "$MAXENT_DIR" || exit 1
 read -ra ALL <<< "${SPECS:?}"; IFS=: read -r STAGE NET SEED <<< "${ALL[$SLURM_ARRAY_TASK_ID]}"
 DT=${DESIGN_TAG:-}; TAG=P2${DT}${NET}${SEED}
 if [ "$STAGE" = MIX ]; then
@@ -24,7 +25,9 @@ else
   case $STAGE in A|B|C) DATA=data_abc_h400 ;; *) DATA=data_stagePURE17_v3_h400 ;; esac
 fi
 [ -f "$MODEL" ] || { echo "NO MODEL $MODEL (training failed or not finished)"; exit 4; }
-export STAGE NET SEED MODEL DATA OUT=output/p2${DT}strict_${STAGE}_${NET}_s${SEED}.json
+export MAXENT_DIR STAGE NET SEED MODEL DATA OUT=output/p2${DT}strict_${STAGE}_${NET}_s${SEED}.json
 export MMAP_BASE=${MMAP_BASE:-$R/mmap} E_CSV=${E_CSV:-stageE_design.csv} F_CSV=${F_CSV:-stageF_design_aug.csv}
 case $DT in aug*) export ABC_DESIGN=$R/gen/designs ;; esac
-bash score_p2.sbatch
+# score_p2.sbatch is in the analysis folder on Symmetry and in analysis/symmetry/ in the repository
+S=score_p2.sbatch; [ -f $S ] || S=symmetry/score_p2.sbatch
+bash $S

@@ -1,5 +1,5 @@
 #!/bin/bash
-# The wide coupling scan of App. B at the final standard (Benoit, Oct 18: redo overnight).
+# The wide coupling scan of Sec. 3.5 (Fig. 6) at the final standard.
 # Data: the coupling alone over [0.08, 0.20], 21 training runs spaced by 0.006 (9000-9020) and six
 # held-out runs (9100-9105 at 0.083, 0.107, 0.131, 0.155, 0.179, 0.197), 80k events each, the Stage A
 # card of gen_stageABC.sh (Sherpa 3.0.4, CSS, Ahadic, every other parameter at its default), into
@@ -13,11 +13,12 @@
 # The reference weights at every held-out point are saved for the weight panel (LADDER_DUMP_WEIGHTS).
 #   bash widebox_submit.sh
 set -u; export PATH=/cm/shared/apps/slurm/current/bin:$PATH
-R=/mnt/beegfs/bassi/reweighting; cd $R
+MAXENT_DIR=${MAXENT_DIR:-/mnt/beegfs/bassi/reweighting/maxent_code}; R=$(dirname "$MAXENT_DIR")
+cd "$R" || exit 1
 source env/torch/bin/activate
-python3 - <<'EOF'
-import csv
-R = '/mnt/beegfs/bassi/reweighting'
+R=$R python3 - <<'EOF'
+import csv, os
+R = os.environ['R']
 ASV = [round(0.080 + 0.006*i, 4) for i in range(21)]
 TRAIN = {9000 + i: a for i, a in enumerate(ASV)}
 HELD = {9100: 0.083, 9101: 0.107, 9102: 0.131, 9103: 0.155, 9104: 0.179, 9105: 0.197}
@@ -38,7 +39,7 @@ print('tasks and designs written')
 EOF
 G=$(sbatch --parsable --array=0 --export=ALL,TASKS=gen/tasks/widebox.txt,GEN_DATA=gen/data_widebox gen/gen_batch.sbatch)
 echo "generation $G"
-cd $R/maxent_code
+cd "$MAXENT_DIR" || exit 1
 export K=48 STEPS=324000 PATIENCE=0 GPU_FETCH=1 MMAP_BASE=/dev/shm STAGEW_DATA=$R/gen/data_widebox LADDER_DUMP_WEIGHTS=1 LADDER_NREF_TOTAL=63000
 sub() {  # DESIGN_TAG, design csv, reference runs
   DESIGN_TAG=$1 STAGEW_CSV=$R/gen/designs/$2 LADDER_REF_RUNS=$3 SPECS="W:fac:0" \

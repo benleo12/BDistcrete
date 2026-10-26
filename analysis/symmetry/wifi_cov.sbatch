@@ -4,13 +4,14 @@
 #SBATCH --mem=150G
 #SBATCH -t 12:00:00
 #SBATCH -J wificov
-#SBATCH -o /mnt/beegfs/bassi/reweighting/maxent_code/logs/wificov_%j.out
+#SBATCH -o logs/wificov_%j.out
 # The learning band of a trained mixture (wifi_fit.py, if not done yet), its diagnostics against the
 # mean of members out of sample (wifi_diag.py, if not done yet), and the check that it covers the
 # emulator's own error at the 48 held-out points with 400k events each (wifi_coverage.py).
 #   TAG=MIXGEOV3S9 sbatch --export=ALL wifi_cov.sbatch
 set -uo pipefail
-R=/mnt/beegfs/bassi/reweighting; cd $R/maxent_code; source $R/env/torch/bin/activate
+MAXENT_DIR=${MAXENT_DIR:-/mnt/beegfs/bassi/reweighting/maxent_code}; R=$(dirname "$MAXENT_DIR")   # analysis/ in the repository, R its parent
+cd "$MAXENT_DIR" || exit 1; [ -f $R/env/torch/bin/activate ] && source $R/env/torch/bin/activate
 export OMP_NUM_THREADS=8 TORCH_THREADS=8
 M=output/models/${TAG:?}
 [ -f output/wifi_${TAG}_fit.npz ] || python3 -u wifi_fit.py output/wifi_${TAG}_basis.npz ${M}_cond.npz ${M}_ref_v2_slim.npz || { echo "WIFI FIT FAILED"; exit 3; }

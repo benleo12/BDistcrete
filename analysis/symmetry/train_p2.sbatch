@@ -5,7 +5,7 @@
 #SBATCH --mem=96G
 #SBATCH -t 1-00:00:00
 #SBATCH -J p2
-#SBATCH -o /mnt/beegfs/bassi/reweighting/maxent_code/logs/p2_%A_%a.out
+#SBATCH -o logs/p2_%A_%a.out
 # Phase 2: every stage of the paper with both networks, three trainings each, at the configuration
 # the learning curve selects (K, STEPS), in the protocol of the paper: four bootstrap members, a
 # fifth of each run held out as the fit set, mean of members, temperature on the stop split,
@@ -16,7 +16,8 @@
 # Data: ABC_DATA for A-C (gen/data_abc), E_DATA/E_CSV and F_DATA/F_CSV for the single generators,
 # DM_DATA for the mixture.
 set -uo pipefail
-R=/mnt/beegfs/bassi/reweighting; cd $R/maxent_code; source $R/env/torch/bin/activate
+MAXENT_DIR=${MAXENT_DIR:-/mnt/beegfs/bassi/reweighting/maxent_code}; R=$(dirname "$MAXENT_DIR")   # analysis/ in the repository, R its parent
+cd "$MAXENT_DIR" || exit 1; [ -f $R/env/torch/bin/activate ] && source $R/env/torch/bin/activate
 read -ra ALL <<< "${SPECS:?}"; IFS=: read -r STAGE NET SEED <<< "${ALL[$SLURM_ARRAY_TASK_ID]}"
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-12} LADDER_ENS=4 LADDER_K=${K:?} LADDER_STEPS=${STEPS:?} LADDER_SEED_OFFSET=$((SEED*1000))
 export LADDER_ACT=silu LADDER_EMB_SCALE=auto LADDER_LR=1e-3 LADDER_LOWMEM=1 LADDER_MMAP=1
@@ -26,9 +27,9 @@ MMAP_BASE=${MMAP_BASE:-/tmp}; mkdir -p $MMAP_BASE
 # working memory maps in RAM (MMAP_BASE=/dev/shm) outlive a job that is killed without its EXIT trap:
 # remove those of our own jobs that are no longer running before adding one (skipped if squeue fails)
 if [ "$MMAP_BASE" = /dev/shm ] && LIVE=" $(squeue -h -u $USER -o %A 2>/dev/null | tr '\n' ' ') " && [ "$LIVE" != "  " ]; then
-  for d in /dev/shm/bassi_mmap_*; do [ -e "$d" ] || continue; j=${d##*_}; case "$LIVE" in *" $j "*) ;; *) rm -rf "$d" ;; esac; done
+  for d in /dev/shm/${USER}_mmap_*; do [ -e "$d" ] || continue; j=${d##*_}; case "$LIVE" in *" $j "*) ;; *) rm -rf "$d" ;; esac; done
 fi
-export LADDER_MMAP_DIR=$MMAP_BASE/bassi_mmap_p2_${STAGE}_${NET}_${SEED}_$SLURM_JOB_ID
+export LADDER_MMAP_DIR=$MMAP_BASE/${USER}_mmap_p2_${STAGE}_${NET}_${SEED}_$SLURM_JOB_ID
 trap 'rm -rf $LADDER_MMAP_DIR' EXIT
 DT=${DESIGN_TAG:-}   # e.g. aug for the densified ladder designs (ABC_DESIGN); keeps outputs apart
 [ -n "${ABC_DESIGN:-}" ] && export LADDER_ABC_DESIGN=$ABC_DESIGN

@@ -1,5 +1,5 @@
 #!/bin/bash
-# The K scan of App. C at the final standard (Benoit, Oct 18: redo overnight). One factorized
+# The K scan of Sec. 3.7 (Fig. 8) at the final standard. One factorized
 # training per K, seed 0, through train_p2.sbatch exactly as the paper's cells (324k steps, no
 # patience, four bootstrap members, fit fraction 0.2, best stop-split checkpoint, temperature on the
 # stop split), each followed element by element by its strict test (score_p2_array.sbatch).
@@ -10,7 +10,8 @@
 # Memory maps in /dev/shm (RAM, charged to the job), so the scan writes nothing large to beegfs.
 #   bash kscan_submit.sh
 set -u; export PATH=/cm/shared/apps/slurm/current/bin:$PATH
-R=/mnt/beegfs/bassi/reweighting; cd $R/maxent_code
+MAXENT_DIR=${MAXENT_DIR:-/mnt/beegfs/bassi/reweighting/maxent_code}; R=$(dirname "$MAXENT_DIR")
+cd "$MAXENT_DIR" || exit 1
 export STEPS=324000 PATIENCE=0 GPU_FETCH=1 MMAP_BASE=/dev/shm
 # the Sherpa stage first: its trainings are the longest
 for K in 1 2 4 6 8 9 10 12 16 24 32 45; do

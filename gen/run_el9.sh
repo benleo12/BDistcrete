@@ -4,7 +4,7 @@
 # need), and run the script from gen/ with its output under $GEN_BASE (default gen/).
 #   usage: run_el9.sh gen_stageE.sh <rid> <8 parameters> <events>
 set -eo pipefail   # no -u: the module scripts reference unset variables
-R=/mnt/beegfs/bassi/reweighting
+R=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)   # the folder that holds gen/, where this script is
 GEN_BASE=${GEN_BASE:-$R/gen}
 CVMFSEXEC=$R/tools/cvmfsexec/cvmfsexec
 SIF=$R/containers/almalinux9.sif

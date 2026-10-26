@@ -2,7 +2,7 @@
 # One generator run inside the EL9 container with CVMFS mounted (called by gen_batch.sbatch).
 #   gen_one.sh <gen_stageE.sh|gen_stageF.sh> <rid> <8 parameters> <events>
 # Skips a run whose particle file already exists, so a batch can simply be resubmitted.
-R=/mnt/beegfs/bassi/reweighting
+R=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)   # the folder that holds gen/, where this script is
 script=$1; rid=$2
 # GEN_SEED_OFFSET > 0 makes an extension: the same parameters with seed rid + offset (written to
 # its own GEN_DATA directory, so the file name stays particles_full_<rid>.npz)

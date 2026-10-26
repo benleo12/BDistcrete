@@ -28,7 +28,7 @@ import os, re, sys
 import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 HEPDATA_DIR = os.environ.get('HEPDATA_DIR', os.path.join(HERE, 'hepdata'))
-sys.path.insert(0, os.environ.get('MAXENT_CODE', '/Users/user/maxent_code'))
+sys.path.insert(0, os.environ.get('MAXENT_CODE', os.path.dirname(HERE)))   # fit_alpha0.py, in analysis/
 from fit_alpha0 import lepdata
 
 SRC = {'aleph': ('ins636645', 54, True), 'delphi': ('ins424112', 11, False), 'opal': ('ins669402', 1, False)}

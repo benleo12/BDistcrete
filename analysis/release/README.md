@@ -152,11 +152,11 @@ head.support(theta)        # score, threshold, ok, nearest
 ```
 
 `box` is the range of each parameter. `support` is the question of whether the head ever saw a
-point like yours, and the two can come apart. Both eight-parameter designs fill their boxes. The
-first Herwig design followed the published retunes, which move the shower coupling with the
-shower cutoff and the cluster fission mass with its power, and so covered a six-dimensional
-locus. The 256 points of each generator added for the current networks are a scrambled Sobol
-sequence over the whole box, which fills the rest. `check` still tells you when a point is far
+point like yours, and the two can come apart. Both eight-parameter designs fill their boxes. Each
+design holds the points of the earlier design of its generator and 256 points of a scrambled Sobol
+sequence over the whole box. The first Herwig design follows the published retunes, which move the
+shower coupling with the shower cutoff and the cluster fission mass with its power, and covers a
+six-dimensional locus. The Sobol points fill the rest. `check` still tells you when a point is far
 from every training point, which `in_box` alone does not.
 
 ## Conventions you have to match
@@ -220,10 +220,8 @@ names differ from the paper's stage letters, as the last column says.
 | `MIX17` | both | 17 | the `E` box, the `F` box, and the fraction of the sample the Herwig side supplies. Reference sample of 1,149,840 events, closure measured at the 48 held-out points of both generators | the seventeen-parameter mixture of Sec. 4 |
 | `C_1M` | Sherpa 3 | 3 | the shower coupling, the strange fraction and the Ahadic cluster transverse momentum scale, trained on a cache of 1,080,000 events | an earlier version only |
 
-`E`, `F` and `MIX17` are the networks of the current paper, retrained when every result was
-redone at one training standard (version 2.0.0 of this release). Under the same names, version
-1.0.0 shipped the networks of the earlier version, and the git history keeps them. `C_1M` is
-unchanged from 1.0.0. The networks of the paper's Stages A, B and C (one, two and three
+`E`, `F` and `MIX17` are the networks of the current paper (version 2.0.0 of this release). The
+git history keeps the networks of version 1.0.0. `C_1M` is that of version 1.0.0. The networks of the paper's Stages A, B and C (one, two and three
 parameters) are not here.
 
 Parameter names, ranges and the traps just above are printed by
@@ -361,7 +359,7 @@ reproducible function of the parameters.
 ### Away from its held points, `C_1M` reads the flavour rates about three times worse
 
 The numbers in `STAGES.md` are measured at the points held out of training, which for the
-three-parameter stage are five interior points. At twelve further points that were used for nothing
+three-parameter stage are four interior points. At twelve further points that were used for nothing
 at all, the root mean square relative error over the same reference rises from 0.35 to 1.17 percent
 for the baryon rate, against 0.15 to 0.22 for the multiplicity, 0.12 to 0.34 for the broadening and
 0.20 to 0.51 for one minus thrust. The strange fraction is the exception, 0.71 at the held points

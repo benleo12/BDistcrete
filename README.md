@@ -1,182 +1,178 @@
 # BDistcrete
 
 Code for *Combined Uncertainties from Event Generators and Precision QCD* (B. Assi and J. Thaler),
-earlier circulated as *Beyond Discrete Variations: Continuous Generator Uncertainties Anchored to
-Precision QCD*. The LaTeX source of the paper is kept in a separate repository synced from Overleaf
+earlier circulated as *Beyond Discrete Variations*. This README describes draft r8 of the paper,
+and every section, figure and table number below is that of draft r8. The LaTeX source of the
+paper is kept in a separate repository synced from Overleaf
 (benleo12/Reweighting-generator-parameters, private until publication).
 
-An event-generator prediction has three kinds of uncertainty, and this code puts all three on one
-stored event sample. A classifier conditioned on the generator parameters reweights the sample to
-any point of a parameter box, so the generator becomes a continuous, differentiable function of its
-hadronization and shower parameters, including the choice between Sherpa and Herwig as the fraction
-of a multiplicative mixture (the generator uncertainty). A fit of the classifier's own ensemble of
-trainings on held-out events, following Benevedes and Thaler (arXiv:2506.00113), gives the
-covariance of the weight (the learning uncertainty), while the prediction is the mean of the
-ensemble members. A maximum-entropy reweighting then imposes
-the windowed thrust moments of an NNLL+NLO calculation on the same events and propagates its scale
-and scheme variations (the theory uncertainty). The demonstration of the paper shows the three
-bands of the thrust distribution and of other observables, separately and combined, against LEP
-data. The sections below marked "earlier draft" document the strong-coupling fit of the earlier
-version, whose code remains in the repository.
+## What the paper does
 
-## The current version (19 October 2026): every result rerun at one standard
+An event-generator prediction has three kinds of uncertainty. The paper obtains all three from one
+stored event sample of e+e- → hadrons at the Z pole and shows each one separately and combined.
 
-Every number and figure of the current draft comes from one training standard: the factorized network
-with K = 48 terms, four members trained from different starting values on resamples of the training
-runs, 3.24×10^5 steps on the full cosine schedule without early stopping, and 8×10^4 events per run,
-with 720 pure Sherpa and Herwig runs for the seventeen-parameter mixture. The concatenation network is
-trained the same way, through the same code. Every model is trained three times with new seeds and
-scored on the standard test and on a strict test with five times the statistics. Every quoted number
-is written by `analysis/phase2tools/make_numbers.py` from the result files in `analysis/output/`.
+- **Generator band.** A classifier that takes the generator parameters as an input reweights the
+  sample to any point of a parameter box. The estimator is that of DCTR. Its output is written as
+  an inner product of stored functions of the event with functions of the parameters, the
+  factorized network. Sherpa and Herwig enter as a multiplicative mixture with a continuous mixing
+  fraction ξ, so the family has seventeen parameters: eight of Sherpa, eight of Herwig and ξ. The
+  generator band is the spread of a prediction over 200 points of the box.
+- **Learning band.** Each model is trained as four members, from different starting values and on
+  resamples of the training runs. A fit of the log ratio as a combination of the members' products,
+  on events set aside from training (WiFi ensembles, Benevedes and Thaler, arXiv:2506.00113), gives
+  the covariance of the learned weight. The prediction is the mean of members.
+- **Theory band.** A maximum-entropy weight imposes fourteen moments of an NNLL+NLO thrust
+  calculation with a dispersive power correction on the same events, inside the window
+  0.05 ≤ τ < 1/3. The scale, scheme and dispersive-model variations of the calculation give a
+  theory band that keeps the sign of each variation.
 
-| what | where |
-|---|---|
-| training, both networks, every stage | `analysis/r2_ladder.py`, `analysis/symmetry/train_p2.sbatch` (stages), `analysis/symmetry/train_mixgeo.sbatch` (mixture) |
-| closure on the standard and strict tests | `analysis/symmetry/score_p2_array.sbatch`, `analysis/symmetry/strict_closure.sbatch`, `analysis/ladder_widths_big.py` |
-| the learning band and the check that it covers the errors | `analysis/wifi_fit.py`, `analysis/wifi_coverage.py`, `analysis/symmetry/wifi_cov.sbatch` |
-| the three bands of Sec. 4 (signed theory band, statistical error of the sample) | `analysis/three_bands.py`, `analysis/theory_variations.py`, `analysis/band_checks.py` |
-| the calculation against ALEPH and DELPHI | `analysis/calc_bins.py`, `analysis/calc_vs_delphi.py`, `analysis/lepcov/` |
-| the toy, the cost benchmark, the number-of-terms and wide-coupling scans | `analysis/toy_final.py`, `analysis/bench_cost_final.py`, `analysis/kscan_submit.sh`, `analysis/widebox_submit.sh` |
-| every quoted number | `analysis/phase2tools/make_numbers.py`, which writes `numbers.tex` and `numbers.json` |
-| every data figure, in one style | `analysis/figs_r8.py` |
-| the released networks (numpy only) | `analysis/release/models/` `E`, `F` and `MIX17`, packaged by `analysis/package_release.py` (`analysis/symmetry/package_r8.sbatch`) |
-
-The released `E` is Stage D of the paper (Sherpa, eight parameters, 352 training runs), `F` is Stage E
-(Herwig, eight parameters, 368 training runs) and `MIX17` is the seventeen-parameter multiplicative
-mixture of Sec. 4 (720 pure runs). Each is checked at packaging against the trained network.
-
-### Training times
-
-On one NVIDIA H200 with 12 CPU cores, all members of a model in one job:
-
-| model | wall time |
-|---|---|
-| Stages A to C (one to three parameters) | about 1 to 1.5 h each |
-| Stage D, Sherpa (`E` in the code) | about 2.5 h |
-| Stage E, Herwig (`F` in the code) | about 2 h |
-| the seventeen-parameter mixture, 720 runs of 8×10^4 events | about 4 h, with four or with eight members |
-| the same mixture with the concatenation network | about 5 h |
-
-Scoring a model on the strict test takes about 15 minutes, the fit of the learning band about ten
-minutes, and the three bands at one point under a minute on 80 CPU cores. The whole rerun, with the
-scans and three seeds of every model, took about 400 GPU-hours.
-
-## The revision of October 2026 in short
-
-| what | where |
-|---|---|
-| the multiplicative mixture head and the ensemble-size switch | `analysis/r2_ladder.py` (`GeoMixturePFN`, `LADDER_ENS`, `LADDER_EMB_STORE`), `analysis/stage_mixture.py` (geometric head is the default) |
-| the pure-run sample of both generators | `analysis/make_pure_dataset.py`, `analysis/data_stagePURE17/meta.json` |
-| the learning uncertainty: basis, fit, covariance, diagnostics, ensemble-size scan | `analysis/wifi_embed.py`, `wifi_fit.py`, `wifi_diag.py`, `wifi_scan_table.py` |
-| the NNLL+NLO calculation at a fixed point | `THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python thrust_chain.py`, `analysis/targets_nlo_point.py` |
-| the three bands and their figures | `analysis/three_bands.py`, `fig_three_bands.py`, `fig_three_bands_obs.py`, results in `analysis/output/three_bands_*.json` |
-| the training jobs | `analysis/perlmutter/train_mixgeo_ens.sbatch` (any ensemble size), `analysis/run_mixgeo_local.sh` (one laptop GPU) |
-
-`docs/REPRODUCE.md` opens with the commands of this revision.
-
-## Contents
-
-| path | what it holds |
-|---|---|
-| `analysis/` | every script that produces a figure, table or number of the paper, run from this directory |
-| `analysis/output/` | the small result files the figures and numbers are made from, and the paper's figures |
-| `analysis/release/` | the trained networks of the current version (`E`, `F`, `MIX17`) and of an earlier draft (`C_1M`) with a numpy-only reader, `gentune`, the generator cards and run scripts, examples and closure tables |
-| `analysis/symmetry/` | the batch scripts of the rerun, as run on the Symmetry cluster at Perimeter |
-| `gen/` | the scripts and designs that generated every sample of the current version on the same cluster |
-| `analysis/phase2tools/` | `make_numbers.py`, which writes every quoted number of the current version, and its output |
-| `analysis/lepcov/` | the reader of the LEP thrust tables with statistical and systematic errors kept apart, and its HEPData cache |
-| `analysis/perlmutter/` | the batch scripts as run at NERSC |
-| `analysis/farm/` | the GPU farm of the term-count scan and the wide coupling range, with the script versions it ran |
-| `analysis/ares_recovered/`, `analysis/eerad3/` | our drivers and patches for ARES and EERAD3, and the tables they produced |
-| `analysis/rivet_ref/` | the LEP thrust measurements (HEPData values in the YODA format of Rivet) |
-| `docs/REPRODUCE.md` | every figure, table and quoted number, with the command and the inputs that produce it |
-| `docs/DATA.md` | the event samples and network exports, which are too large for git, as downloadable archives |
-| `tools/get_data.sh` | downloads the archives of `docs/DATA.md`, checks their SHA256 and unpacks them into `analysis/` |
-| `CLAUDE.md` | orientation for Claude Code: the method, how it relates to DCTR, the map of the code |
-| `environment.yml`, `environment-tf.yml` | the analysis environment, and the TensorFlow one that only `crosscheck_ef.py` needs |
+The paper performs no fit of the strong coupling. The two parameters of the calculation are fixed
+inputs, α_s(M_Z) = 0.1135 and α_0 = 0.43, the values at which the calculation alone describes the
+ALEPH thrust distribution in the window. The predictions are compared with DELPHI. Section 3 tests
+the classifier weights and the learning band against fresh generator runs for one to seventeen
+parameters. Section 4 shows the three bands of the thrust distribution and of seven means.
 
 ## Quick start
 
 ```bash
 conda env create -f environment.yml && conda activate bdistcrete
 cd analysis
-python make_sec6_numbers.py                                   # every number of Sec. 6, from output/
-python fig_anchored_fit.py output/profile_MIX17ext_central.json   # Fig. 10
-python fig_thrust_vs_aleph.py                                  # Fig. 11 and the fit of App. D
-python figs_pro.py toy anymap head widebox                     # Figs. 4, 6, 7 and 8
-python fig_cost.py                                             # Fig. 9, from output/bench/
-python method_figs.py                                          # Fig. 2
+python phase2tools/make_numbers.py output    # every quoted number
+python figs_r8.py                            # the ten data figures, Figs. 3 to 12
 ```
 
-The figure scripts draw their labels with LaTeX, which `environment.yml` does not install, so a
-TeX distribution is needed for the figures. To reweight your own events with the released models,
-see `analysis/release/README.md`.
+`make_numbers.py` reads the result files in `analysis/output/` and
+`analysis/data_stagePURE17/meta.json`, and writes
+`analysis/phase2tools/numbers.tex`, 575 macros identical to the paper's `numbers.tex`, and
+`numbers.json` next to it. `figs_r8.py` writes `output/r8_<name>.pdf`, and with names it draws
+only those figures, for example `python figs_r8.py bands obs`. Figs. 1 and 2 are drawn in TikZ in
+the paper source. The figures are typeset with LaTeX, which `environment.yml` does not install. To
+reweight your own events with the released networks, see `analysis/release/README.md`.
 
-## What can be reproduced from where
+## What can be redone from where
 
-1. **From this repository alone, on a laptop:** every number of Sec. 6 (`make_sec6_numbers.py`), the
-   thrust calculation and its fit to ALEPH (App. D), and every figure made by code except Fig. 5,
-   which needs a Stage C event file (Figs. 1 and 3 are drawn in the LaTeX source).
-2. **With the network exports and reference samples (`tools/get_data.sh`,
-   [`docs/DATA.md`](docs/DATA.md)):** the closure tests of Sec. 5, the anchoring and the fits of
-   Sec. 6. The fits ran on NERSC CPU nodes (`analysis/perlmutter/`).
-3. **From the generators:** the run cards and seeds of every sample are included, and
-   `docs/DATA.md` lists the versions. Training ran on GPUs.
+1. **From this repository alone, on a laptop.** Every quoted number and every figure, from the
+   result files in `analysis/output/`. The thrust calculation at the fixed point and its comparison
+   with ALEPH and DELPHI (`thrust_chain.py`, `targets_nlo_point.py`, `calc_bins.py`,
+   `calc_vs_delphi.py`, with `RIVET_REF=rivet_ref`). The collection of the term-count scan
+   (`kscan_collect.py`). The self-test of the released networks and the reweighting of your own
+   events (`analysis/release/`).
+2. **With the network exports and event samples of draft r8** ([`docs/DATA.md`](docs/DATA.md)).
+   The three bands, the learning band and its coverage, the inputs of Figs. 3 and 5, the strict
+   tests, the cost benchmark and the packaging of the released networks. These ran on the Symmetry
+   cluster at Perimeter, with the batch scripts in `analysis/symmetry/`.
+3. **From the generators.** Every sample can be regenerated with the scripts and designs in `gen/`.
+   Training needs the samples and a GPU, one NVIDIA H200 per job.
+
+The toy of Fig. 4 needs no data, because `toy_final.py` generates its own events. Its training ran
+on a GPU (`symmetry/toy_final.sbatch`).
+
+[`docs/REPRODUCE.md`](docs/REPRODUCE.md) gives the command and the inputs of every figure, table
+and number.
+
+## The pipeline of draft r8
+
+All scripts are in `analysis/` and run from there.
+
+| what | where |
+|---|---|
+| training, both networks, every model | `r2_ladder.py` (`CondPFN`, `GeoMixturePFN`, `ConcatPFN`, `ConcatGeoMixture`), `stage_mixture.py`, `symmetry/train_p2.sbatch`, `symmetry/train_mixgeo.sbatch` |
+| closure on the standard and the strict test | `ladder_widths_big.py`, `eval_valid.py`, `symmetry/score_p2_array.sbatch`, `symmetry/strict_closure.sbatch` |
+| the learning band and its coverage | `wifi_embed.py`, `wifi_fit.py`, `wifi_diag.py`, `wifi_coverage.py`, `symmetry/wifi_cov.sbatch` |
+| the calculation at the fixed point | `thrust_chain.py`, `targets_nlo_point.py`, `calc_bins.py`, `calc_vs_delphi.py` |
+| the maximum-entropy weights and the three bands | `directlib.py`, `three_bands.py`, `theory_variations.py`, `band_checks.py` |
+| the toy, the scans and the cost | `toy_final.py`, `kscan_submit.sh`, `kscan_collect.py`, `widebox_submit.sh`, `widebox_collect.py`, `bench_cost_final.py` |
+| every quoted number, every data figure | `phase2tools/make_numbers.py`, `figs_r8.py` |
+| the released networks | `package_release.py`, `make_stage_table.py`, `precision_gap.py`, `closure_vs_distance.py`, `fit_accuracy_law.py`, run by `symmetry/package_r8.sbatch`, `table_r8.sbatch` and `accuracy_r8.sbatch` |
+
+## Contents
+
+| path | what it holds |
+|---|---|
+| `analysis/` | every script of the paper, run from this directory |
+| `analysis/output/` | the result files the numbers and figures are made from. `figs_r8.py` writes the figures here |
+| `analysis/phase2tools/` | `make_numbers.py` and its output, `numbers.tex` and `numbers.json` |
+| `analysis/symmetry/` | the batch scripts of draft r8, as run on the Symmetry cluster |
+| `analysis/release/` | the released networks (numpy only), the `gentune` reader, the generator scripts and designs, the closure tables |
+| `gen/` | the scripts and designs that generated the samples of draft r8 |
+| `analysis/lepcov/`, `analysis/rivet_ref/` | the LEP measurements (HEPData tables and the YODA files of Rivet) and their reader |
+| `analysis/ares_recovered/`, `analysis/eerad3/` | our drivers and patches for ARES and EERAD3, and the tables they produced |
+| `analysis/perlmutter/`, `analysis/farm/` | batch scripts of the earlier draft |
+| `docs/REPRODUCE.md` | every figure, table and quoted number, with the command and the inputs that produce it |
+| `docs/DATA.md` | the network exports and event samples, which are too large for git |
+| `tools/get_data.sh` | downloads the data archives of the earlier draft |
+| `CLAUDE.md` | orientation for Claude Code: the method, how it relates to DCTR, the map of the code |
+| `environment.yml`, `environment-tf.yml` | the analysis environment, and the TensorFlow one that only the energyflow cross-check needs |
 
 ## Data
 
-The exports and event samples are too large for git. [`docs/DATA.md`](docs/DATA.md) lists them as
-archives of under 2 GB each, published with the GitHub release `data-v1`, and says what each one
-holds. `tools/get_data.sh` downloads archives by group or by name, checks their SHA256 and unpacks
-them into `analysis/` with the paths the scripts use. From the repository root:
+The network exports and event samples are too large for git, and those of draft r8 are not yet in
+a release archive. [`docs/DATA.md`](docs/DATA.md) lists the files the paper needs and what reads
+each one. They will be archived with the paper at Zenodo, and until then they are available on
+request. The result files made from them are in `analysis/output/`, so every number and figure
+can be redone without them.
+
+## Batch scripts
+
+The scripts in `analysis/symmetry/` are the ones that ran on Symmetry, one H200 per training job.
+Each one changes to `${MAXENT_DIR:-/mnt/beegfs/bassi/reweighting/maxent_code}`, the cluster's copy
+of `analysis/`, and takes its parent as the folder that holds `gen/` and the Python environment
+`env/torch`. To run them elsewhere, set `MAXENT_DIR` to your `analysis/` folder and submit from
+there:
 
 ```bash
-tools/get_data.sh sec6              # the archives of one group in the table below
-tools/get_data.sh B1_exports_ABC    # or single archives, by name
-tools/get_data.sh core              # A0 and B1 to B10 (9.6 GB): every row below except App. A, Sec. 5.8 and retraining
-tools/get_data.sh --list            # every archive with its size, and the groups
+cd analysis
+export MAXENT_DIR=$PWD
+TAG=MIXGEOV3S9 sbatch --export=ALL symmetry/three_bands.sbatch
 ```
 
-The script also links the reference names the scripts open to the slim reference files
-(`docs/DATA.md`, "Reference files"). Run `tools/get_data.sh --unlink` before retraining. The
-archives each cross-check needs, and the group that downloads them:
+The logs go to `logs/` in the folder you submit from. The `#SBATCH` lines name the partitions of
+Symmetry, so adapt them to your cluster. The scripts set the settings of the paper that
+`r2_ladder.py` does not use by default (four bootstrap members, a fifth of each run set aside,
+SiLU). The number of terms and of steps come from `K` and `STEPS`, so pass `K=48 STEPS=324000` as
+in `docs/REPRODUCE.md`.
+`gen/README.md` describes the generation scripts.
 
-| cross-check | archives | group |
-|---|---|---|
-| every number of Sec. 6 from the stored results, Figs. 2, 4 and 6 to 10, the fit of App. D | none | |
-| the per-job files of the toy merges of Sec. 5.1 and of the Stage E term-count merge, the Sec. 6 grid profiles, the ARES tables | none, they ship with the repository | |
-| the fixed-order cumulants of App. D, rebuilt from the raw EERAD3 logs | `A0_theory_logs` | `appD` |
-| Table 1, Sec. 5.2 rates and energy fraction, Fig. 5, App. B temperatures and single networks | `B1_exports_ABC`, `B2_held_ABC` | `table1` |
-| Fig. 6 and the multiplicity tails (Sec. 5.3) | `B1_exports_ABC`, `B2_held_ABC`, `B3_held_C_valid` | `sec5` |
-| offsets at 80k and 800k events and the accuracy law (Sec. 5.3) | `B1_exports_ABC`, `B2_held_ABC`, `B4_held_C_floor` | `sec5` |
-| Table 2, the seven-parameter mixture | `B5_mix7` | `table2` |
-| the Sec. 6 fit and App. E | `B6_sec6_MIX17` | `sec6` |
-| Table 3 | `B6_sec6_MIX17`, `B8_E`, `B9_F`, `B10_held_8param` | `table3` |
-| the Sec. 6 three-parameter family | `B7_C1M` | `family` |
-| App. A, the exact-axis widths and the closure of the 54-run network | `B1_exports_ABC`, `B7_C1M`, `B12_appA_v2` | `appA` |
-| Sec. 5.8 cost | `B6_sec6_MIX17`, `B11_bench` | `cost` |
-| retraining a network | its training archives (`C1_train_A` to `C9b_train_MIX17`) and the archive with its held-out runs, listed under "Retraining" in `docs/DATA.md` | `train-A`, `train-B`, `train-C`, `train-C1M`, `widebox`, `train-DM2`, `train-E`, `train-F`, `train-MIX17` |
+## Release v2.0.0
 
-`docs/REPRODUCE.md` gives the archives per section as well.
+The tag `v2.0.0` marks the code of draft r8. `analysis/release/` holds the released networks at
+version 2.0.0 (`analysis/release/VERSION`): `E` (Stage D, Sherpa), `F` (Stage E, Herwig) and
+`MIX17` (the seventeen-parameter mixture of Sec. 4, its first set of members), with the basis
+weights of its learning band in `MIX17_wifi.npz`. `C_1M` is a three-parameter network of the
+earlier draft. They need only numpy, and `python -m gentune.selftest models`, run in
+`analysis/release/`, checks them.
 
 ## Notes on exact reproduction
 
-- The closure tests of Secs. 5.2 to 5.6 used an earlier thrust-axis finder
-  (`compute_efps_old_axis.py`), and so did the temperature fits of App. B (`docs/DATA.md`, "Notes
-  on exact reproduction"). Everything else uses the exact axis (`compute_efps.py`). The network
-  inputs are unchanged between the two.
-- The temperature grid of `r2_ladder.py` was refined after the ladder networks were trained. The
-  ladder uses temperature one, as stated in the paper, so a retrained Stage C needs
-  `python apply_T.py C 1.0`.
-- Four Stage B runs lost their seeds and cannot be regenerated bit for bit.
-- External codes are not redistributed: Sherpa 3.0.4 and a Sherpa 3.1 development build, Herwig
-  7.2.3 and 7.3.0, Rivet 3.1.10, ARES (GPL-3, upstream commit e75c88c with the edits in
-  `ares_recovered/ares_edits.txt`) and EERAD3 1.0 (with `eerad3/eerad3_blk.patch`).
-- Batch scripts use `$SCRATCH/BDistcrete/analysis` and the placeholder `<your-account>`.
+- The run number of every sample is its generator seed. The one exception is run 32077, generated
+  with seed 5032077 (`gen/designs/seed_overrides.csv`). The four extensions of a held-out run use
+  the seeds run + k × 10^6, k = 1 to 4.
+- Every event shape is computed with the exact thrust axis (`compute_efps.py`). The network inputs
+  use the axis of an iterative search (`extract_particles_full_flavor.py`), as App. A says.
+- The scripts that read the LEP measurements look for them in a local Rivet installation unless
+  `RIVET_REF=rivet_ref` points them to the copies in `analysis/rivet_ref/`.
+- External codes are not redistributed: Sherpa 3.0.4 and Herwig 7.3.0 (pinned CVMFS builds, see
+  `analysis/release/generators/README.md`), ARES (GPL-3, upstream commit e75c88c with the edits in
+  `analysis/ares_recovered/ares_edits.txt`) and EERAD3 1.0 (with `analysis/eerad3/eerad3_blk.patch`).
+
+## Earlier draft with an α_s fit (not in the paper)
+
+The earlier draft fitted α_s(M_Z) and α_0 to the LEP thrust distributions with the seventeen generator parameters profiled, on networks trained to an
+earlier standard. Draft r8 has no such fit, and every one of its results comes from one training
+standard. The code of the earlier draft stays in the repository: `make_sec6_numbers.py`, the
+profile and fit scripts (`profile_*.py`, `bands_exact.py`, `surface_rows.py`, `pseudo_rows*.py`),
+the mixture trained on 208 runs (tags `MIXGEO`, `MIXGEOpm`, `MIXGEO8`, `MIXGEO16`, `MIXGEO32`,
+`run_mixgeo_local.sh`), its figures (`figs_pro.py`,
+`fig_three_bands*.py`, `fig_anchored_fit.py`) and the batch scripts in `analysis/perlmutter/` and
+`analysis/farm/`. Its result files are in `analysis/output/`, and its data are the release
+`data-v1` (`docs/DATA.md`). Its seed study is superseded by the three sets of members of every
+model in Table 1. The instructions for it are in the git history, for example
+`git show 1d66811:docs/REPRODUCE.md`.
 
 ## License
 
-The code is released under the MIT License (`LICENSE`). ARES and EERAD3 are not included and keep their own licenses.
+The code is released under the MIT License (`LICENSE`). ARES and EERAD3 are not included and keep
+their own licenses.
 
 ## Citation
 

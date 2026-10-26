@@ -1,271 +1,228 @@
 # Reproducing the paper
 
-All commands run from `analysis/`. Result files named below are in `analysis/output/` unless marked
-**(data)**, which means they need network exports or event samples from the archives of
-`docs/DATA.md`. Each section names the archives it needs, by their names in `docs/DATA.md`, and the
-group of `tools/get_data.sh` that downloads them, for example `../tools/get_data.sh sec6` from
-`analysis/`. Section, figure and table numbers follow the paper.
+This file maps every figure, table and quoted number of draft r8 of *Combined Uncertainties from
+Event Generators and Precision QCD* to the command and the inputs that make it. Section, figure,
+table and equation numbers are those of draft r8. All commands run from `analysis/`, and the result
+files named below are in `analysis/output/`, which is in git. **(data)** marks a step that needs
+the network exports or event samples of `docs/DATA.md`, and **(GPU)** a training.
 
 ## Before you start
 
-- The networks are trained with the production settings, which `r2_ladder.py` does not use by
-  default. Every training command below assumes
+- Create the environment with `conda env create -f environment.yml`. The figures are typeset with
+  LaTeX (`usetex`, with `amsmath` and `amssymb`), which the environment does not install.
+- The scripts that read the LEP measurements (`thrust_chain.py`, `calc_bins.py`, and everything
+  that imports `directlib.py`) look for them in a local Rivet installation. Set
+  `export RIVET_REF=rivet_ref` to use the copies that ship in `analysis/rivet_ref/`.
+- The batch scripts in `symmetry/` are those that ran on the Symmetry cluster at Perimeter. Set
+  `export MAXENT_DIR=$PWD` in `analysis/` and submit from there with `sbatch --export=ALL`. Their
+  logs go to `logs/`. Their `#SBATCH` lines name the partitions of Symmetry.
+- The batch scripts set the training settings of the paper (four bootstrap members, a fifth of each
+  run set aside, SiLU), and `K` and `STEPS` must be passed as in the commands below.
+  `train_p2.sbatch` requires both, and `train_mixgeo.sbatch` defaults to 36000 steps.
+  `r2_ladder.py` alone defaults to other settings.
+- `kscan_submit.sh` and `widebox_submit.sh` change to `MAXENT_DIR`, by default the Symmetry copy
+  `/mnt/beegfs/bassi/reweighting/maxent_code`, and submit the batch scripts by name from there, as
+  they sit in the analysis folder on Symmetry. Elsewhere they need copies of `symmetry/*.sbatch` in
+  `analysis/`.
+- A rerun writes its result files and exports under the published names. Copy the shipped files
+  first if you want to compare with them.
 
-  ```bash
-  export LADDER_ACT=silu LADDER_EMB_SCALE=auto LADDER_LR=1e-3
-  ```
+## Figures
 
-  The Perlmutter batch scripts set them themselves.
-- The figure scripts draw their labels with LaTeX (`usetex`, with `amsmath`, `amssymb` and `bm`).
-  `environment.yml` does not provide LaTeX, so install a TeX distribution first.
-- `logs/` is not in git. Run `mkdir -p logs` once, because the batch scripts and
-  `run_rows_local.sh` write their logs there.
-- Training writes into `output/models/` under the published names and overwrites downloaded
-  exports. Copy the exports elsewhere before retraining, and run `../tools/get_data.sh --unlink`
-  first. Some reference names there are links to the slim reference files, and training would
-  write through a link into the slim file (`docs/DATA.md`, "Reference files").
-- Retrained networks are not bit for bit the published ones, because GPU training is not
-  deterministic.
-- Batch scripts: set the account placeholders, and check the `#SBATCH -o` and `-e` lines, because
-  Slurm does not expand variables there.
+`python figs_r8.py` draws Figs. 3 to 12 and writes `output/r8_<name>.pdf`. The paper's
+`figs/r8_<name>.pdf` are copies of these files. With names, `figs_r8.py` draws only those figures.
 
-## The current version (19 October 2026)
+| figure | what it shows | drawn from (`output/`) | inputs made by | drawn by |
+|---|---|---|---|---|
+| 1 | overview of the method | | TikZ in `main.tex` | |
+| 2 | the factorized network | | TikZ in `main.tex` | |
+| 3 | the mixture at a held-out Sherpa and a held-out Herwig point | `fig_closure_mix.npz` | `sbatch --export=ALL symmetry/closure_mix.sbatch`, which runs `fig_closure_mix.py 7214 8211` on `MIXGEOV3S9` and `data_stagePURE17_v3` **(data)** | `python figs_r8.py closure_mix` |
+| 4 | the toy model | `toy_final_K48_s0.npz`, `toy_final_K48_s0.json` | `sbatch --array=0-8 --export=ALL symmetry/toy_final.sbatch` (`toy_final.py`, which generates its own events) | `python figs_r8.py toy` |
+| 5 | Stage C across its box | `valid_map_C_P2augfullfac0_report.json` | `VALID_MODEL=C_P2augfullfac0 VALID_DATA=../gen/data_abc VALID_BLIND_DATA=../gen/data_abc_blind VALID_HALF=report VALID_OUT=output/valid_map_C_P2augfullfac0_report.json python eval_valid.py` **(data)**. The dotted tick is the `mean` of `xp_null.json`, from `python xp_null.py ../gen/data_abc` **(data)** | `python figs_r8.py map`, which reads that mean for the dotted tick (`XP_NULL` overrides it) |
+| 6 | the wide coupling scan | `widebox_wb18.json`, `wb/W_P2wb18*_w_9100.npy` | `bash widebox_submit.sh` **(data, GPU)**, which generates the runs into `gen/data_widebox` and trains the three references, then `python widebox_collect.py`. The paper's networks were trained with `STEPS=18000` and the tags `wb18single`, `wb18pool` and `wb18local<run>`, in place of the 324000 steps and the `wb` tags written in the script. The weight files are the ones the training writes into `output/models/` (`LADDER_DUMP_WEIGHTS=1`), copied into `output/wb/` | `python figs_r8.py widebox` |
+| 7 | coverage of the learning band | `wifi_coverage_MIXGEOV3S9.json`, `..._MIXGEOV3S9s1.json`, `..._MIXGEOV3S9s2.json` | `TAG=<tag> sbatch --export=ALL symmetry/wifi_cov.sbatch` for each of the three tags **(data)** | `python figs_r8.py coverage` |
+| 8 | the number of terms | `rank_scan_final.json` | `bash kscan_submit.sh` **(data, GPU)**, then `python kscan_collect.py`, which reads the result files of the scan and the K = 48 cells of Table 1 in `output/` | `python figs_r8.py kscan` |
+| 9 | the cost of a fit step | `bench_final_cpu_4.json`, `bench_final_cuda_12.json` | `sbatch symmetry/bench_final_cpu.sbatch` and `sbatch symmetry/bench_final_gpu.sbatch` (`bench_cost_final.py`) **(data)** | `python figs_r8.py cost` |
+| 10 | the thrust distribution and its three bands | `three_bands_MIXGEOV3S9.npz`, `three_bands_MIXGEOV3S9.json`, `theory_variations_MIX.json` | `TAG=MIXGEOV3S9 sbatch --export=ALL symmetry/three_bands.sbatch` and `sbatch --export=ALL symmetry/theory_variations.sbatch` **(data)** | `python figs_r8.py bands` |
+| 11 | the bands of the seven means | `three_bands_MIXGEOV3S9.json` | as Fig. 10 | `python figs_r8.py obs` |
+| 12 | the calculation against ALEPH and DELPHI | `calc_bins_nlo_point.json` | `THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python calc_bins.py` | `python figs_r8.py aleph` |
 
-This section covers the current draft, with its own numbering of sections, figures and tables, and the
-sections after it document earlier drafts. Training and scoring ran on the Symmetry cluster at
-Perimeter, one H200 per job, with the batch scripts in `symmetry/` (they set the production
-settings). Every other step runs on a laptop from the result files in `output/`, which are in the
-repository. The training times are in the README.
+## Tables
 
-| object | from | command |
-|---|---|---|
-| every quoted number | `output/` | `python phase2tools/make_numbers.py output`, which writes `numbers.tex` and `numbers.json` |
-| Fig. 3, the mixture at a Sherpa and a Herwig held-out point | network export, fresh runs **(data)** | `DM_DATA=data_stagePURE17_v3 python fig_closure_mix.py 7214 8211`, then `python figs_r8.py closure_mix` |
-| Fig. 4 and Sec. 3.3, the toy | `output/toy_final_K48_s0.*` | `sbatch symmetry/toy_final.sbatch`, then `python figs_r8.py toy` |
-| Tables 1 and 2, closure widths of every model | `output/p2*_*.json`, `output/stage_mixture_MIXGEOV3S9*.json` | `sbatch symmetry/train_p2.sbatch` (see its header for `SPECS`), `symmetry/train_mixgeo.sbatch`, `symmetry/score_p2_array.sbatch`, `symmetry/strict_closure.sbatch` |
-| Fig. 5, Stage C across its box | `output/valid_map_C_P2augfullfac0_report.json`, `output/xp_null.json` | `VALID_MODEL=C_P2augfullfac0 VALID_DATA=../gen/data_abc VALID_BLIND_DATA=../gen/data_abc_blind VALID_HALF=report python eval_valid.py` **(data)**, `python xp_null.py ../gen/data_abc`, then `XP_NULL=0.874 python figs_r8.py map` |
-| Fig. 6, the wide coupling scan | `output/widebox_wb18.json`, `output/wb/` | `bash widebox_submit.sh` **(data)**, `python widebox_collect.py`, then `python figs_r8.py widebox` |
-| Fig. 7 and Sec. 3.6, coverage of the learning band | `output/wifi_coverage_MIXGEOV3S9*.json` | `TAG=MIXGEOV3S9 sbatch symmetry/wifi_cov.sbatch` **(data)**, then `python figs_r8.py coverage` |
-| Fig. 8, the number of terms | `output/rank_scan_final.json` | `bash kscan_submit.sh` **(data)**, `python kscan_collect.py`, then `python figs_r8.py kscan` |
-| Fig. 9, the cost of a fit step | `output/bench_final_cpu_4.json`, `output/bench_final_cuda_12.json` | `sbatch symmetry/bench_final_cpu.sbatch` and `symmetry/bench_final_gpu.sbatch` **(data)**, then `python figs_r8.py cost` |
-| Figs. 10 and 11, Table 3, the three bands | `output/three_bands_MIXGEOV3S9.*`, `output/theory_variations_MIX.json` | `TAG=MIXGEOV3S9 sbatch symmetry/three_bands.sbatch` and `sbatch symmetry/theory_variations.sbatch` **(data)**, then `python figs_r8.py bands obs` |
-| the checks of Sec. 4.3 (box mean, mixing fraction, largest weights) | `output/band_checks_MIXGEOV3S9.json` | `TAG=MIXGEOV3S9 sbatch symmetry/band_checks.sbatch` **(data)** |
-| Fig. 12 and Sec. 4.2, the calculation against ALEPH and DELPHI | `output/calc_bins_nlo_point.json`, `output/calc_vs_delphi_MIXGEOV3S9.json` | `python calc_bins.py`, `NPZ=output/three_bands_MIXGEOV3S9.npz python calc_vs_delphi.py MIXGEOV3S9`, then `python figs_r8.py aleph` |
-| Table 6, the fit of the basis weights | `output/wifi_MIXGEOV3S9*_fit.npz` | `wifi_fit.py`, run by `symmetry/wifi_cov.sbatch` **(data)** |
-| the released networks `E`, `F`, `MIX17` | network exports **(data)** | `sbatch symmetry/package_r8.sbatch` |
-| `release/STAGES.md`, `release/closure_*.csv`, `release/closure_summary.json`, `output/precision_gap_r8.json` | network exports, held-out runs **(data)** | `sbatch symmetry/table_r8.sbatch` (`make_stage_table.py`, then `precision_gap.py`), which writes into `release_r8_table/`, copied into `release/` |
-| `release/accuracy_law.json`, `release/accuracy_law_points.csv` | the closure tables above, held-out runs **(data)** | `sbatch symmetry/accuracy_r8.sbatch` (`closure_vs_distance.py`, then `fit_accuracy_law.py`), into the same directory |
+| table | what it shows | from (`output/` unless stated) | made by |
+|---|---|---|---|
+| 1 | closure widths of every model, both networks, three sets of members | Stages A to C: `p2augfull_<S>_<net>_s<k>.json` and `p2augfullstrict_<S>_<net>_s<k>.json`, with the `p2aug` files where a `p2augfull` file is absent. Stages D and E: `p2v3full{,strict}_{E,F}_<net>_s<k>.json`. Mixture: `stage_mixture_MIXGEOV3S9{,s1,s2}.json` and `p2v3fullstrict_MIX_fac_s<k>.json` (factorized), `p2v3full{,strict}_MIX_cat_s<k>.json` (concatenation) | the trainings and strict tests of "Trained models" below **(data, GPU)**, then `make_numbers.py` (`\Acc{Aug,Dense}*`) |
+| 2 | closure widths per observable, Stages D and E and the mixture | as Table 1 | `make_numbers.py` (`\ObsDense*`) |
+| 3 | the seven means and their bands | `three_bands_MIXGEOV3S9.json`, `three_bands_MIXGEOV3S9.npz` | as Fig. 10, then `make_numbers.py` (`\Tb<observable>*`) |
+| 4 | parameters of Stages A to C | the designs `gen/designs/stage{A,B,C}_design_aug.csv` (App. A.1) | typed in `main.tex` |
+| 5 | parameters of Stages D and E | the designs `analysis/release/generators/stage{E,F}_design_v3all.csv` and the boxes in `analysis/release/STAGES.md` | typed in `main.tex` |
+| 6 | loss and closure width of the mean of members and of the fitted basis weights | `wifi_MIXGEOV3S9{,s1,s2}_diag.json` | `wifi_diag.py`, run by `symmetry/wifi_cov.sbatch` **(data)**, then `make_numbers.py` (`\Wifi{Loss,Width}*`) |
 
-`figs_r8.py` draws every data figure at its printed size with one palette, in which each color has one
-meaning across the paper (its header lists them). It reads `output/` and writes `output/r8_<name>.pdf`.
+## Quoted numbers
 
-## The revision of October 2026: three uncertainties on one sample
+```bash
+python phase2tools/make_numbers.py output
+```
 
-The paper now shows a generator band, a learning band and a theory band on the thrust
-distribution and on other observables at a fixed point of an NNLL+NLO calculation, with the
-multiplicative seventeen-parameter mixture of Sherpa and Herwig as the model and the WiFi weights
-of its ensemble as the central estimate. The sections further down describe the earlier draft,
-whose strong-coupling fit is no longer in the paper. All commands run from `analysis/`.
+writes `phase2tools/numbers.tex`, 575 macros identical to the paper's `numbers.tex`, and
+`phase2tools/numbers.json`, from the result files in `output/` and the held-out points of the
+208-run set in `data_stagePURE17/meta.json`. Copy `numbers.tex` into the paper
+source. `LC_DIR` can point the learning-curve and coverage files to another folder. The macros
+come in families:
 
-The training needs the Stage D and E event samples (the pure runs of both generators, archives
-`C`-series of `docs/DATA.md` for `data_stageE` and `data_stageF`) and a GPU. The learning
-uncertainty, the bands and the figures need only the model files listed at the end of this
-section, which will be deposited with the paper.
+| macros | where in the paper | read from (`output/`) | made by |
+|---|---|---|---|
+| `\Acc{Aug,Dense}*`, `\AccFinal*`, `\ObsDense*`, `\Mix{Sherpa,Herwig}Points*` | Tables 1 and 2, Secs. 3.4 and 3.7 | the files of Table 1 | the trainings and strict tests below |
+| `\LcRunsThreeStrictAll`, `\LcMembersStrictAll` | Sec. 3.1 | `widths_v2_<tag>{,h400}{,r415}.json` of the learning-curve trainings, `p2origfull*_MIX_fac_s<k>.json`, `p2origfull48*_MIX_fac_s<k>.json` | `symmetry/train_mixgeo.sbatch`, `strict_closure.sbatch`, `rescore_v4.sbatch`, `train_p2.sbatch` and `score_p2.sbatch` **(data, GPU)** |
+| `\Calib*` | Sec. 3.2, two halves of one fresh run | `p2augfull_{A,B,C}_fac_s0.json` | the trainings of Stages A to C |
+| `\Toy*` | Sec. 3.3 | `toy_final_K<K>_s<k>.json` | `symmetry/toy_final.sbatch` |
+| `\Map*`, `\XpNullMean` | Sec. 3.5, Fig. 5 | `valid_map_C_P2augfullfac0_report.json`, `xp_null.json` | as Fig. 5 **(data)** |
+| `\Wide*` | Sec. 3.5 | `p2wb18{single,pool,local9100,...,local9105}_W_fac_s0.json` | `widebox_submit.sh` with the settings of Fig. 6 **(data, GPU)** |
+| `\Cov*`, `\CovEight*` | Secs. 3.6 and 5, Fig. 7 | `wifi_coverage_MIXGEOV3S9{,s1,s2}.json`, `wifi_coverage_MIXGEOV3M8S9.json` | `symmetry/wifi_cov.sbatch` **(data)** |
+| `\SvdRank*` | Sec. 3.7 | `p2trunc_{A,B,C,E,MIX}_cat_s0.json` | `symmetry/score_p2.sbatch` with `LADDER_TRUNCATE=1` on the first concatenation training of each model **(data)** |
+| `\Cost*` | Sec. 3.7, Fig. 9 (rounded in Secs. 1 and 5) | `bench_final_cpu_4.json`, `bench_final_cuda_12.json` | as Fig. 9. The fit times multiply the time of one step by 6000 steps, `COST_STEPS` in `make_numbers.py` |
+| `\CalcAlphas`, `\CalcAlphaZero` | Sec. 4.1, Eq. (C.9) | `three_bands_MIXGEOV3S9.json` | as Fig. 10, from the fixed point of the calculation below |
+| `\Tb*` | Secs. 1, 2.3, 2.7, 4.1 to 4.3 and 5, Apps. C.2 and D.2, Table 3 | `three_bands_MIXGEOV3S9{,s1,s2}.{json,npz}`, `theory_variations_MIX.json`, `calc_vs_delphi_MIXGEOV3S9.json`, `band_checks_MIXGEOV3S9.json` | as Fig. 10, `TAG=<tag> sbatch --export=ALL symmetry/three_bands.sbatch` for `s1` and `s2`, `TAG=MIXGEOV3S9 sbatch --export=ALL symmetry/band_checks.sbatch` **(data)**, and `NPZ=output/three_bands_MIXGEOV3S9.npz python calc_vs_delphi.py MIXGEOV3S9` |
+| `\Kappa*`, `\Single*`, `\TruncMaxPercent`, `\WifiNewton*`, `\Wifi{Loss,Width}*` | Sec. 3.6, App. A.2, Table 6 | the training results of Table 1, `single_members_C_P2augfullfac0.json`, `truncation_fraction.json`, `wifi_MIXGEOV3S9{,s1,s2}_{fit,diag}.json` | `python single_members.py C_P2augfullfac0 C ../gen/data_abc`, `python trunc_frac.py` and `symmetry/wifi_cov.sbatch` **(data)** |
 
-| item | produced by | from |
-|---|---|---|
-| the pure-run data set (208 training runs, 16 held-out points, both generators) | `python make_pure_dataset.py` (links the Stage D and E runs into `data_stagePURE17/` and writes its `meta.json`, which ships with the repository) | `data_stageE/`, `data_stageF/` |
-| the multiplicative mixture, four members (Sec. 3, Table 1 rows "multiplicative") | `./run_mixgeo_local.sh` on one GPU, or `sbatch --export=ALL,ENS=4 -t 03:00:00 perlmutter/train_mixgeo_ens.sbatch`. `stage_mixture.py` now defaults to the geometric head, pure-run targets, a fifth of each run held out and bootstrap members; the earlier additive head is `LADDER_HEAD_KIND=mixture` | `output/models/MIXGEO_{cond.npz,trunk.pt,fitsplit.npz,ref_v2_slim.npz}`, `output/widths_v2_MIXGEO.json`, `output/wifi_MIXGEO_basis.npz` |
-| larger ensembles for the scan of App. B | `sbatch --export=ALL,ENS=8 -t 03:00:00 perlmutter/train_mixgeo_ens.sbatch` (also `ENS=16`, `ENS=32` with longer limits). `LADDER_EMB_STORE=a` keeps the stored event vectors instead of the pooled latent so thirty-two members fit one GPU | `output/models/MIXGEO8_*` and so on |
-| the WiFi fit: basis weights, covariance, closure with both weight rules (Sec. 2.5, App. B) | `python wifi_fit.py output/wifi_MIXGEO_basis.npz output/models/MIXGEO_cond.npz output/models/MIXGEO_ref_v2_slim.npz` | `output/wifi_MIXGEO_fit.{npz,json}` |
-| the loss on the comparison halves for four weight rules (Table 6) | `python wifi_diag.py output/wifi_MIXGEO_basis.npz output/models/MIXGEO_cond.npz output/models/MIXGEO_ref_v2_slim.npz` | `output/wifi_MIXGEO_diag.json` |
-| the ensemble-size scan as LaTeX rows | `python wifi_scan_table.py MIXGEO MIXGEO8 MIXGEO16 MIXGEO32` | the fit and diag files above |
-| the NNLL+NLO calculation fixed on ALEPH (App. D) | `THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python thrust_chain.py`, then `python targets_nlo_point.py` | `output/chain_summary_nlo.json`, `output/moments_joint_nlo.json`, `output/thrust_targets_nlo_point.npz` |
-| Fig. 6 (App. D), the calculation against ALEPH with the fixed-point band | `THRUST_ORDER=2 CHAIN_SUFFIX=_nlo FIXED_POINT=1 python fig_thrust_vs_aleph.py` | `output/fig_thrust_vs_aleph_nlo_fixed.pdf` |
-| the three bands at the default tunes (Sec. 4, Table 2) | `WIFI_CENTRAL=0 CENTRAL=0.118,0.68,3.9,0.48,0.46,0.17,0.97,0.18,0.102337,0.654714,3.528693,1.849375,0.914156,0.374094,0.33107,0.78,0.5 DM_DATA=data_stagePURE17 NODES=200 OUT=output/three_bands_MIXGEO_m python three_bands.py MIX output/models/MIXGEO_cond.npz output/models/MIXGEO_ref_v2_slim.npz output/thrust_targets_nlo_point.npz output/wifi_MIXGEO_fit.npz` (the prediction is the mean of members and the fit of the basis weights gives the learning band; `WIFI_CENTRAL=1` makes the fitted weights the prediction, the variant of `three_bands_MIXGEO_w`) | `output/three_bands_MIXGEO_m.{json,npz}` |
-| Figs. 4 and 5 | `python fig_three_bands.py output/three_bands_MIXGEO_m.npz output/three_bands_MIXGEO_m.json output/figs/fig_three_bands.pdf` and `python fig_three_bands_obs.py output/three_bands_MIXGEO_m.json output/figs/fig_three_bands_obs.pdf` | the files above |
-| the concatenation network with the multiplicative head (Table 1, the comparison of Sec. 3.5) | `sbatch perlmutter/concat_geo.sbatch` (`CONCAT_HEAD=geometric`, `CONCAT_EVENTS_PER_RUN=25000`) | `output/concat_baseline_MIX_geohead.json` |
-| the truncation test of App. C on that network | `sbatch perlmutter/trunc_geo.sbatch` (`dctr_truncation.py MIX output/models/concat_MIX_geohead.pt`) | `output/dctr_truncation_MIX_concat_MIX_geohead.json` |
+Some statements of App. A.2 rest on result files without a macro. The number of coefficients of
+the event network comes from `python param_count.py` (`output/param_count.json`). The comparison
+with the energyflow PFN
+comes from `CROSSCHECK_DATA=../gen/data_widebox EF_PYTHON=<python of the bdistcrete-tf environment> bash run_crosscheck_seeds.sh`, which
+trains on runs 9000 and 9010 of the wide coupling scan (`output/crosscheck_seeds/`,
+`output/crosscheck_seeds_summary.json`) **(data)**. The explanation of Table 6 by the reference
+events of the other generator rests on `python wifi_gensplit.py output/wifi_MIXGEOV3S9_basis.npz`
+(`output/wifi_gensplit_MIXGEOV3S9.json`) **(data)**.
 
-Model files of this revision, to be deposited with the paper (not yet in the `data-v1` release):
-`output/models/MIXGEO_cond.npz` (1.6 GB), `MIXGEO_trunk.pt`, `MIXGEO_fitsplit.npz`,
-`MIXGEO_ref_v2_slim.npz`, `output/wifi_MIXGEO_basis.npz` (0.7 GB), and the same for the second
-training (`MIXGEOpm`) and the larger ensembles (`MIXGEO8`, `MIXGEO16`, `MIXGEO32`). The result
-files they produce ship with the repository in `output/`.
+## Trained models
 
-## Section 5.1, the toy model
+Every model of Table 1 is trained three times, the three sets of members, with seeds 0, 1 and 2
+(`LADDER_SEED_OFFSET` 0, 1000 and 2000). Each training writes its result on the standard test, and
+the strict test scores the saved model again on held-out runs with five times the statistics.
 
-Needs nothing beyond the repository. The per-job files of the CPU jobs ship with it in
-`output/_kruler/` and `output/_law/`, so the merges can be redone without rerunning the jobs.
+**Stages A to C.** The densified designs are `gen/designs/stage{A,B,C}_design_aug.csv` and the runs
+are in `gen/data_abc`. The strict test reads `data_abc_h400`, made by `python make_abc_strict.py`
+from `gen/data_abc` and the extensions in `gen/data_abc_ext/` **(data)**.
 
-| item | produced by | from |
-|---|---|---|
-| Fig. 4 (a), (b) | `python validate_pfn.py`, then `python figs_pro.py toy` | `toy_fvf_data.json` |
-| Fig. 4 (c) | `python ab_rank.py`, then `python figs_pro.py toy` | `toy_ab_data.json` |
-| closure widths 17.9, 2.89, 1.08, flat for K = 2 to 32 | `bash run_kscan_toy_ruler.sh` (12 CPU jobs, then `kscan_toy_ruler_merge.py`). With the per-job files in `output/_kruler/`, which ship with the repository, `python kscan_toy_ruler_merge.py` alone redoes the merge | `kscan_toy_ruler.json` |
-| 1.05 ± 0.02 and 1.08 ± 0.09 | `bash run_toy_law_ruler.sh` (split and law jobs, then `toy_law_ruler_merge.py`) | `kscan_toy_law_ruler.json` |
-| N* = 89k, R² = 0.99, intercept 0.86 | the law jobs above, plus three null jobs that no script runs: `for SD in 0 1 2; do python -u toy_law_ruler.py --mode null --seed $SD --out output/_law/null_s$SD.json; done`, then `python toy_law_ruler_merge.py` and `python law_released_intercept.py`. N* and R² are written only when the null files exist. The merge rewrites `kscan_toy_law_ruler.json` without the top-level key `released_intercept`, which `law_released_intercept.py` adds back: it fits χ²/ndf = c + N/N*, with the intercept c free, to the χ²/ndf values the merge stored and gives the same N* and the intercept 0.86. The merge also reads `split_scan.json` and `budget_law.json`. These and the per-job files in `output/_law/`, the null files included, ship with the repository, so the two scripts alone redo the numbers | `kscan_toy_law_ruler.json` |
+```bash
+export MAXENT_DIR=$PWD K=48 STEPS=324000 DESIGN_TAG=augfull ABC_DESIGN=../gen/designs
+export SPECS="A:fac:0 A:fac:1 A:fac:2 A:cat:0 A:cat:1 A:cat:2 B:fac:0 B:fac:1 B:fac:2 B:cat:0 B:cat:1 B:cat:2 C:fac:0 C:fac:1 C:fac:2 C:cat:0 C:cat:1 C:cat:2"
+J=$(sbatch --parsable --array=0-17 --export=ALL symmetry/train_p2.sbatch)
+sbatch --array=0-17 --dependency=aftercorr:$J --export=ALL symmetry/score_p2_array.sbatch
+```
 
-## Section 5.2, the ladder (Table 1, Fig. 5)
+This writes `output/p2augfull{,strict}_<S>_<net>_s<k>.json` and the exports
+`output/models/<S>_P2augfull<net><k>_*`. Five trainings of the published table (B factorized, seeds 0 to
+2, and C factorized and C concatenation, seed 2) are read from the `p2aug` files of a run with
+`DESIGN_TAG=aug`. That run had early stopping switched on but trained the full 324000 steps, and
+`make_numbers.py` uses a `p2aug` file only when its training reached 324000 steps.
 
-Needs `B1_exports_ABC` and `B2_held_ABC` (group `table1`). Retraining Stage A, B or C needs
-`C1_train_A`, `C2_train_B` or `C3_train_C` with `B2_held_ABC` (groups `train-A`, `train-B`,
-`train-C`).
+**Stages D and E, and the concatenation network of the mixture.** The designs are
+`stageE_design_v3all.csv` and `stageF_design_v3all.csv` in `analysis/`, and the runs are those of
+`data_stagePURE17_v3` **(data)**.
 
-| item | produced by | from |
-|---|---|---|
-| Stage A network | `LADDER_STAGES=A python r2_ladder.py` (step 1a of `campaign_gpu.sh`, run alone because the rest of that script launches hours of other studies) | event samples **(data)** |
-| Stage B network | `LADDER_STAGES=B LADDER_SEED_OFFSET=100 python r2_ladder.py` | event samples **(data)** |
-| Stage C network | `LADDER_STAGES=C python r2_ladder.py`, then `python apply_T.py C 1.0`. The refined temperature grid of `r2_ladder.py` selects 0.95 for C, and the paper uses 1.0 | event samples **(data)** |
-| Table 1, Stage A | `r2_ladder.py`. Check from the export without training: `python ladder_widths_dedup.py A output/models/A_ref.npz` (0.953, writes `ladder_dedup_A_A_ref_all.json`) | `ladder_final.json` |
-| Table 1, Stages B and C, and the per-observable ranges | `python ladder_widths_dedup.py B output/models/B_ref.npz` and `python ladder_widths_dedup.py C output/models/C_ref.npz`. Held-out runs 6704 and 6902 are dropped by default, they repeat training runs | `ladder_dedup_B_B_ref.json`, `ladder_dedup_C_C_ref.json`, exports **(data)** |
-| mean baryon and strange rates, \|z\| and percent | `python rate_check_dedup.py B` and `C` (prints only) | exports **(data)** |
-| energy-fraction width 0.85, same-run 0.91 ± 0.13 | mean over runs 6900, 6901, 6903, 6904 of `valid_map.json` (`eval_valid.py`) and of the three split widths per run in `xp_samerun.json` (`audit_xp_samerun.py`). No script takes this four-run mean | included |
-| Fig. 5 | `python figs_pro.py hero` | `C_cond.npz`, `C_ref.npz`, run 6901 **(data)**, `valid_map.json` |
+```bash
+export MAXENT_DIR=$PWD K=48 STEPS=324000 DESIGN_TAG=v3full DM_DATA=data_stagePURE17_v3 \
+       E_DATA=data_stagePURE17_v3 E_CSV=stageE_design_v3all.csv F_DATA=data_stagePURE17_v3 F_CSV=stageF_design_v3all.csv
+export SPECS="E:fac:0 E:fac:1 E:fac:2 E:cat:0 E:cat:1 E:cat:2 F:fac:0 F:fac:1 F:fac:2 F:cat:0 F:cat:1 F:cat:2 MIX:cat:0 MIX:cat:1 MIX:cat:2"
+J=$(sbatch --parsable --array=0-14 --export=ALL symmetry/train_p2.sbatch)
+sbatch --array=0-14 --dependency=aftercorr:$J --export=ALL symmetry/score_p2_array.sbatch
+```
 
-## Section 5.3, validation across the box (Fig. 6)
+The strict test reads `data_stagePURE17_v3_h400`. This writes `output/p2v3full{,strict}_*` and the
+exports `output/models/{E,F}_P2v3full<net><k>_*` and `output/models/MIXP2v3fullcat<k>_*`.
 
-Needs `B1_exports_ABC` and `B2_held_ABC`, with `B3_held_C_valid` for Fig. 6 and the tails and
-`B4_held_C_floor` for the offsets and the accuracy law (the four together are group `sec5`).
-`B2_held_ABC` is needed because `eval_valid.py` also evaluates held runs 6900 to 6904, which Figs. 5
-and 6 read from `valid_map.json`, and because the offsets and the accuracy law compare with held
-runs 6901 and 6902.
+**The factorized mixture.** `symmetry/train_mixgeo.sbatch` trains it, builds its reference bundle
+(`rebuild_ref_lowmem.py`), scores it on the standard test (`ladder_widths_big.py`) and embeds the
+basis of its learning band (`wifi_embed.py`). With `CHAIN=1` a training longer than one queue slot
+continues in a second job.
 
-| item | produced by | from |
-|---|---|---|
-| Fig. 6 and the twelve-run widths and \|z\| | `python eval_valid.py` (step 2 of `campaign_cpu.sh`), `python figs_pro.py anymap` | `valid_map.json` |
-| multiplicity tails, 11 to 14 percent | `python tail_stress.py` | `tail_stress.json` |
-| offsets at 80k and 800k events | runs 6970 and 6971 from `SHERPA3_PREFIX=<Sherpa 3 install> bash gen_floor.sh` (or `B4_held_C_floor`), then `python floor_eval_gen.py --out output/floor_eval_final.json --force`. Without `--force` the script stops because the file is shipped. Give another `--out` to keep the shipped file for comparison | `floor_eval_final.json` |
-| accuracy law: 1.23 at 800k, 1.06 at 80k, 0.8 percent per bin | `python accuracy_law_gen.py --out output/accuracy_law_final.json --force` (same remark on `--force`) | `accuracy_law_final.json` |
+```bash
+export MAXENT_DIR=$PWD
+for k in 0 1 2; do
+  T=MIXGEOV3S9; [ $k = 0 ] || T=MIXGEOV3S9s$k
+  A="ALL,TAG=$T,DATA=data_stagePURE17_v3,STEPS=324000,CHAIN=1,LADDER_SEED_OFFSET=$((1000*k))"
+  J=$(sbatch --parsable --export=$A symmetry/train_mixgeo.sbatch)
+  sbatch --dependency=afterany:$J --export=$A symmetry/train_mixgeo.sbatch
+done
+```
 
-## Section 5.4, the number of terms (Fig. 7)
+This writes `output/stage_mixture_<tag>.json` (the standard test of Table 1),
+`output/widths_v2_<tag>.json`, `output/wifi_<tag>_basis.npz` and the exports
+`output/models/<tag>_*`. The strict test of Table 1 is `score_p2_array.sbatch` with
+`DESIGN_TAG=v3full` and `SPECS="MIX:fac:0 MIX:fac:1 MIX:fac:2"`, which reads
+`output/models/MIXP2v3fullfac<k>_trunk.pt`. Make `MIXP2v3fullfac<k>_trunk.pt` and
+`MIXP2v3fullfac<k>_cond.npz` links to the files of `MIXGEOV3S9`, `MIXGEOV3S9s1` and `MIXGEOV3S9s2`
+first, as they are on Symmetry. `MMAP_BASE` sets where a training keeps the memory map of its
+training set (see the header of `train_mixgeo.sbatch`).
+`TAGS="MIXGEOV3S9 MIXGEOV3S9s1 MIXGEOV3S9s2" sbatch --export=ALL symmetry/strict_closure.sbatch`
+writes the same test as `output/widths_v2_<tag>h400.json`.
 
-The scans and retrainings need the training archives with their held-out runs: groups `train-A`,
-`train-B` and `train-C` for Stages A to C, and `train-E` for the Sherpa model.
+**The learning curve of Sec. 3.1.** The other mixtures are trained the same way: `MIXGEOV3E20S9`,
+`MIXGEOV3E160S9` and `MIXGEOV3E320S9` (2 × 10^4 to 3.2 × 10^5 events per run), `MIXGEOV3S27F`
+(972000 steps), `MIXGEOV4S9` and `MIXGEOV4L` (2768 runs, rescored against a reference of equal size
+by `symmetry/rescore_v4.sbatch`) and `MIXGEOV3M8S9` (eight members, `ENS=8`). Their data sets are
+built by `symmetry/build_dataset.sbatch` (`make_dataset_v3.py`). The row of 208 runs is
+`train_p2.sbatch` with `DESIGN_TAG=origfull` on `data_stagePURE17_orig`. It is scored by
+`score_p2.sbatch` at its own 16 held-out points, with the strict test on the data set of
+`make_orig_h400.py`, and at the 48 held-out points of the 720-run set, on the data sets of
+`make_orig48.py`.
 
-| item | produced by | from |
-|---|---|---|
-| Fig. 7, Stages A to C | the GPU farm: `farm/launch_farm.sh` running the jobs of `farm/all_jobs.txt` (`farm/r3_rank.py`, four networks, SiLU). Without the farm, for each stage `<S>` and each `<K>` in 1, 2, 3, 4, 6, 8, 16: `RANK_STAGES=<S> RANK_KS=<K> RANK_ENS=4 RANK_OUT=output/rank_scan_<S>_K<K>.json python r3_rank.py`, then `python merge_rank_scan.py A B C` | `rank_scan.json` |
-| Fig. 7, the eight-parameter Sherpa model | `export STAGE=E RANK_ENS=4 KLIST=1,2,4,6,8,9,10,12,16,24,32,45,48`, then `sbatch --array=0-12 perlmutter/rank_scan.sbatch` (the script defaults to two networks, so `RANK_ENS=4` must be set), then `RANK_KS=$KLIST python merge_rank_scan.py E`. The per-K files of the published scan ship with the repository in `output/ens4/`, so `RANK_DIR=output/ens4 RANK_KS=$KLIST python merge_rank_scan.py E` redoes the merge without GPUs | `rank_scan.json` |
-| retraining at K = K₂: 0.96, 1.20, 1.05 | farm jobs `k3_A`, `k6_B`, `k10_C`. By hand: `LADDER_STAGES=A LADDER_K=3 LADDER_SUFFIX=_k3 LADDER_OUT=output/rank_v2_A.json python farm/r2_ladder.py`, the same for B (`LADDER_K=6 LADDER_SEED_OFFSET=100 LADDER_SUFFIX=_k6`) and C (`LADDER_K=10 LADDER_SUFFIX=_k10`). The numbers are the means over the held-out runs without 6704 and 6902 | `rank_production_v2.json` |
-| singular values, R² 0.990 to 0.9996, correlation 0.98 | `python factor_fig.py` (needs `B1_exports_ABC`) | `factor_fig_values.json` |
-| disjoint halves, correlation 0.89 | `python farm/disjoint_score.py` (needs `C1_train_A`, and `B1_exports_ABC` for the reference events it compares on) | `disjoint_score.json` |
-| the figure | `python figs_pro.py head` | `rank_scan.json` |
+**The data sets of the mixture.** `data_stagePURE17_v3` holds the 720 training runs and the 48
+held-out points at 8 × 10^4 events, and `data_stagePURE17_v3_h400` the same with the held-out runs
+at 4 × 10^5 events. Both are built from the generated runs by `make_dataset_v3.py`, which
+`symmetry/build_dataset.sbatch` runs once for every entry of `SPECS`:
 
-## Section 5.5, the wide coupling range (Fig. 8)
+```bash
+export MAXENT_DIR=$PWD SPECS="data_stagePURE17_v3:release,v3:0:0 data_stagePURE17_v3_h400:release,v3:0:4"
+sbatch --export=ALL symmetry/build_dataset.sbatch
+```
 
-| item | produced by | from |
-|---|---|---|
-| Fig. 8, widths 2.03, 1.09, 0.96 and 6.87, effective events 13 and 56.9k | `python farm/r2b_widebox_ctrl.py` (needs `C5_widebox`, group `widebox`), `python figs_pro.py widebox` | `widebox_ctrl.json`, `wb_weights_*_0.083.npy` |
+`make_dataset_v3.py` and `make_abc_strict.py` read and write under `MAXENT_DIR` and its parent, by
+default the Symmetry copy.
+The samples themselves come from `gen/` (`gen/README.md`).
 
-## Section 5.6, the mixture of two generators (Table 2)
+## The calculation at its fixed point
 
-Needs `B5_mix7` (group `table2`). Retraining needs `C6_train_DM2` with `B5_mix7` (group
-`train-DM2`). `B5_mix7` ships the reference once, because the two trainings share it. The scripts
-below name their outputs after the reference file, so they need the second name
-`output/models/DMDMXSc10_ref.npz`. `tools/get_data.sh` makes this link. Only after a manual
-download do you make it yourself: `ln -sfn DMDMXSc0_ref.npz output/models/DMDMXSc10_ref.npz`.
+```bash
+export RIVET_REF=rivet_ref
+THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python thrust_chain.py    # output/chain_summary_nlo.json, moments_joint_nlo.json
+python targets_nlo_point.py                                # output/thrust_targets_nlo_point.npz
+THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python calc_bins.py       # output/calc_bins_nlo_point.json, Fig. 12
+```
 
-| item | produced by | from |
-|---|---|---|
-| mixture samples | `gen_showerbox.sh`, `gen_showerbox2.sh` (Sherpa 3.1), `herwig_grid.py grid 80000 --out data_herwigbox2` (Herwig 7.2.3), then `DM_H_SRC=data_herwigbox2 DM_DST=data_stageDM2 python make_stageDM_data.py`. The merge of each pair of 40k-event Sherpa runs into one 80k run (9300 to 9331) and the merge of the Herwig slice `meta.json` files are not scripted | **(data)** |
-| networks (two trainings) | `stageDM.py` via `sbatch perlmutter/stageDMxSc.sbatch` and `sbatch perlmutter/stageDMx_s10Sc.sbatch` (K = 24, 72k steps, mixture head) | **(data)** |
-| temperature 1.125 | `DM_DATA=data_stageDM2 DROP=9932 python recalibrate_T.py DMDMXSc0`, then `python apply_T.py DMDMXSc0`, and the same for `DMDMXSc10` | `recal_T_DMDMXSc*.json` |
-| Table 2, widths 1.13 and 1.09, baryon 1.49 | `EXPORT=output/models/DMDMXSc0_cond.npz python ladder_widths_dedup.py MIXSTAGE output/models/DMDMXSc0_ref.npz`, the same for `DMDMXSc10`, averaged. Run after `apply_T.py`, because the temperature is read from the export | `ladder_dedup_MIXSTAGE_*.json` |
-| baryon count one to three percent low | `EXPORT=output/models/DMDMXSc0_cond.npz python rate_check_mix.py output/models/DMDMXSc0_ref.npz`, the same for `DMDMXSc10` | `rate_check_mix_*.json` |
+The fixed point α_s(M_Z) = 0.1135, α_0 = 0.43 of Eq. (C.9) is the pair at which the χ² of the
+calculation alone against ALEPH in the window is smallest. `thrust_chain.py` finds it and writes it
+to `output/chain_summary_nlo.json`. `targets_nlo_point.py` evaluates the fourteen windowed moments,
+the window fraction, every scale and scheme variation and the three variations of the dispersive
+model at that point, and the covariance Σ_c of Eq. (4.2). These steps run from the repository
+alone. The resummation tables of ARES (`ares_recovered/`) and the fixed-order coefficients of
+EERAD3 (`output/eerad_*.npy`) ship with it. Rebuilding those needs ARES and EERAD3 themselves
+(`ares_recovered/ares_edits.txt`, `eerad3/`).
 
-## Section 5.7, larger models (Tables 3 and 7)
+## The released networks
 
-Needs `B6_sec6_MIX17`, `B8_E`, `B9_F` and `B10_held_8param` (group `table3`). Retraining needs
-`C7a` to `C7d_train_E` (Sherpa), `C8a` to `C8e_train_F` (Herwig) or `C9a` and `C9b_train_MIX17`
-(mixture), each with `B10_held_8param` (groups `train-E`, `train-F`, `train-MIX17`). The training
-and closure scripts look for `stageE_design.csv` and `stageF_design_aug.csv` inside `data_stageE/`
-and `data_stageF/` (the archives carry them there) or in `analysis/`. Copies are in
-`release/generators/`.
+```bash
+export MAXENT_DIR=$PWD
+sbatch --export=ALL symmetry/package_r8.sbatch     # release_r8/: E, F and MIX17
+sbatch --export=ALL symmetry/table_r8.sbatch       # release_r8_table/: STAGES.md, closure_*.csv, closure_summary.json
+sbatch --export=ALL symmetry/accuracy_r8.sbatch    # release_r8_table/: accuracy_law.json, accuracy_law_points.csv
+```
 
-| item | produced by | from |
-|---|---|---|
-| samples | `design_stageE.py`, `design_stageF_herwig.py`, `design_stageF_augment.py`, then `perlmutter/gen_stageE.sh`, `release/generators/gen_stageF.sh` (`perlmutter/stageE.sbatch`, `stageF.sbatch`, `gen_stageF_augment.sbatch`), and the mixtures by `make_mixture_data.py` (`perlmutter/build_mixture.sbatch`, `mix17_v2_*.sbatch`) | **(data)** |
-| Table 7 | the per-axis minimum and maximum of the design CSVs, also in `release/STAGES.md` | `release/generators/*.csv` |
-| Sherpa network (E) | `STAGE=E sbatch perlmutter/train_stage.sbatch` | **(data)** |
-| Herwig network (F, trained as `Fauglong`) | `STAGE=F STAGEF_CSV=stageF_design_aug.csv LADDER_SUFFIX=auglong LADDER_STEPS=72000 LADDER_OUT=output/ladder_stageFauglong.json sbatch -t 02:30:00 perlmutter/train_stage.sbatch` | **(data)** |
-| mixture network (MIX17, trained as `MIX17aug`) | `STAGE=MIX DM_DATA=data_stageDM17aug_v2 DM_TAG=MIX17aug LADDER_DRIVER=stage_mixture.py STAGED_OUT=output/stage_mixture_MIX17aug.json LADDER_OUT=output/ladder_MIX17aug.json sbatch perlmutter/train_stage.sbatch` (K = 48 from the batch script). The published training read `data_stageDM17aug`, which has the same particles and the earlier-axis shapes | **(data)** |
-| Table 3 | `python ladder_widths_big.py E output/models/E_cond.npz output/models/E_ref_v2_slim.npz`, `STAGEF_CSV=stageF_design_aug.csv python ladder_widths_big.py F output/models/Fauglong_cond.npz output/models/Fauglong_ref_v2_slim.npz`, `DM_DATA=data_stageDM17aug_v2 python ladder_widths_big.py MIX output/models/MIX17aug_cond.npz output/models/MIX17aug_ref_v2_slim.npz` (as in `perlmutter/widths_big.sbatch`, which passes `E_ref.npz`, `Fauglong_ref.npz` and `MIX17aug_ref.npz`, the names `tools/get_data.sh` links to the same slim references) | `widths_v2_*.json` |
-| multiplicity remarks | `make_stage_table.py`, as in `perlmutter/refresh_release_v2.sbatch`. To leave the shipped `release/` alone, copy it and run `RELEASE_DIR=<copy> STAGE_TABLE_SUBSET=1 STAGEF_CSV=stageF_design_aug.csv DM_DATA=data_stageDM17aug_v2 python make_stage_table.py E Fauglong=F MIX17aug=MIX17`. It reads `output/models/<tag>_ref.npz`, and `tools/get_data.sh` links `E_ref.npz`, `Fauglong_ref.npz` and `MIX17aug_ref.npz` to the slim references. After a manual download make the links yourself, for example `ln -sfn E_ref_v2_slim.npz output/models/E_ref.npz`, and the same for `Fauglong` and `MIX17aug` | `release/closure_*.csv` |
+**(data)** The packager converts `E_P2v3fullfac0`, `F_P2v3fullfac0` and `MIXGEOV3S9` to the numpy
+files of `analysis/release/models/` and checks them against the trained networks.
+`table_r8.sbatch` also writes `output/precision_gap_r8.json`. The files are then copied into
+`analysis/release/`. `release/models/MIX17_wifi.npz` is a copy of `output/wifi_MIXGEOV3S9_fit.npz`.
 
-## Section 5.8, factorized and concatenation networks (Table 4)
+## Earlier draft with an α_s fit (not in the paper)
 
-| item | produced by | from |
-|---|---|---|
-| concatenation (early fusion), Stages A to C | `for S in A B C; do STAGE=$S sbatch perlmutter/concat_small.sbatch; done` (needs `C1_train_A` to `C3_train_C` and the held runs of `B2_held_ABC`) | `concat_baseline_{A,B,C}_prod.json` |
-| concatenation, Sherpa 8 and mixture 17 | `STAGE=E sbatch perlmutter/concat_big.sbatch` and `STAGE=MIX sbatch perlmutter/concat_big.sbatch` (needs `C7a` to `C7d_train_E`, `C9a` and `C9b_train_MIX17`, and `B10_held_8param`) | `concat_baseline_{E,MIX}_silu.json` |
-| factorized columns | as Tables 1 and 3 | |
-| truncation test: the concatenation output keeps its closure within 0.02 at r = 3, 5, 5, 9, 16 singular components for d = 1, 2, 3, 8, 17 | `sbatch perlmutter/dctr_truncation.sbatch` (`dctr_truncation.py <tag> <weights>`, which reloads the trained concatenation networks and recomputes the closure from the truncated output with the published evaluation) | `dctr_truncation_{A,B,C,E,MIX}_concat_*.json` |
-| late fusion (θ after the sum), Stage C and mixture 17: 0.98 and 1.26 | `STAGE=C sbatch perlmutter/concat_late.sbatch` and `STAGE=MIX sbatch perlmutter/concat_late.sbatch` (`concat_baseline.py` with `CONCAT_MODE=late`) | `concat_baseline_{C,MIX}_late.json` |
-| Fig. 9, the cost of the three networks: 0.20 s, 17 s and 20 min per step on one CPU process with four threads, 0.50 s for the reweighting and χ², memory 0.9, 4.7 and 1.7 GB | `sbatch perlmutter/bench_cpu.sbatch` and `sbatch perlmutter/bench_gpu.sbatch` (`bench_cost.py`, needs `B6_sec6_MIX17` and `B11_bench`, group `cost`), then `python fig_cost.py` | `output/bench/bench_cost_{cpu_4,cpu_6,cpu_32,cpu_32_full,cpu_128,cuda_32}.json` |
-| training-seed spreads and the mixture-head control. Done for the seventeen-parameter mixture: factorized 1.09 to 1.13 over five trainings, concatenation with the mixture form 1.11 to 1.14 over three; the other stages are still running | `TASKS="design:stage:seed ..." sbatch perlmutter/seedstudy.sbatch`, at most four tasks per job, one per GPU. Designs: `fact` (factorized, stages A, B, C, E, MIX), `concat`, `late`, and for MIX only `mixe` and `mixl` (early and late fusion with the exact mixture head, `CONCAT_HEAD=mixture`). Example: `TASKS="mixe:MIX:0 mixl:MIX:0"`. A seed n trains the four networks with seeds n to n + 3, so seeds that are multiples of 4 give members independent of the published ones (0 to 3, and 100 to 103 for the factorized Stage B, which `fact:B:0` uses). `SMOKE=1` runs tiny budgets for timing. No published file is touched | `output/seedstudy/<design>_<stage>_s<seed>.json`, factorized closures in `ladder_dedup_<S>_<S>_seed<n>_ref.json` and `widths_v2_{E,MIX17aug}_seed<n>.json` |
-
-## Section 6, anchoring and the fit (Table 5, Fig. 10)
-
-Needs `B6_sec6_MIX17` for the MIX17 rows (group `sec6`) and `B7_C1M` for the three-parameter
-family (group `family`). The three-parameter fit reads `output/models/C_1M_ref_v2.npz`, which
-`tools/get_data.sh` links to `C_1M_ref_v2_slim.npz`. After a manual download make the link with
-`ln -sfn C_1M_ref_v2_slim.npz output/models/C_1M_ref_v2.npz`. The theory targets, the
-calculation-only fits and `make_sec6_numbers.py` need no archives. The grid profiles and
-`thrust_anchor_targets_cond.npz` ship with the repository in `output/`.
-
-| item | produced by | from |
-|---|---|---|
-| theory targets on the (α_s, α0) grid | `FO_NORM=total ARES_EXT=1 A0_MIN=0.15 A0_MAX=0.85 TARGETS_OUT=output/thrust_targets_grid_ext.npz python anchor_targets_grid.py` (uses `thrust_chain.py`, `np_shift.py`, `theory_cov.py`, and reads `output/thrust_anchor_targets_cond.npz`, which ships with the repository). Without `TARGETS_OUT` the grid goes to `thrust_targets_grid.npz`, which nothing reads | `thrust_targets_grid_ext.npz` |
-| profile on the grid (starting points) | `TAG=MIX17ext MODEL_TAG=MIX17aug A0_LIST='0.25 0.27 ... 0.79' sbatch perlmutter/profile_variant.sbatch` (`profile_column.py`, `polish_parallel.py`). The stored file was built in stages (first 21 columns on a 9-coupling grid, then extended to 0.136), so a fresh run covers more coupling rows and is an independent recomputation, not a bit-for-bit one | `profile_MIX17ext_central.json` |
-| Eq. (6.8): coupling, α0, correlation, χ² | `profile_rows.py` via `sbatch perlmutter/rows_main.sbatch` (stage 1). On a laptop: `COLS=1 COL_STEP=0.005 ROW_STEP=0.001 ./run_rows_local.sh output/profile_MIX17ext_central.json 4` | `profile_MIX17ext_central_rows.json` |
-| perturbative and nonperturbative errors | `perlmutter/rows_main.sbatch` (stage 2) | `profile_MIX17ext_central_rows_var.json` |
-| box limited to 90 percent | `sbatch perlmutter/rows_shrink.sbatch`, then `cp output/profile_MIX17ext_central_rows_shrink0.90sep.json output/profile_MIX17ext_central_rows_shrink0.90.json`, the name `make_sec6_numbers.py` reads. Stage 3 of `rows_main.sbatch` does the same and is superseded | `profile_MIX17ext_central_rows_shrink0.90*.json` |
-| product mixture, window bins only | grid profiles with `TAG=MIX17geo MODEL_TAG=MIX17aug MIX_FORM=geometric A0_LIST='0.25 0.27 ... 0.75' sbatch perlmutter/profile_variant.sbatch` and `TAG=MIX17win MODEL_TAG=MIX17aug LAST_BIN=0.3334 USE_NCH=0` (the stored grid profiles `profile_MIX17geo_central.json` and `profile_MIX17win_central.json` ship with the repository), then `sbatch perlmutter/rows_variants.sbatch` and `for V in geo win; do cp output/profile_MIX17${V}_central_rows_sep.json output/profile_MIX17${V}_central_rows.json; done` | `profile_MIX17{geo,win}_central_rows*.json` |
-| three-parameter family | `COLS=1 COL_STEP=0.005 ROW_STEP=0.001 ./run_rows_local.sh output/profile_C_1Mext_central.json 4` | `profile_C_1Mext_central_rows.json` |
-| pseudo-data closure, 40 sets | `FIT=output/profile_MIX17ext_central.json sbatch perlmutter/closure_rows.sbatch` (`pseudo_rows.py`). Sets 2 and 22 again with longer rows: `SETS='2 22' sbatch perlmutter/closure_wide.sbatch`. Both scripts write the sets to `output/pseudo_rows_sets/`, run `pseudo_rows.py summary` on them and copy the summary to `output/`. In the summary a wide set replaces the original one. Without the two wide sets `make_sec6_numbers.py` stops | `pseudo_rows_sets/`, `pseudo_rows_*_summary.json` |
-| χ² per experiment, residuals, edges, fraction | `python fit_summary_direct.py output/profile_MIX17ext_central.json` | `profile_MIX17ext_central_summary.json` |
-| pseudo-data at the fitted point, 40 sets: the experimental errors 0.0052 and 0.062 with correlation +0.92 | `FIT=output/profile_MIX17ext_central.json sbatch perlmutter/closure_atfit.sbatch` (`pseudo_rows_atfit.py`, every truth at the fitted point) | `output/pseudo_atfit_sets/` |
-| Table 5 and the bands of Fig. 10 | `FIT=output/profile_MIX17ext_central.json sbatch perlmutter/bands_exact.sbatch` (`bands_exact.py point`, `part`, `merge`). Rerun the point mode whenever the rows change | `*_exchange.json`, `*_exchange_dist.npz`, `*_bands_point.json` |
-| Fig. 10 (c), the contour where the χ² of the fit rises by one | `FIT=output/profile_MIX17ext_central.json sbatch perlmutter/surface.sbatch` (`surface_rows.py`) | `profile_MIX17ext_central_surface.json` |
-| Fig. 10 | `python fig_anchored_fit.py output/profile_MIX17ext_central.json` | the files above and `output/pseudo_atfit_sets/` |
-| fraction below τ = 0.05 | `python peak_fraction.py output/profile_MIX17ext_central.json` | `profile_MIX17ext_central_peak.json` |
-| calculation-only window fits (Sec. 6.4) | `python calc_window_fits.py` | `calc_window_fits.json` |
-| band at the ALEPH pair, 0.8 percent | `python band_refit_compare.py` | `band_refit_compare.json` |
-| parton-level check (Sec. 6.6) | `python parton_direct.py output/profile_MIX17ext_central.json` | `profile_MIX17ext_central_check.json` |
-| **every number of Sec. 6** | `python make_sec6_numbers.py` | all of the above |
-
-## Appendix D, the thrust calculation (Fig. 11)
-
-| item | produced by | from |
-|---|---|---|
-| fixed order | EERAD3 1.0 with `eerad3/eerad3_blk.patch`. The production jobs ship with the repository in `eerad3/`, and the raw logs are in `A0_theory_logs` (group `appD`). Cumulant: `python eerad_cumulant_combine.py --dirs logs/eerad_NNLO logs/eerad_NNLO_prod4 --trim 0.10 --out output/eerad_NNLO_cum.npy` | `eerad_*.npy` |
-| resummation | ARES is not redistributed (GPL-3). Clone it from upstream, https://github.com/lcarpino/ARES, at commit e75c88c and apply the three edits that `ares_recovered/ares_edits.txt` describes. The drivers load ARES from `ares_recovered/ARES_sym`, so build it there: `cd ares_recovered && git clone https://github.com/lcarpino/ARES ARES_sym && cd ARES_sym && git checkout e75c88c`, then run the edit commands listed in `ares_edits.txt` inside `ARES_sym/`. Back in `analysis/`: `wolframscript -file ares_recovered/ares_prod_asgrid_ext.wls` and `ares_prod_asgrid.wls`. Needs Wolfram Engine | `ares_recovered/ares_prod_asgrid*.csv` |
-| fit to ALEPH and its refits | `ARES_EXT=1 python thrust_chain.py` | `chain_summary.json`, `moments_joint.json` |
-| χ² at the fitted pair, 13.7, and the refitted χ² range | `python calc_window_fits.py` (ALEPH, own normalization) | `calc_window_fits.json` |
-| cross-check with y0 = 1e-7 | `python eerad_y7_check.py`. The cumulant it compares with is rebuilt by `python eerad_cumulant_combine.py --dirs logs/eerad_NNLO_y7 --trim 0.10 --out output/eerad_NNLO_ranktrim_y7.npy` | `eerad_NNLO_cum.npy`, `eerad_NNLO_ranktrim_y7.npy` |
-| clipping of the cumulant, third-order subtraction | `python appD_checks.py`, `NP_SUB_ORDER=3 python appD_checks.py`, both with `ARES_EXT` unset | `appD_checks*.json` |
-| Fig. 11 and the deviations from ALEPH | `python fig_thrust_vs_aleph.py` | the files above |
-
-## Appendix E
-
-Needs `B6_sec6_MIX17` (group `sec6`).
-
-| item | produced by | from |
-|---|---|---|
-| condition numbers, eigenvalues, diagonal-term scan | `python floor_scan_direct.py output/profile_MIX17ext_central.json` | `profile_MIX17ext_central_floorscan.json` |
-| noise test of the diagonal term | `python floor_noise_direct.py output/profile_MIX17ext_central.json` | `profile_MIX17ext_central_floornoise.json` |
-
-## Appendices A and B
-
-| item | produced by | from |
-|---|---|---|
-| temperatures, Stages A to C and the 54-run network | `python recalibrate_T.py A`, `B`, `C` (`B1_exports_ABC`, `B2_held_ABC`) and `python recalibrate_T.py C_1M` (`B7_C1M`, `B2_held_ABC`), then `python apply_T.py C_1M`. For C_1M the script reads `output/models/C_1M_ref.npz`, which `tools/get_data.sh` links to `C_1M_ref_v2.npz`, the exact-axis reference (itself a link to `C_1M_ref_v2_slim.npz`). The published C_1M temperature was selected on the earlier axis, with the held runs of `B2_held_ABC`. To repeat that fit, point the name at the earlier-axis reference of `B7_C1M` first, `ln -sfn C_1M_ref_v1_slim.npz output/models/C_1M_ref.npz`, then run `python recalibrate_T.py C_1M`, and restore the link afterwards with `ln -sfn C_1M_ref_v2.npz output/models/C_1M_ref.npz` | `recal_T_{A,B,C,C_1M}.json` |
-| temperatures, E, F and MIX17 | `sbatch perlmutter/recal_T.sbatch` (`recalibrate_T.py E`, `Fauglong`, and `MIX17aug` with `DM_DATA`), then `python apply_T.py Fauglong` and `python apply_T.py MIX17aug` (`B6_sec6_MIX17`, `B8_E`, `B9_F`, `B10_held_8param`, group `table3`). The script reads `output/models/<tag>_ref.npz`, which `tools/get_data.sh` links to the slim references (by hand after a manual download, as in Sec. 5.7). With the release data use `DM_DATA=data_stageDM17aug_v2`. The published fit used the earlier-axis shapes, so a rerun can differ slightly | `recal_T_{E,Fauglong,MIX17aug}.json` |
-| single networks against the average, 1.22 to 1.55 and 1.10 to 1.62 | `LADDER_ACT=silu FINE_T=1 DROP_DUP=1 ABLATION_OUT=output/ensemble_ablation_dedup.json python ensemble_ablation.py` (`B1_exports_ABC`, `B2_held_ABC`). Without `ABLATION_OUT` it writes `ensemble_ablation.json` | `ensemble_ablation_dedup.json` |
-| 82457 weights | `python param_count.py` | `param_count.json` |
-| comparison with the energyflow PFN | `EF_PYTHON=<python of the bdistcrete-tf environment> bash run_crosscheck.sh` (`crosscheck_ef.py`, `crosscheck_torch.py`) on runs 9000 and 9010 of `data_widebox` (`C5_widebox`). The paper's 0.0004 came from a Stage D sample that no longer exists. The rerun on `data_widebox` is in progress | `crosscheck_*.json` |
-| SiLU against ReLU at Stage B | `LADDER_ACT=relu LADDER_LR=1e-3 LADDER_STEPS=24000 LADDER_SUFFIX=_probe_relu LADDER_OUT=output/probe_B_relu.json python -u r2_ladder.py B > output/probe_B_relu.log`, and the same with `silu` and `_probe_silu`, with `LADDER_EMB_SCALE` unset (`C2_train_B` with `B2_held_ABC`, group `train-B`) | `probe_B_*.log` |
-| exact-axis widths 0.97, 1.23, 1.00 | A: `STAGEA_DATA=data_stageA_v2 python ladder_widths_v2.py A output/models/A_ref_v2.npz` (prints 0.974, also in `output/post_A_v2.log`, which ships with the repository). B: `STAGEB_DATA=data_stageB_v2 python ladder_widths_dedup.py B output/models/B_ref_v2.npz`. C: `STAGEC_DATA=data_stageC_v2 python ladder_widths_dedup.py C output/models/C_ref_v2.npz`. `tools/get_data.sh` links `{A,B,C}_ref_v2.npz` to the slim references of `B12_appA_v2` (by hand: `ln -sfn A_ref_v2_slim.npz output/models/A_ref_v2.npz`, and the same for B and C). The references are rebuilt by `rebuild_ref_obs.py` (`post_AB_v2.sh`) | `B1_exports_ABC`, `B12_appA_v2` **(data)** |
-| three-parameter network on all 54 Stage C runs | samples by `perlmutter/pm_campaign.sh` and `perlmutter/anchor1M_submit.sh` (1M campaign) and `reextract_anchor1M.sh`. The staging of these runs into `data_stageC` as 7800 to 7826 is not scripted. Training: `python stageC_1M_train.py` (`C3_train_C`, `C4_train_C1M`, `B2_held_ABC`, group `train-C1M`), then `python recalibrate_T.py C_1M` and `python apply_T.py C_1M` | **(data)** |
-| closure of the 54-run network | copy `release/` and run `RELEASE_DIR=<copy> STAGEC_DATA=data_stageC_v2 python make_stage_table.py` (`B7_C1M`, `B12_appA_v2`, in group `appA`). It reads `output/models/C_1M_ref.npz`, which `tools/get_data.sh` links to `C_1M_ref_v2.npz` and that to `C_1M_ref_v2_slim.npz`. After a manual download make both links: `ln -sfn C_1M_ref_v2_slim.npz output/models/C_1M_ref_v2.npz` and `ln -sfn C_1M_ref_v2.npz output/models/C_1M_ref.npz`. `STAGEC_DATA=data_stageC_v2` is required, because the shipped table was made on those runs. After a retrain, `RELEASE_DIR=<copy> python package_release.py C_1M` first rebuilds the released head. It reads the particles of the reference, which for the published network are in `B13_C1M_particles` | `release/closure_C_1M.csv` |
+The earlier draft fitted α_s(M_Z) and α_0 to the LEP data with the generator parameters profiled,
+in its own Sec. 6, on networks trained to an earlier standard and on the samples of the release
+`data-v1`. Draft r8 has none of this. Its scripts and result files stay in the repository, and
+`python make_sec6_numbers.py` recomputes the numbers of that Sec. 6 from `output/`. The
+walk-throughs of that draft, section by section with the archives each one needs, are in the git
+history: `git show 1d66811:docs/REPRODUCE.md`. Two things of draft r8 go back to it. The cost
+estimate of Sec. 3.7 takes its 6000 steps per fit from the forty pseudo-data fits of that draft,
+which needed a median of 6315 evaluations of the χ² and its gradient per fit.
+Its seed study (`perlmutter/seedstudy.sbatch`) is superseded by the three sets of members of every
+model in Table 1.

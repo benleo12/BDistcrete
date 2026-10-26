@@ -1,5 +1,5 @@
-"""Every accuracy number of the paper, written by script: phase2/numbers.json and phase2/numbers.tex
-(one \\newcommand per quoted number), so no number in the text or the tables is typed by hand.
+"""Every accuracy number of the paper, written by script: numbers.json and numbers.tex next to this
+script (one \\newcommand per quoted number), so no number in the text or the tables is typed by hand.
 
 A cell is (design set, stage, network). For each cell, over its trainings (seeds 0 to 2): the
 closure width on the standard test (the report half of the 80k-event held-out runs) and on the
@@ -13,13 +13,17 @@ e.g. \\AccAugBFacStrict, \\AccAugBFacStrictSd, \\AccAugBUniStd, \\AccOrigHerwigC
 
 A run that trained its full budget under the old early-stopping rule (it was never cut, so the
 result is the one of a full-schedule run) stands in for its full-schedule rerun.
-Usage: python make_numbers.py [results dir]   (LC_DIR: the folder of the learning-curve widths)"""
+
+From analysis/, this writes the paper's numbers.tex:
+    python phase2tools/make_numbers.py output
+The argument is the folder of the result files (default analysis/output). The learning-curve widths
+and the coverage files are read from the same folder, or from LC_DIR if it is set."""
 import json, os, sys
 from decimal import Decimal, ROUND_HALF_UP
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-D = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, 'results')
+D = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(HERE), 'output')
 FULL_BUDGET = 324000
 SETS = [  # (macro name, file prefix, fallback prefix, stages)
     ('Grid', 'p2gridfull', 'p2', ['A', 'B', 'C']),
@@ -139,12 +143,12 @@ numbers['final_range'] = rng_final
 # Every row is scored at the same sixteen held-out points of the paper (7200-7207 Sherpa, 8200-8207
 # Herwig), on the standard test and on the strict test, so that rows with different run sets
 # compare like with like. Rows: (macro name, runs, events per run, steps, members, source).
-# A source is a list of learning-curve tags (widths_v2_<TAG>.json and widths_v2_<TAG>h400.json in
-# output/learning_curve) or ('p2', prefix) for the three Phase 2 trainings of the 208-run set. The
+# A source is a list of learning-curve tags (widths_v2_<TAG>.json and widths_v2_<TAG>h400.json in the
+# results folder, or in LC_DIR) or ('p2', prefix) for the three Phase 2 trainings of the 208-run set. The
 # closure width grows with the size of the reference, so every row is scored against a reference of
 # the size of the 720-run model's: '<TAG>@r415' reads the widths of rescore_v4.sbatch, which use 415 of
 # the 1000 stored events of each of the 2768 runs (1 148 720 events, against 1 149 840).
-LC = os.environ.get('LC_DIR', os.path.join(os.path.dirname(HERE), 'output', 'learning_curve'))
+LC = os.environ.get('LC_DIR', D)
 PAPER = [str(r) for r in list(range(7200, 7208)) + list(range(8200, 8208))]
 META208 = os.path.join(os.path.dirname(HERE), 'data_stagePURE17', 'meta.json')
 LC_ROWS = [
@@ -182,7 +186,7 @@ for name, runs, ev, steps, mem, src in LC_ROWS:
                 p = pick(src[1], None, 'MIX', 'fac', k, test)
                 if p and held208:
                     acc.append(paper_width(p2_per_run(load(p), held208)))
-            # the same trainings scored at all 48 held-out points of the 720-run set (make_orig48.py)
+            # the same trainings scored at all 48 held-out points of the 720-run set (data of make_orig48.py)
             for test, acc48 in ((False, std48), (True, strict48)):
                 p = pick(src[1] + '48', None, 'MIX', 'fac', k, test)
                 if p:
@@ -458,7 +462,7 @@ if os.path.exists(fmap):
     macro('MapBaryonZNear', mp['baryon_z_near'], 1); macro('MapBaryonZFar', mp['baryon_z_far'], 1)
     textmacro('MapBaryonZOverTwo', str(mp['baryon_z_over_two']))
 
-# ---- App. B: two halves of one fresh run, calibration constants, selected steps ------------------
+# ---- Sec. 3.2 and App. A.2: two halves of one fresh run, calibration constants, selected steps ---
 # The calibration check (two disjoint halves of the same held-out run, no network) depends only on
 # the data, so one training per stage gives it.
 for S, (s, pre, fb) in {'A': ('Aug', 'p2augfull', 'p2aug'), 'B': ('Aug', 'p2augfull', 'p2aug'),
@@ -524,7 +528,7 @@ if len(th3) == 3:
     textmacro('SeedThrustSdEFour', f'{1e4*float(np.std(th3, ddof=1)):.1f}')
     if 'three_bands' in numbers:
         textmacro('TbThrustLearnEFour', f'{1e4*numbers["three_bands"]["table"]["thrust"]["learning"]:.1f}')
-# ---- the wide coupling scan (App. B): three references of equal size, mean width per held point ---
+# ---- the wide coupling scan (Sec. 3.5): three references of equal size, mean width per held point -
 def _pt(f):
     """{coupling: mean width over the observables} of one stage-W result"""
     return {float(k.strip('()').split(',')[0]): float(np.mean(list(v.values()))) for k, v in load(f)['per_point'].items()}
@@ -544,7 +548,7 @@ if os.path.exists(fs) and os.path.exists(fp) and all(os.path.exists(f) for f in 
     macro('WidePoolMin', min(pool.values()), 2); macro('WidePoolMax', max(pool.values()), 2)
     macro('WideLocalMin', min(local.values()), 2); macro('WideLocalMax', max(local.values()), 2)
 
-# ---- the concatenation network truncated to its leading singular components (App. C) --------------
+# ---- the concatenation network truncated to its leading singular components (Sec. 3.7) ------------
 # r2_ladder.py with LADDER_TRUNCATE=1 on the first concatenation training of each model: the smallest
 # number of components whose closure width comes within 0.02 of that of the full network
 svd = {}
@@ -594,7 +598,7 @@ if all((48, s) in toys for s in range(3)):
     rest = [v for k, v in scan.items() if k >= 2]
     macro('ToyWidthScanMin', min(rest), 2); macro('ToyWidthScanMax', max(rest), 2)
 
-# ---- the cost of a fit step (Sec. 3.6, Fig. cost): bench_cost_final.py on the final mixture ---------
+# ---- the cost of a fit step (Sec. 3.7, Fig. cost): bench_cost_final.py on the final mixture ---------
 # the network part of a step (the weights of the reference events and their derivatives) on one CPU
 # process with four threads and on one H200, the rest of the step (the maximum-entropy weight and the
 # chi^2, the same for every network) on the CPU, and a profile fit of COST_STEPS steps

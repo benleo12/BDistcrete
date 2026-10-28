@@ -32,7 +32,47 @@ ALEPH thrust distribution in the window. The predictions are compared with DELPH
 the classifier weights and the learning band against fresh generator runs for one to seventeen
 parameters. Section 4 shows the three bands of the thrust distribution and of seven means.
 
-## Quick start
+## Quick start: the released networks, numpy only
+
+```bash
+pip install numpy
+cd analysis/release
+python -m gentune.selftest models
+python examples/reweight_own_events.py --stage MIX17 --hepmc examples/data/herwig_default.hepmc.gz \
+    --from herwig-default --to herwig-default H:pwtdiquark=0.40 --out weights.npz
+python examples/generator_band.py --stage MIX17 --reference
+python examples/learning_band.py --stage MIX17 --reference
+```
+
+The self-test checks the networks, and the reading of HepMC files, against stored outputs in
+about ten seconds, longer on the first run. The second command writes one weight per event that
+takes the Herwig example file from Herwig's default tune to a larger diquark weight, in the order
+of the file and summing to one, and prints the effective sample size. For your own sample, pass
+its file and the point it was generated at. The last two give the generator band of the paper,
+over its 200 points of the box, and the learning band at its central point, on the 2000 reference
+events that ship with the networks, with the statistical error of each. Those errors are about 24
+times the paper's.
+
+With the paper's reference sample and calculation, the two public files of Data (below),
+downloaded into `analysis/release`, the same scripts give the paper's bands on its observables
+and in its thrust bins, and `reproduce_paper.py` its central predictions and generator band,
+before and after the calculation is imposed, checked against the paper's numbers:
+
+```bash
+python examples/generator_band.py --stage MIX17 --reference-file reference_MIX17.npz --bins paper
+python examples/learning_band.py --stage MIX17 --reference-file reference_MIX17.npz --bins paper
+python examples/reproduce_paper.py --reference reference_MIX17.npz --targets targets_thrust_nlo.npz
+```
+
+[`analysis/release/README.md`](analysis/release/README.md) describes all of it, including what
+your sample has to match,
+[`analysis/release/IMPOSE.md`](analysis/release/IMPOSE.md) how to impose a calculation in numpy,
+[`analysis/release/REFERENCE.md`](analysis/release/REFERENCE.md) the reference sample and the
+calculation, and
+[`analysis/release/examples/reproduce_paper.py`](analysis/release/examples/reproduce_paper.py)
+what it checks.
+
+## Quick start: the numbers and figures of the paper
 
 ```bash
 conda env create -f environment.yml && conda activate bdistcrete
@@ -46,8 +86,7 @@ python figs_r8.py                            # the ten data figures, Figs. 3 to 
 `analysis/phase2tools/numbers.tex`, 575 macros identical to the paper's `numbers.tex`, and
 `numbers.json` next to it. `figs_r8.py` writes `output/r8_<name>.pdf`, and with names it draws
 only those figures, for example `python figs_r8.py bands obs`. Figs. 1 and 2 are drawn in TikZ in
-the paper source. The figures are typeset with LaTeX, which `environment.yml` does not install. To
-reweight your own events with the released networks, see `analysis/release/README.md`.
+the paper source. The figures are typeset with LaTeX, which `environment.yml` does not install.
 
 ## What can be redone from where
 
@@ -55,13 +94,19 @@ reweight your own events with the released networks, see `analysis/release/READM
    result files in `analysis/output/`. The thrust calculation at the fixed point and its comparison
    with ALEPH and DELPHI (`thrust_chain.py`, `targets_nlo_point.py`, `calc_bins.py`,
    `calc_vs_delphi.py`, with `RIVET_REF=rivet_ref`). The collection of the term-count scan
-   (`kscan_collect.py`). The self-test of the released networks and the reweighting of your own
-   events (`analysis/release/`).
-2. **With the network exports and event samples of draft r8** ([`docs/DATA.md`](docs/DATA.md)).
+   (`kscan_collect.py`). The self-test of the released networks, the reweighting of your own
+   events, and the generator and learning bands on the 2000 reference events that ship with
+   them (`analysis/release/`).
+2. **With the public reference sample of the mixture** (Data, below), with numpy alone. The
+   central predictions, the generator band and the learning band of Sec. 4, on the paper's
+   reference events, and the symmetric scale and scheme band of <1-T>
+   (`analysis/release/IMPOSE.md`). They agree with the paper to a few 1e-8 relative or better,
+   the learning band to 1e-5.
+3. **With the network exports and event samples of draft r8** ([`docs/DATA.md`](docs/DATA.md)).
    The three bands, the learning band and its coverage, the inputs of Figs. 3 and 5, the strict
    tests, the cost benchmark and the packaging of the released networks. These ran on the Symmetry
    cluster at Perimeter, with the batch scripts in `analysis/symmetry/`.
-3. **From the generators.** Every sample can be regenerated with the scripts and designs in `gen/`.
+4. **From the generators.** Every sample can be regenerated with the scripts and designs in `gen/`.
    Training needs the samples and a GPU, one NVIDIA H200 per job.
 
 The toy of Fig. 4 needs no data, because `toy_final.py` generates its own events. Its training ran
@@ -93,24 +138,40 @@ All scripts are in `analysis/` and run from there.
 | `analysis/output/` | the result files the numbers and figures are made from. `figs_r8.py` writes the figures here |
 | `analysis/phase2tools/` | `make_numbers.py` and its output, `numbers.tex` and `numbers.json` |
 | `analysis/symmetry/` | the batch scripts of draft r8, as run on the Symmetry cluster |
-| `analysis/release/` | the released networks (numpy only), the `gentune` reader, the generator scripts and designs, the closure tables |
+| `analysis/release/` | the released networks (numpy only), the `gentune` reader, the examples and example HepMC files, the generator scripts and designs, the closure tables |
 | `gen/` | the scripts and designs that generated the samples of draft r8 |
 | `analysis/lepcov/`, `analysis/rivet_ref/` | the LEP measurements (HEPData tables and the YODA files of Rivet) and their reader |
 | `analysis/ares_recovered/`, `analysis/eerad3/` | our drivers and patches for ARES and EERAD3, and the tables they produced |
 | `analysis/perlmutter/`, `analysis/farm/` | batch scripts of the earlier draft |
 | `docs/REPRODUCE.md` | every figure, table and quoted number, with the command and the inputs that produce it |
-| `docs/DATA.md` | the network exports and event samples, which are too large for git |
+| `docs/DATA.md` | the network exports and event samples, which are too large for git, and the download of the public ones |
 | `tools/get_data.sh` | downloads the data archives of the earlier draft |
 | `CLAUDE.md` | orientation for Claude Code: the method, how it relates to DCTR, the map of the code |
 | `environment.yml`, `environment-tf.yml` | the analysis environment, and the TensorFlow one that only the energyflow cross-check needs |
 
 ## Data
 
-The network exports and event samples are too large for git, and those of draft r8 are not yet in
-a release archive. [`docs/DATA.md`](docs/DATA.md) lists the files the paper needs and what reads
-each one. They will be archived with the paper at Zenodo, and until then they are available on
-request. The result files made from them are in `analysis/output/`, so every number and figure
-can be redone without them.
+The network exports and event samples are too large for git. [`docs/DATA.md`](docs/DATA.md)
+lists the files the paper needs and what reads each one.
+
+The reference sample of the mixture, `reference_MIX17.npz` (865 MB, the 1,149,840 events the
+released `MIX17` network reweights, with the paper's per-event observables), and the paper's
+thrust calculation, `targets_thrust_nlo.npz`, are public, as the assets of the GitHub release
+https://github.com/benleo12/BDistcrete/releases/tag/data-r8, with `REFERENCE.md`, which describes
+them, and `SHA256SUMS`. They will also be archived at Zenodo. To download and check them into
+`analysis/release`, where the examples look for them:
+
+```bash
+cd analysis/release
+for f in reference_MIX17.npz targets_thrust_nlo.npz REFERENCE.md SHA256SUMS; do
+  curl -LO https://github.com/benleo12/BDistcrete/releases/download/data-r8/$f
+done
+shasum -a 256 -c SHA256SUMS          # sha256sum -c SHA256SUMS on Linux; every line must say OK
+```
+
+Only the other exports and samples of draft r8 are available on request, and they will be
+archived with the paper at Zenodo. The result files made from them are in `analysis/output/`, so
+every number and figure can be redone without them.
 
 ## Batch scripts
 
@@ -133,14 +194,38 @@ SiLU). The number of terms and of steps come from `K` and `STEPS`, so pass `K=48
 in `docs/REPRODUCE.md`.
 `gen/README.md` describes the generation scripts.
 
-## Release v2.0.0
+## Releases
 
-The tag `v2.0.0` marks the code of draft r8. `analysis/release/` holds the released networks at
-version 2.0.0 (`analysis/release/VERSION`): `E` (Stage D, Sherpa), `F` (Stage E, Herwig) and
+The tag `v2.0.0` marks the code of draft r8. `analysis/release/` holds the released networks,
+since version 2.0.0: `E` (Stage D, Sherpa), `F` (Stage E, Herwig) and
 `MIX17` (the seventeen-parameter mixture of Sec. 4, its first set of members), with the basis
 weights of its learning band in `MIX17_wifi.npz`. `C_1M` is a three-parameter network of the
 earlier draft. They need only numpy, and `python -m gentune.selftest models`, run in
 `analysis/release/`, checks them.
+
+The tag `v2.0.1`, version 2.0.1 in `analysis/release/VERSION`, keeps those networks and documents
+and fixes what is needed to use them without reading the source:
+
+- three Herwig setting names in `gentune.axes` corrected, and the full setting and the default
+  of every parameter added, with presets for `--from` and `--to`
+- the units line of a HepMC file read and a MeV file converted, a warning for weighted files, and
+  the HepMC2 files that Herwig 7.3 writes recognised by the automatic format detection
+- the generator band and the learning band in `examples/`, with `wifi_basis` and
+  `learning_band` on the head, the statistical error and a bootstrap of every band, a warning
+  when a band is not significant, and the paper's thrust bins (`--bins paper`). On the public
+  reference sample (`--reference-file`) they give the paper's bands
+- `gentune.bands`, with the paper's points, the per-event observables, the statistical errors and
+  the bootstrap, for scripts of your own
+- the event numbers of a HepMC file kept, and written with the weights and the per-event
+  observables by `--out`, so that weight i is known to belong to event i of the file
+- two example HepMC files, one per generator, and a second stage of the self-test that reads them
+- `gentune.maxent` and `IMPOSE.md`, to impose a calculation in numpy, with a warning when the
+  solution empties the window because the calculation is not reachable, `REFERENCE.md`, which
+  describes the reference sample of `MIX17`, and `examples/reproduce_paper.py`, which reproduces
+  the paper from it. The sample and the paper's calculation are the release `data-r8` (Data)
+- `pyproject.toml`, so that
+  `pip install 'git+https://github.com/benleo12/BDistcrete@v2.0.1#subdirectory=analysis/release'`
+  installs `gentune`. The networks and examples still come from a checkout.
 
 ## Notes on exact reproduction
 

@@ -8,10 +8,36 @@ The scripts open them at exactly these paths.
 
 ## Draft r8
 
-The exports and samples of draft r8 are not yet in a release archive. They will be archived at
-Zenodo with the paper, and until then they are available on request from the authors. Every
-number and figure of the paper can be redone without them, from the result files in
-`analysis/output/` (`docs/REPRODUCE.md`). They are needed to redo those result files.
+### Public: the reference sample of the mixture and the thrust calculation
+
+Two files are public, as the assets of the GitHub release `data-r8`,
+https://github.com/benleo12/BDistcrete/releases/tag/data-r8, with `REFERENCE.md`, which describes
+them (a copy is `analysis/release/REFERENCE.md`), and `SHA256SUMS`. They will also be archived at
+Zenodo.
+
+| file | bytes | what | read by |
+|---|---|---|---|
+| `reference_MIX17.npz` | 865,353,418 | the 1,149,840 reference events of the mixture, released as `MIX17`, as the event vectors a(Φ) of `MIXGEOV3S9_cond.npz` and the per-event observables of `MIXGEOV3S9_ref_v2_slim.npz`, with the run and the generator of every event | `analysis/release/examples/reproduce_paper.py`, `generator_band.py` and `learning_band.py` with `--reference-file`, `gentune.maxent` (`analysis/release/IMPOSE.md`) |
+| `targets_thrust_nlo.npz` | 33,524 | the NNLL+NLO thrust calculation imposed in the paper, its 14 moments in the window, their covariance and its variations, copied from `output/thrust_targets_nlo_point.npz` | `gentune.maxent.load_targets` |
+
+With them, numpy alone reproduces the central predictions of Sec. 4, the generator band and the
+learning band, without the exports below. To download and check them into `analysis/release`,
+where the examples look for them:
+
+```bash
+cd analysis/release
+for f in reference_MIX17.npz targets_thrust_nlo.npz REFERENCE.md SHA256SUMS; do
+  curl -LO https://github.com/benleo12/BDistcrete/releases/download/data-r8/$f
+done
+shasum -a 256 -c SHA256SUMS          # sha256sum -c SHA256SUMS on Linux; every line must say OK
+```
+
+### On request: the other exports and samples
+
+Only the exports and samples below are not public yet. They will be archived at Zenodo with the
+paper, and until then they are available on request from the authors. Every number and figure of
+the paper can be redone without them, from the result files in `analysis/output/`
+(`docs/REPRODUCE.md`). They are needed to redo those result files.
 
 ### Network exports
 

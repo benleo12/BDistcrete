@@ -24,6 +24,11 @@ Two operations are useful, and they are not the same thing.
       pair of points inside the training box and needs no reference events at all.
 
 Weights are returned normalized to sum to one over the events you passed in.
+
+The learning band of the paper, the uncertainty of the log ratio itself, comes from the WiFi fit
+of the ensemble (Benevedes and Thaler, arXiv:2506.00113), whose weights and covariance ship for
+MIX17 as models/MIX17_wifi.npz. wifi_basis(A, theta) gives its basis functions and
+learning_band(A, theta, O, wifi_path) the band of a weighted mean.
 """
 import os
 import numpy as np
@@ -67,9 +72,7 @@ class Head:
         self.checksum = c['f_checksum'] if 'f_checksum' in c.files else None
         self.checksum_theta = c['f_checksum_theta'] if 'f_checksum_theta' in c.files else None
         # The training design, standardized. A box is not the same thing as the region that
-        # was sampled: the Herwig stage varies eight parameters along a six-dimensional locus
-        # taken from published retunes, so the corners of its bounding box were never
-        # generated and a point there is an extrapolation even though in_box() passes.
+        # was sampled, and support() measures the difference against these points.
         self.theta_train = c['theta_train'].astype(np.float64) if 'theta_train' in c.files else None
         self._spacing = None
 
@@ -86,31 +89,70 @@ class Head:
         return np.stack([self.norm[:, 0] - self.norm[:, 1], self.norm[:, 0] + self.norm[:, 1]], 1)
 
     def in_box(self, theta, tol=1e-9):
-        t = np.asarray(theta, np.float64)
+        t = self._vec(theta)
         lo, hi = self.box[:, 0], self.box[:, 1]
         return bool(np.all(t >= lo - tol) and np.all(t <= hi + tol))
 
     def tn(self, theta):
-        t = np.asarray(theta, np.float64)
-        assert t.shape[-1] == self.nt, f'expected {self.nt} parameters, got {t.shape[-1]}'
+        t = self._vec(theta)
         return (t - self.norm[:, 0])/self.norm[:, 1]
+
+    def _names(self):
+        """The parameter names gentune.axes holds for this file's stage, read off the file name,
+        or None when the file is not a released stage."""
+        tag = os.path.basename(str(getattr(self, 'path', ''))).replace('_head.npz', '')
+        try:
+            from . import axes
+            return axes.names(tag, self.nt) if tag in getattr(axes, 'NAMES', {}) else None
+        except (ImportError, ValueError):
+            return None
+
+    def _vec(self, theta):
+        """theta as float64, after checking it holds one value per parameter. A wrong count used
+        to fail inside in_box() as a numpy broadcasting error, and a single number was compared
+        with every row of the box and could pass."""
+        t = np.asarray(theta, np.float64)
+        if t.ndim == 0 or t.shape[-1] != self.nt:
+            nm = self._names()
+            order = f', in the order {", ".join(nm)}' if nm else ''
+            n = 1 if t.ndim == 0 else t.shape[-1]
+            raise ValueError(f'theta has {n} value{"" if n == 1 else "s"} and '
+                             f'{getattr(self, "path", "this head")} takes {self.nt}{order}')
+        return t
+
+    def _box_error(self, theta, tol=1e-9):
+        """The ValueError for a point outside the box, naming each parameter that is out."""
+        rows = self._vec(theta).reshape(-1, self.nt)
+        lo, hi = self.box[:, 0], self.box[:, 1]
+        out = ~((rows >= lo - tol) & (rows <= hi + tol))          # also catches nan
+        r = int(np.argmax(out.any(1)))
+        nm = self._names() or tuple(f'parameter {i}' for i in range(self.nt))
+        lines = [f'  [{i:>2}] {nm[i]} = {rows[r, i]:.6g}, the box runs from {lo[i]:.6g} to '
+                 f'{hi[i]:.6g}' for i in np.where(out[r])[0]]
+        which = f'point {r} of theta' if len(rows) > 1 else 'theta'
+        return ValueError(f'{which} is outside the training box of {self.path}, where the head is '
+                          f'not to be trusted:\n' + '\n'.join(lines))
 
     def support(self, theta):
         """Was this point sampled, or is the head extrapolating?
 
-        Being inside the box is necessary and not sufficient. The Sherpa stage varies eight
-        parameters independently, so its box really is the region that was generated. The
-        Herwig stage varies eight parameters along a six-dimensional locus taken from
-        published retunes, because the shower coupling and the shower cutoff rise together in
-        that family and so do the cluster fission mass and power. Its bounding box therefore
-        contains large regions no run ever visited, and a point there passes in_box() while
-        being a genuine extrapolation.
+        Being inside the box is necessary and not sufficient. Both eight-parameter designs of
+        this release fill their boxes: each holds the points of the earlier design of its
+        generator and 256 points of a scrambled Sobol sequence over the whole box. Only the
+        first Herwig design followed the published retunes, which move the shower coupling with
+        the shower cutoff and the cluster fission mass with its power, and so covered a
+        six-dimensional locus. The Sobol points fill the rest. The training runs of MIX17 are
+        pure runs of one generator, at a fraction of 0 or 1, with the other generator's
+        parameters at the centre of their box. About one point in a thousand drawn uniformly
+        in the box of E, F or MIX17 fails, a corner further from the design than any training
+        point. A head whose design does not fill its box fails far more often, which is the
+        case this test is for.
 
-        The test that sees this is the design's own covariance. Rotating into its principal
-        directions and dividing by the spread along each one gives a score, and the two
-        directions across the locus have a small spread, so a point off the locus scores
-        high. The score is compared with the largest score any TRAINING point reaches, which
-        is the model's own definition of how far out it has seen.
+        The test is the design's own covariance. Rotating into its principal directions and
+        dividing by the spread along each one gives a score, so a point far out along a
+        direction the design covers thinly scores high. The score is compared with the
+        largest score any TRAINING point reaches, which is the model's own definition of how
+        far out it has seen.
 
         Returns a dict with score, threshold, ok, and the nearest training point distance.
         Returns None if the design was not shipped with this head.
@@ -137,7 +179,7 @@ class Head:
         """in_box plus support, as one call. Raises if outside the box, returns the support
         dict and prints a warning if the point is further out than anything trained on."""
         if not self.in_box(theta):
-            raise ValueError(f'theta {np.asarray(theta)} is outside the training box\n{self.box}')
+            raise self._box_error(theta)
         s = self.support(theta)
         if s is not None and not s['ok'] and warn:
             print(f'WARNING this point is inside the box but outside the region that was '
@@ -180,7 +222,7 @@ class Head:
     def logit(self, A, theta, check_box=True):
         """f(Phi; theta) per event, ensemble mean of the member logits, before temperature."""
         if check_box and not self.in_box(theta):
-            raise ValueError(f'theta {np.asarray(theta)} is outside the training box\n{self.box}')
+            raise self._box_error(theta)
         return self.pack(A) @ (self.bcat(theta)/self.ENS)
 
     def weights(self, A, theta, check_box=True):
@@ -201,6 +243,67 @@ class Head:
         the reweighting is being carried by a few events and its errors will be large."""
         w = np.asarray(w, np.float64)
         return float(1.0/np.sum((w/w.sum())**2))
+
+    # -- the learning band -------------------------------------------------------------------
+    def wifi_basis(self, A, theta, check_box=True):
+        """The basis functions of the WiFi fit at theta, one row per event, (Nev, 1 + ENS^2).
+
+        Column 0 is the constant and column 1 + i*ENS + j is < a_i(Phi), b_j(theta) >, the event
+        vector of member i against the parameter vector of member j. That is the order of the
+        weights in models/<stage>_wifi.npz, w_0 first and then w_ij row by row, so the log ratio
+        of the fit is basis @ w. The published network is the diagonal, w_ij = delta_ij/(ENS T),
+        so basis @ w_published is logit(A, theta)/T and gives the weights of weights(A, theta).
+        """
+        if check_box and not self.in_box(theta):
+            raise self._box_error(theta)
+        a = self.pack(A).reshape(-1, self.ENS, self.K)
+        f = np.einsum('nik,jk->nij', a, self.bcat(theta).reshape(self.ENS, self.K))
+        return np.concatenate([np.ones((len(a), 1)), f.reshape(len(a), self.ENS**2)], 1)
+
+    def learning_band(self, A, theta, O, wifi_path, mask=None, theta_from=None, check_box=True,
+                      counts=None):
+        """The learning band of the weighted mean of O at theta, sqrt(g^T C g).
+
+        C is the covariance of the WiFi weights in wifi_path, and g_k, the derivative of the
+        mean with respect to w_k at w_published, is the weighted covariance of O with the basis
+        function k of wifi_basis(). The temperature sits inside w_published, so no separate
+        factor of 1/T enters g, and the constant has no covariance with anything. This is the
+        band the paper quotes for the generator alone, before a calculation is imposed.
+
+        The weights are those of weights(A, theta), so A is the reference sample. For a sample
+        generated at theta_from pass it, which takes the weights of ratio_weights() and the
+        difference of the two bases. O is one value per event, or (Nev, n) for n observables at
+        once, which returns n bands. mask restricts the mean to a subset of the events,
+        normalized over that subset: the mean of 1 - T inside a window is O = 1 - T with the
+        window as mask, and a bin of a distribution normalized over a set of bins is
+        O = (in the bin)/(bin width) with mask = (in any of the bins). counts, one number per
+        event, multiplies the weights, which for the counts of gentune.bands.resample_counts()
+        gives the band on a bootstrap resample of the events.
+        """
+        W = np.load(wifi_path)
+        want = (self.ENS, self.K, getattr(self, 'kind', 'cond'))
+        got = (int(W['ens']), int(W['K']), str(W['kind']))
+        if got != want:
+            raise ValueError(f'{wifi_path} was fitted to a head with (members, K, kind) = {got} '
+                             f'and {self.path} has {want}, so its weights do not belong to this '
+                             f'head')
+        F = self.wifi_basis(A, theta, check_box)
+        if theta_from is not None:
+            F = F - self.wifi_basis(A, theta_from, check_box)
+        O = np.asarray(O, np.float64)
+        if O.ndim not in (1, 2) or len(O) != len(F):
+            raise ValueError(f'O has shape {O.shape} and A has {len(F)} events, so O needs one row '
+                             f'per event')
+        m = np.ones(len(F), bool) if mask is None else np.asarray(mask, bool)
+        z = F[m] @ np.asarray(W['w_published'], np.float64)
+        w = np.exp(z - z.max())
+        if counts is not None:
+            w = w*np.asarray(counts, np.float64)[m]
+        w /= w.sum()
+        X = O[m].reshape(len(w), -1)
+        g = (w[:, None]*(X - w @ X)).T @ F[m]                 # (n, 1 + ENS^2), Cov_w(O, f_k)
+        band = np.sqrt(np.maximum(np.einsum('ak,kl,al->a', g, W['C'], g), 0.0))
+        return float(band[0]) if O.ndim == 1 else band
 
     def check_trunk(self, trunk, tol=1e-6):
         """Raise unless this head and that trunk come from the same trained stage.
@@ -314,9 +417,21 @@ class MixtureHead(Head):
             x = (z*sigm(z) if self.act == 'silu' else np.maximum(z, 0.0)) if l < L - 1 else z
         return x
 
+    def bcat(self, theta):
+        """The members' b vectors concatenated, as for a single generator. The geometric mixture
+        is an inner product in theta, with b_m = (1 - f) b_S,m(theta_S) + f b_H,m(theta_H) per
+        member, and the additive one is not, so it has no such vector."""
+        if self.kind != 'geometric':
+            raise ValueError(f'{self.path} is an additive mixture, whose log ratio is not an inner '
+                             f'product < a, b(theta) >, so it has no b vector and no WiFi basis')
+        tS, tH, fr = self.split(theta)
+        return np.concatenate([(1.0 - fr)*self._bvec_net(self.W[m], self.b[m], tS)
+                               + fr*self._bvec_net(self.WH[m], self.bH[m], tH)
+                               for m in range(self.ENS)])
+
     def logit(self, A, theta, check_box=True):
         if check_box and not self.in_box(theta):
-            raise ValueError(f'theta {np.asarray(theta)} is outside the training box\n{self.box}')
+            raise self._box_error(theta)
         Ap = self.pack(A)
         tS, tH, _ = self.split(theta)
         # the fraction is a physical number in [0, 1] and enters the mixture unstandardized,

@@ -12,6 +12,8 @@ analysis/logs/*
 !analysis/logs/.gitkeep
 *.hepmc
 *.hepmc.gz
+# except the two small example files that the release's self-test and quick start read
+!analysis/release/examples/data/*.hepmc.gz
 *.tar
 *.tar.part*
 
@@ -19,3 +21,7 @@ analysis/logs/*
 gen/data*/
 gen/logs/
 gen/tasks/
+
+# what `pip install analysis/release` leaves in a checkout
+analysis/release/build/
+*.egg-info/

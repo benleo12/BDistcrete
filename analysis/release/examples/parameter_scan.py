@@ -12,6 +12,15 @@ with different weights.
 The effective sample size is printed alongside, because it is what limits how far a single
 sample can be pushed. It falls as the parameter moves away from the reference, and when it
 falls far the means are still correct but their errors grow.
+
+The 1 - T column is not the paper's thrust. It is read off the frame the per-particle features
+are stored in, whose axis comes from the single-seed iteration gentune/features.py keeps on
+purpose. That iteration stops at a local maximum in about 4 percent of events at the Z pole,
+which biases the mean of 1 - T by about +1.2 percent against the exact axis of the paper and
+of the closure tables. generators/README.md, under "The thrust axis, and why two versions of it
+ship", says why both exist. The column also weights particles by energy rather than momentum
+and sees at most the 100 hardest. None of this touches the weights, so the column still shows
+how the head responds, but its values are not the paper's.
 """
 import argparse, os, sys
 import numpy as np
@@ -24,7 +33,9 @@ def observables(particles, mask):
     """A few event shapes and rates, from the stored per-particle features.
 
     Columns of particles are [z, cos_theta, phi, log10_mass, baryon, charge] in the thrust
-    frame, so 1 - T follows from the energy fractions and the polar angles directly."""
+    frame, so 1 - T follows from the energy fractions and the polar angles directly. That frame
+    uses the iterative axis, so the mean of this 1 - T sits about 1.2 percent above the
+    exact-axis one, as the module docstring says."""
     z, cos = particles[..., 0], particles[..., 1]
     m = mask.astype(bool)
     thrust = np.where(m, z*np.abs(cos), 0.0).sum(1)/np.maximum(np.where(m, z, 0.0).sum(1), 1e-12)
@@ -37,12 +48,16 @@ def observables(particles, mask):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--stage', default='C_1M')
-    ap.add_argument('--models', default=os.path.join(os.path.dirname(__file__), '..', 'models'))
+    ap = argparse.ArgumentParser(description=__doc__.split('\n')[0],
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    ap.add_argument('--stage', default='C_1M', help='the released stage: C_1M, E (Sherpa), '
+                                                    'F (Herwig) or MIX17 (both and the fraction)')
+    ap.add_argument('--models', default=os.path.relpath(
+        os.path.join(os.path.dirname(__file__), '..', 'models')),
+        help='the folder with <stage>_head.npz, _trunk.npz and _selftest.npz')
     ap.add_argument('--axis', default='0',
                     help='which parameter to move, by index or by name. Pass "list" to see them')
-    ap.add_argument('--points', type=int, default=7)
+    ap.add_argument('--points', type=int, default=7, help='points across the range of --axis')
     a = ap.parse_args()
 
     hp = f'{a.models}/{a.stage}_head.npz'
@@ -57,18 +72,17 @@ def main():
     nm = axes.names(a.stage, head.nt)
     axes.verify(a.stage, head, os.path.join(os.path.dirname(__file__), '..', 'generators'))
     if a.axis == 'list':
-        for i, k in enumerate(nm):
-            lo, hi = head.box[i]
-            print(f'  [{i:>2}]  {k:<20s} {lo:>10.4f}  to  {hi:>10.4f}')
+        print('\n'.join(axes.listing(a.stage, head)))
         return 0
     try:
         ax = int(a.axis)
     except ValueError:
-        if a.axis not in nm:
+        try:
+            ax = axes.find(nm, a.axis)
+        except ValueError:
             print(f'{a.stage} has no parameter called {a.axis!r}. Its parameters are '
                   f'{", ".join(nm)}, and --axis list prints them with their ranges.')
             return 2
-        ax = nm.index(a.axis)
     if not 0 <= ax < head.nt:
         print(f'{a.stage} has {head.nt} parameters, so index {ax} does not exist.')
         return 2
@@ -89,6 +103,9 @@ def main():
         print(row)
     print('\nEach percentage is the shift from the first row. The events are identical '
           'throughout, so every change is the head responding to the parameter.')
+    print('1 - T here is built from the stored features, on the iterative thrust axis, which puts '
+          'its mean about 1.2 percent above the exact-axis value of the paper. See '
+          'generators/README.md.')
     return 0
 
 

@@ -80,6 +80,7 @@ OUT = E('OUT', f'output/strategy_test_{tag}'); STORED = E('STORED', f'output/thr
 WIDTHS = [float(s) for s in E('WIDTHS', '0.1,0.2,0.3,0.5,0.75,1.0').split(',')]
 MC_N = int(E('MC_N', '400')); HYB_N = int(E('HYB_N', '50')); MC_NP = E('MC_NP', '0') == '1'; NBOOT = int(E('NBOOT', '300'))
 MC_CRN = E('MC_CRN', '0') == '1'
+MIX_FORM = E('MIX_FORM', 'geometric'); assert MIX_FORM in ('geometric', 'additive'), MIX_FORM
 FD_PARAMS = [int(p) for p in E('FD_PARAMS', '0,8,16').split(',')]; FD_STEPS = [float(h) for h in E('FD_STEPS', '1e-2,1e-3').split(',')]
 LIN_DTYPE = E('LIN_DTYPE', 'float64'); RES_TOL = float(E('RES_TOL', '1e-8'))
 torch.set_num_threads(int(E('TORCH_THREADS', '8'))); np.seterr(divide='ignore', invalid='ignore')     # empty bins give nan ratios
@@ -142,7 +143,7 @@ NEWTON = dict(solves=0, max_iterations=0, max_residual=0.0, unconverged=0, resid
 LAST = {}                                                           # tilt(): multipliers and cond(A) of the last solve
 
 
-def prior(th, om):
+def prior1(th, om):
     """log w0 at theta (tensor) for the wifi weights om (None: the published network), with the head HEAD[0]."""
     H = HEAD[0]; H.set_wifi(om)
     try:
@@ -150,6 +151,17 @@ def prior(th, om):
     finally:
         H.set_wifi(None)
     return lg - torch.logsumexp(lg, 0)
+
+
+def prior(th, om):
+    """prior1, or with MIX_FORM=additive the population mixture (1 - xi) w(xi=0) + xi w(xi=1) of the two
+    normalized endpoints (the same networks; the predictions before the tilt are then linear in xi). S0 and
+    the API checks (predict) keep the geometric head."""
+    if MIX_FORM == 'geometric' or not is_mix:
+        return prior1(th, om)
+    f, z = th[-1], torch.zeros(1, dtype=th.dtype)
+    a, b = prior1(torch.cat([th[:-1], z]), om), prior1(torch.cat([th[:-1], z + 1]), om); big = torch.maximum(a, b)
+    return big + torch.log(torch.clamp((1 - f)*torch.exp(a - big) + f*torch.exp(b - big), min=1e-300))
 
 
 def tilt_fixed_h(lw0, cT, Sig):
@@ -336,7 +348,7 @@ def clean(o):
 
 
 res = dict(tag=tag, export=export, grid=grid, wifi=wfit, wifi_central=CENW is not None, test=TEST, labels=LAB, n_low=int(nlow),
-           observables=OBK, nodes=NODES, seed=SEED, widths=WIDTHS, mc_n=MC_N, hyb_n=HYB_N, mc_np=MC_NP, mc_crn=MC_CRN, lin_dtype=LIN_DTYPE,
+           observables=OBK, nodes=NODES, seed=SEED, widths=WIDTHS, mc_n=MC_N, hyb_n=HYB_N, mc_np=MC_NP, mc_crn=MC_CRN, mix_form=MIX_FORM, lin_dtype=LIN_DTYPE,
            sigma_c_variations={l: wt for l, wt in WT.items()}, checks=dict(sigma_pert_rebuilt=sig_rec), timings={}, newton=NEWTON)
 tick = [time.time()]
 
@@ -444,6 +456,47 @@ if Sj is not None:
     res['checks']['learning_means_vs_stored'] = relmax(learn1[:NM], [Sj['learning_band'][k] for k in OBK])
 LJ = {k: joint_linear(J) for k, J in (('box_centre', J1), ('central', Jc))}
 done('S2')
+
+# ---- S3X: the width scan with a subset shrunk (dims@point: all, params or xi, around box or central, or
+# around central with xi fixed at 0 or 1: sherpa, herwig), the shrunk box cut to the full one, linear at its own
+# centre against re-solved on the S0 hypercube mapped into it. Where xi varies over [a, b], also the two-generator
+# formula: E[(1-xi)^2] J_S V J_S^T + E[xi^2] J_H V J_H^T + Var(xi) (y_H - y_S)^2, the generators linear at xi = 0
+# and 1 (exact for the additive mixture before the tilt when each generator is linear in its parameters)
+if E('S3X'):
+    XI = NT - 1 if is_mix else -1; res['S3X'] = {}
+    for mode in E('S3X').split(','):
+        dims, at = mode.split('@'); P = (BC if at == 'box' else central).copy()
+        if at in ('sherpa', 'herwig'):
+            P[XI] = 0.0 if at == 'sherpa' else 1.0
+        msk = dict(all=np.ones(NT, bool), params=np.arange(NT) != XI, xi=np.arange(NT) == XI)[dims]; out = res['S3X'][mode] = {}
+        for s in WIDTHS:
+            g = np.where(msk, s, 1.0)
+            if at in ('sherpa', 'herwig'):
+                g[XI] = 0.0
+            lo, hi = np.maximum(P - g*hw, cen - hw), np.minimum(P + g*hw, cen + hw); m, h = (lo + hi)/2, (hi - lo)/2
+            _, J, _ = jac(m, W_AT, C0, ALL); Jt = J['theta']; lin = [np.sqrt((Jt[a:a + NO]**2) @ (h**2/3)) for a in (0, NO)]
+            Z = [evaluate(th, W_AT, [C0]) for th in m + h*U]; Z0, Z1 = np.array([z[0] for z in Z]), np.array([z[1][0] for z in Z])
+            form = [None, None]
+            if is_mix and h[XI] > 0:
+                a, b = lo[XI], hi[XI]; ht = h.copy(); ht[XI] = 0.0; ends = []
+                for e in (0.0, 1.0):
+                    me = m.copy(); me[XI] = e; ye, Je, _ = jac(me, W_AT, C0, ALL); ends.append((ye, Je['theta']))
+                Ex2, E1x2, Vx = (a*a + a*b + b*b)/3, ((1 - a)**2 + (1 - a)*(1 - b) + (1 - b)**2)/3, (b - a)**2/12
+                form = [np.sqrt(E1x2*(ends[0][1][k:k + NO]**2) @ (ht**2/3) + Ex2*(ends[1][1][k:k + NO]**2) @ (ht**2/3)
+                                + Vx*(ends[1][0][k:k + NO] - ends[0][0][k:k + NO])**2) for k in (0, NO)]
+            out[f'{s:g}'] = dict(centre=m.tolist(), half_width=h.tolist(),
+                                 **{side: dict(sd=per(sd(Zs)), linear=per(l), ratio_linear=per(rat(l, sd(Zs))),
+                                               **({} if f is None else dict(formula=per(f), ratio_formula=per(rat(f, sd(Zs))))))
+                                    for side, Zs, l, f in (('before', Z0, lin[0], form[0]), ('after', Z1, lin[1], form[1]))})
+            if mode == 'all@box' and abs(s - 1) < 1e-12:
+                res['checks']['S3X_s1_vs_S0_sd'] = dict(before=relmax(sd(Z0), gen0), after=relmax(sd(Z1), gen1))
+            r = np.array(list(out[f'{s:g}']['after']['ratio_linear'].values()), float)
+            rf = out[f'{s:g}']['before'].get('ratio_formula'); rf = None if rf is None else np.array(list(rf.values()), float)
+            print(f'  S3X {mode} s={s:g}: linear/re-solved after {np.nanmin(r):.2f} to {np.nanmax(r):.2f}'
+                  + ('' if rf is None else f', formula/re-solved before {np.nanmin(rf):.2f} to {np.nanmax(rf):.2f}') + f' [{time.time()-t0:.0f} s]', flush=True)
+    done('S3X')
+    if E('STOP_AFTER_S3X', '0') == '1':
+        sys.exit(0)
 
 # ---- the predicted sigma_lnw (D1) at the two linearisation points, before any re-solve at a node ----------------
 ew, Vw = np.linalg.eigh(C); BW = Vw*np.sqrt(np.maximum(ew, 0))     # omega = w_at + BW z, c = C0 + D z (S5)

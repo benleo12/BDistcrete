@@ -619,6 +619,89 @@ if os.path.exists(fc) and os.path.exists(fg):
         textmacro('CostFitFacMin', f'{60*fh["factorized"]:.0f}')
         textmacro('CostFitCatDays', f'{fh["concatenation"]/24:.0f}')
 
+
+# ---- the envelope of 400 variations against the linear covariance (Secs. 4.3 and 5.3, envelope_test.py) ---
+# boxes full (the trained box), tune (every range a third of its width around the default tunes, xi in
+# [1/3, 2/3]), tune_xifull (xi over [0, 1]), tune_sherpa and tune_herwig (xi fixed). Ratios are the linear
+# standard deviation over that of the variations, before (prior only) or after (calculation imposed), for
+# the bins of thrust and multiplicity and the seven means. Read from ENV_DIR (default: the results folder).
+ENV = os.environ.get('ENV_DIR', D)
+def _env(box):
+    f = f'{ENV}/envelope_test_MIXGEOV3S9_{box}.json'
+    return json.load(open(f)) if os.path.exists(f) else None
+def _grp(d, g):
+    lab = d['labels']
+    if g == 'means':
+        return lab[:7]
+    return [l for l in lab if l.startswith({'thrust': 'thr_', 'nch': 'nch_'}[g] )]
+def _r(d, key, groups=('means', 'thrust', 'nch')):
+    c = d['compare'][key]['ratio']
+    return np.array([c[l] for g in groups for l in _grp(d, g) if c[l] is not None], float)
+def _pct(x):
+    return f'{100*x:.0f}'
+EV = {b: _env(b) for b in ('full', 'tune', 'tune_xifull', 'tune_sherpa', 'tune_herwig')}
+if EV['full'] and EV['tune']:
+    ef, et = EV['full'], EV['tune']; env = {}
+    textmacro('EnvNdraw', str(et['ndraw'])); textmacro('EnvNref', str(ef['nref']))
+    def _bse(d):
+        c = d['compare']['before/joint/lin_flat']; v = []
+        for g in ('means', 'thrust', 'nch'):
+            for l in _grp(d, g):
+                if c['ratio'][l]:
+                    v.append(c['ratio_se'][l]/c['ratio'][l])
+        return min(v), max(v)
+    for nm, d in (('Tune', et), ('Full', ef)):
+        lo_, hi_ = _bse(d); textmacro(f'EnvBoot{nm}Min', _pct(lo_)); textmacro(f'EnvBoot{nm}Max', _pct(hi_)); env[f'boot_{nm}'] = [lo_, hi_]
+    rr = _r(ef, f'before/draws{ef["ndraw"]}_vs_ref'); textmacro('EnvNoiseSd', _pct(np.max(np.abs(rr - 1))))
+    cn = max(ef['compare'][f'before/draws{ef["ndraw"]}_vs_ref'][f'corr_{g}']['max_abs_diff'] for g in ('thrust', 'nch'))
+    textmacro('EnvNoiseCorr', f'{cn:.2f}')
+    rt = _r(et, 'before/joint/lin_flat'); textmacro('EnvTuneSd', _pct(np.max(np.abs(rt - 1))))
+    for g, nm in (('thrust', 'Thr'), ('nch', 'Nch')):
+        textmacro(f'EnvTuneCorr{nm}', f"{et['compare']['before/joint/lin_flat'][f'corr_{g}']['max_abs_diff']:.2f}")
+    rz = _r(et, 'before/joint/lin_z'); textmacro('EnvZMin', _pct(rz.min() - 1)); textmacro('EnvZMax', _pct(rz.max() - 1))
+    textmacro('EnvLearnTune', _pct(np.max(np.abs(_r(et, 'before/omega/lin_flat') - 1))))
+    textmacro('EnvLearnFull', _pct(np.max(np.abs(_r(ef, 'before/omega/lin_flat') - 1))))
+    rb = _r(ef, 'before/joint/lin_flat', ('thrust', 'nch')); rm = _r(ef, 'before/joint/lin_flat', ('means',))
+    textmacro('EnvFullBinMin', _pct(1 - rb.max())); textmacro('EnvFullBinMax', _pct(1 - rb.min()))
+    textmacro('EnvFullMeanMin', _pct(1 - rm.max())); textmacro('EnvFullMeanMax', _pct(1 - rm.min()))
+    rq = _r(ef, 'before/joint/xi_quad'); textmacro('EnvXiQuadMin', _pct(rq.min())); textmacro('EnvXiQuadMax', _pct(rq.max()))
+    rqt = _r(ef, 'before/joint/xi_quad', ('thrust',)); rqn = _r(ef, 'before/joint/xi_quad', ('nch',))
+    textmacro('EnvXiQuadThrN', str(int(np.sum(np.abs(rqt - 1) <= 0.13)))); textmacro('EnvThrBins', str(len(rqt)))
+    textmacro('EnvXiQuadNchMin', _pct(rqn.min())); textmacro('EnvXiQuadNchMax', _pct(rqn.max()))
+    rqt2 = _r(et, 'before/joint/xi_quad'); textmacro('EnvTuneXiQuadMin', _pct(rqt2.min())); textmacro('EnvTuneXiQuadMax', _pct(rqt2.max()))
+    fz = f'{ENV}/envelope_test_MIXGEOV3S9_full.npz'
+    if os.path.exists(fz):                                       # the shift of the mean and the correlations at the pivot
+        z = np.load(fz); lab = [str(l) for l in z['labels']]; no = len(lab); Y = z['Y_joint'][:, :no]; yc = z['y_central'][:no]
+        idx = {g: [lab.index(l) for l in _grp(ef, g)] for g in ('means', 'thrust', 'nch')}
+        allx = sum(idx.values(), []); sh = np.abs(Y.mean(0) - yc)/Y.std(0, ddof=1)
+        textmacro('EnvFullShift', f'{np.max(sh[allx]):.1f}')
+        Ce = np.cov(Y, rowvar=False); Cl = z['C_lin_flat'][:no, :no] + z['C_learn'][:no, :no]
+        cr = lambda A: A/np.sqrt(np.outer(np.diag(A), np.diag(A)))
+        piv, els = [], []
+        for g in ('thrust', 'nch'):
+            ii = np.array(idx[g]); dd = np.abs(cr(Cl[np.ix_(ii, ii)]) - cr(Ce[np.ix_(ii, ii)]))
+            p2 = np.argsort(Y.std(0, ddof=1)[ii]/np.abs(yc[ii]))[:2]       # the two bins that move least: the pivot
+            iu = np.triu_indices(len(ii), 1); atp = np.isin(iu[0], p2) | np.isin(iu[1], p2)
+            piv.append(dd[iu][atp].max()); els.append(dd[iu][~atp].max())
+        textmacro('EnvFullCorrPivot', f'{max(piv):.1f}'); textmacro('EnvFullCorrElse', f'{max(els):.1f}')
+    win = lambda d, l: l.startswith('thr_') and 0.05 <= float(l.split('_')[1]) < 1/3
+    def _after(d, inside):
+        c = d['compare']['after/joint/lin_flat']['ratio']
+        return np.array([c[l] for l in _grp(d, 'thrust') if c[l] is not None and win(d, l) == inside], float)
+    textmacro('EnvAfterWin', _pct(max(np.max(np.abs(_after(d, True) - 1)) for d in (et, ef))))
+    textmacro('EnvAfterOutTune', _pct(np.max(np.abs(_after(et, False) - 1))))
+    ro = _after(ef, False); textmacro('EnvAfterOutFullMin', _pct(1 - ro.max())); textmacro('EnvAfterOutFullMax', _pct(1 - ro.min()))
+    cc = ef['compare']['after/c/lin_flat']; out = [l for l in _grp(ef, 'thrust') if not win(ef, l)]
+    textmacro('EnvAfterNorm', f"{100*np.median([cc['sd_exact'][l]/ef['central']['after'][l] for l in out]):.1f}")
+    for b, nm in (('tune_sherpa', 'Sherpa'), ('tune_herwig', 'Herwig')):
+        if EV[b]:
+            textmacro(f'Env{nm}Sd', _pct(np.max(np.abs(_r(EV[b], 'before/joint/lin_flat') - 1))))
+    if EV['tune_xifull']:
+        rx = _r(EV['tune_xifull'], 'before/joint/lin_flat'); rxq = _r(EV['tune_xifull'], 'before/joint/xi_quad')
+        textmacro('EnvXifullMin', _pct(rx.min())); textmacro('EnvXifullMax', _pct(rx.max()))
+        textmacro('EnvXifullQuadMin', _pct(rxq.min())); textmacro('EnvXifullQuadMax', _pct(rxq.max()))
+    numbers['envelope'] = env
+
 json.dump(numbers, open(os.path.join(HERE, 'numbers.json'), 'w'), indent=1)
 open(os.path.join(HERE, 'numbers.tex'), 'w').write(
     '% written by phase2/make_numbers.py, do not edit\n' + '\n'.join(macros) + '\n')

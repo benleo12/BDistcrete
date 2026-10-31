@@ -26,7 +26,7 @@ BOXES = sys.argv[2:] or ['full', 'tune', 'tune_xifull', 'tune_sherpa', 'tune_her
 NBOOT = 300
 BOX_TITLE = dict(full='full box', tune='tune-sized box', tune_xifull=r'tune-sized box, $\xi\in[0,1]$',
                  tune_sherpa=r'tune-sized box, Sherpa ($\xi=0$)', tune_herwig=r'tune-sized box, Herwig ($\xi=1$)')
-MODELS = [('lin_flat', 'linear', '-'), ('lin_z', r'linear in $z$', (0, (1, 1.2))), ('xi_quad', r'$\xi$ exact, rest linear', (0, (4, 2)))]
+MODELS = [('lin_flat', 'linear', '-'), ('lin_z', r'slopes in $z$', (0, (1, 1.2))), ('xi_quad', r'quadrature in $\xi$', (0, (4, 2)))]
 
 
 def load(box):
@@ -85,8 +85,10 @@ def env(box, side='before', keys=('thrust', 'nch')):
             sl = np.sqrt(np.maximum(np.diag(Cm), 0))[ii]/yc[ii]
             for sg in (1, -1):
                 ax.stairs(1 + sg*sl, e, baseline=None, color=F.METHOD, lw=1.1, zorder=4)
-        F.unit_line(ax); ax.set_ylim(0.4, 1.6) if key != 'nch' else ax.set_ylim(0.2, 1.8)
-        ax.set_ylabel('ratio to centre' if c == 0 else ''); plt.setp(ax.get_xticklabels(), visible=False)
+        F.unit_line(ax)
+        dev = np.nanpercentile(np.abs(Y[:, ii]/yc[ii] - 1), 97.5, axis=0)       # the panel holds 95% of the draws in every bin
+        lim = float(np.clip(1.15*np.nanmax(dev), 0.05, 0.8)); ax.set_ylim(1 - lim, 1 + lim)
+        ax.set_ylabel('ratio to center' if c == 0 else ''); plt.setp(ax.get_xticklabels(), visible=False)
         F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity', 'rho': 'heavy jet mass'}[key])
         if side == 'after':
             ax.axvspan(1/20, 1/3, color=F.THEORY, alpha=F.WINDOW_ALPHA, lw=0, zorder=0)
@@ -101,7 +103,7 @@ def env(box, side='before', keys=('thrust', 'nch')):
             r = np.sqrt(np.maximum(np.diag(Cm), 0))[ii]/se[ii]
             bx.stairs(r, e, baseline=None, color=F.METHOD, lw=1.0, ls=ls, label=nm)
         bx.set_ylim(0.3, 1.7); bx.set_xlim(e[0], e[-1]); bx.set_xlabel(xl, labelpad=1.5)
-        bx.set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm draws}$' if c == 0 else '')
+        bx.set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm variations}$' if c == 0 else '')
         if side == 'after':
             bx.axvspan(1/20, 1/3, color=F.THEORY, alpha=F.WINDOW_ALPHA, lw=0, zorder=0)
         for a in (ax, bx):
@@ -109,7 +111,7 @@ def env(box, side='before', keys=('thrust', 'nch')):
     h = [plt.Line2D([], [], color=F.BASE, lw=0.6), plt.Rectangle((0, 0), 1, 1, color=F.GEN, alpha=F.BAND_ALPHA),
          plt.Line2D([], [], color=F.METHOD, lw=1.1)] + [plt.Line2D([], [], color=F.METHOD, lw=1.0, ls=ls) for n, _, ls in MODELS[1:]
                                                          if f'C_{n}' in d.files]
-    lb = [f'{len(Y)} variations', r'draws, $\pm1\sigma$', r'linear, $\pm1\sigma$'] + [nm for n, nm, _ in MODELS[1:] if f'C_{n}' in d.files]
+    lb = [f'{len(Y)} variations', r'variations, $\pm1\sigma$', r'linear, $\pm1\sigma$'] + [nm for n, nm, _ in MODELS[1:] if f'C_{n}' in d.files]
     fig.legend(h, lb, loc='upper center', ncol=len(h), fontsize=7.2, bbox_to_anchor=(0.54, 1.0), handlelength=1.8)
     fig.text(0.99, 0.905, BOX_TITLE.get(box, box) + ('' if side == 'before' else ', with the calculation'), ha='right', va='bottom',
              fontsize=7.5, color=F.REF)
@@ -123,7 +125,8 @@ def corrfig(box, keys=('thrust', 'nch')):
     fig, axs = plt.subplots(1, len(keys), figsize=(F.TW, 2.9), gridspec_kw=dict(wspace=0.25, left=0.07, right=0.9, bottom=0.14, top=0.88))
     for ax, key in zip(np.atleast_1d(axs), keys):
         ii = np.array([i for i in idx[key] if np.diag(Ce)[i] > 0]); A, B = corr(Ce[np.ix_(ii, ii)]), corr(Cm[np.ix_(ii, ii)])
-        M = np.where(np.tril(np.ones_like(A, bool), -1), A, np.where(np.triu(np.ones_like(A, bool), 1), B, np.nan))
+        # origin='lower' draws row i at height i, so the cells with column > row (triu) lie below the diagonal
+        M = np.where(np.triu(np.ones_like(A, bool), 1), A, np.where(np.tril(np.ones_like(A, bool), -1), B, 1.0))
         im = ax.imshow(M, cmap='RdBu_r', vmin=-1, vmax=1, origin='lower', interpolation='nearest')
         ax.plot([-0.5, len(ii) - 0.5], [-0.5, len(ii) - 0.5], color=F.REF, lw=0.5)
         e, xl = edges_of(d, key); centres = [e[list(idx[key]).index(i)] for i in ii]
@@ -133,8 +136,9 @@ def corrfig(box, keys=('thrust', 'nch')):
         ax.set_yticks(ticks); ax.set_yticklabels([fmt(centres[t]) for t in ticks], fontsize=6.5)
         ax.set_xlabel(xl + ' (lower edge)', labelpad=1.5)
         F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity', 'rho': 'heavy jet mass'}[key])
-        ax.text(0.97, 0.05, 'draws', transform=ax.transAxes, ha='right', fontsize=7, color=F.REF)
-        ax.text(0.03, 0.93, 'linear', transform=ax.transAxes, ha='left', va='top', fontsize=7, color=F.REF)
+        bb = dict(fc='white', ec='none', alpha=0.85, pad=1.0)
+        ax.text(0.97, 0.05, 'variations', transform=ax.transAxes, ha='right', fontsize=7, color=F.INK, bbox=bb)
+        ax.text(0.03, 0.95, 'linear', transform=ax.transAxes, ha='left', va='top', fontsize=7, color=F.INK, bbox=bb)
     cax = fig.add_axes([0.92, 0.2, 0.015, 0.62]); fig.colorbar(im, cax=cax).set_label('correlation', fontsize=7.5)
     fig.text(0.9, 0.93, BOX_TITLE.get(box, box), ha='right', fontsize=7.5, color=F.REF)
     F.save(fig, f'corr_{box}')
@@ -153,14 +157,136 @@ def ratios(boxes, key='thrust'):
             ax.stairs(np.sqrt(np.maximum(np.diag(Cm), 0))[ii]/se[ii], e, baseline=None, color=col, lw=1.1, label=BOX_TITLE.get(box, box))
         ax.set_xlim(e[0], e[-1]); ax.set_ylim(0.3, 1.7); ax.set_xlabel(xl, labelpad=1.5); F.trim(ax)
         F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity'}[key])
-    axs[0].set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm draws}$'); axs[1].legend(fontsize=6.5, loc='upper right')
+    axs[0].set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm variations}$'); axs[1].legend(fontsize=6.5, loc='upper right')
     F.save(fig, 'env_ratios')
+
+
+def env_pair(boxes=('tune', 'full'), keys=('thrust', 'nch')):
+    """The paper figure: env() for two boxes stacked, prior only."""
+    fig = plt.figure(figsize=(F.TW, 6.3))
+    outer = GridSpec(2, 1, figure=fig, hspace=0.3, left=0.09, right=0.99, top=0.93, bottom=0.07)
+    rng = np.random.default_rng(1)
+    for r, box in enumerate(boxes):
+        d, lab, no, idx = load(box)
+        Y = d['Y_joint'][:, :no]; yc = d['y_central'][:no]; se = Y.std(0, ddof=1); sb = boot_sd(Y, rng)
+        gs = outer[r].subgridspec(2, len(keys), height_ratios=[1.3, 1], hspace=0.08, wspace=0.22)
+        for c, key in enumerate(keys):
+            ii = idx[key]; e, xl = edges_of(d, key)
+            ax = fig.add_subplot(gs[0, c]); bx = fig.add_subplot(gs[1, c], sharex=ax)
+            for k in range(len(Y)):
+                ax.stairs(Y[k, ii]/yc[ii], e, baseline=None, color=F.BASE, lw=0.35, alpha=0.12, zorder=1)
+            mu = Y[:, ii].mean(0)/yc[ii]; sr = se[ii]/yc[ii]
+            ax.stairs(mu + sr, e, baseline=mu - sr, fill=True, color=F.GEN, alpha=F.BAND_ALPHA, lw=0, zorder=2)
+            ax.stairs(mu, e, baseline=None, color=F.GEN, lw=1.0, zorder=3)
+            sl = np.sqrt(np.maximum(np.diag(model_cov(d, 'lin_flat', 'before', no)), 0))[ii]/yc[ii]
+            for sg in (1, -1):
+                ax.stairs(1 + sg*sl, e, baseline=None, color=F.METHOD, lw=1.1, zorder=4)
+            F.unit_line(ax)
+            dev = np.nanpercentile(np.abs(Y[:, ii]/yc[ii] - 1), 97.5, axis=0)
+            lim = float(np.clip(1.15*np.nanmax(dev), 0.05, 0.8)); ax.set_ylim(1 - lim, 1 + lim)
+            ax.set_ylabel('ratio to center' if c == 0 else ''); plt.setp(ax.get_xticklabels(), visible=False)
+            F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity'}[key] + ', ' + {'tune': 'tune-sized ranges', 'full': 'full box'}.get(box, box))
+            bx.axhline(1, color=F.REF, lw=0.6)
+            rse = sb[ii]/se[ii]
+            bx.stairs(1 + rse, e, baseline=1 - rse, fill=True, color=F.BASE, alpha=0.28, lw=0)
+            for name, nm, ls in MODELS:
+                Cm = model_cov(d, name, 'before', no)
+                if Cm is not None:
+                    bx.stairs(np.sqrt(np.maximum(np.diag(Cm), 0))[ii]/se[ii], e, baseline=None, color=F.METHOD, lw=1.0, ls=ls)
+            bx.set_ylim(0.3, 1.7); bx.set_xlim(e[0], e[-1]); bx.set_xlabel(xl, labelpad=1.5)
+            bx.set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm variations}$' if c == 0 else '')
+            for a in (ax, bx):
+                F.trim(a)
+    h = [plt.Line2D([], [], color=F.BASE, lw=0.6), plt.Rectangle((0, 0), 1, 1, color=F.GEN, alpha=F.BAND_ALPHA),
+         plt.Line2D([], [], color=F.METHOD, lw=1.1)] + [plt.Line2D([], [], color=F.METHOD, lw=1.0, ls=ls) for _, _, ls in MODELS[1:]]
+    lb = ['400 variations', r'variations, $\pm1\sigma$', r'linear, $\pm1\sigma$'] + [nm for _, nm, _ in MODELS[1:]]
+    fig.legend(h, lb, loc='upper center', ncol=len(h), fontsize=7.2, bbox_to_anchor=(0.54, 1.0), handlelength=1.8)
+    F.save(fig, 'envelope')
+
+
+def corr_pair(boxes=('tune', 'full'), keys=('thrust', 'nch')):
+    """The paper figure: correlation matrices for two boxes, variations below the diagonal, linear above."""
+    corr = lambda A: A/np.sqrt(np.outer(np.diag(A), np.diag(A)))
+    fig, axs = plt.subplots(len(boxes), len(keys), figsize=(F.TW, 5.6),
+                            gridspec_kw=dict(wspace=0.28, hspace=0.42, left=0.08, right=0.89, bottom=0.08, top=0.95))
+    for r, box in enumerate(boxes):
+        d, lab, no, idx = load(box)
+        Ce = np.cov(d['Y_joint'][:, :no], rowvar=False); Cm = model_cov(d, 'lin_flat', 'before', no)
+        for c, key in enumerate(keys):
+            ax = axs[r, c]
+            ii = np.array([i for i in idx[key] if np.diag(Ce)[i] > 0]); A, B = corr(Ce[np.ix_(ii, ii)]), corr(Cm[np.ix_(ii, ii)])
+            # origin='lower' draws row i at height i, so the cells with column > row (triu) lie below the diagonal
+            M = np.where(np.triu(np.ones_like(A, bool), 1), A, np.where(np.tril(np.ones_like(A, bool), -1), B, 1.0))
+            im = ax.imshow(M, cmap='RdBu_r', vmin=-1, vmax=1, origin='lower', interpolation='nearest')
+            ax.plot([-0.5, len(ii) - 0.5], [-0.5, len(ii) - 0.5], color=F.REF, lw=0.5)
+            e, xl = edges_of(d, key); lows = [e[list(idx[key]).index(i)] for i in ii]
+            step = max(1, len(ii)//6); ticks = np.arange(0, len(ii), step)
+            fmt = (lambda v: f'{v:.2f}') if key != 'nch' else (lambda v: f'{int(v)}')
+            ax.set_xticks(ticks); ax.set_xticklabels([fmt(lows[t]) for t in ticks], fontsize=6.5)
+            ax.set_yticks(ticks); ax.set_yticklabels([fmt(lows[t]) for t in ticks], fontsize=6.5)
+            ax.set_xlabel(xl + ' (lower bin edge)', labelpad=1.5)
+            F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity'}[key] + ', ' + {'tune': 'tune-sized ranges', 'full': 'full box'}.get(box, box))
+            bb = dict(fc='white', ec='none', alpha=0.85, pad=1.0)
+            ax.text(0.97, 0.04, 'variations', transform=ax.transAxes, ha='right', fontsize=7, color=F.INK, bbox=bb)
+            ax.text(0.03, 0.96, 'linear', transform=ax.transAxes, ha='left', va='top', fontsize=7, color=F.INK, bbox=bb)
+    cax = fig.add_axes([0.91, 0.25, 0.015, 0.5]); fig.colorbar(im, cax=cax).set_label('correlation', fontsize=7.5)
+    F.save(fig, 'envelope_corr')
+
+
+def env_after_pair(boxes=('tune', 'full')):
+    """The application figure: thrust with the calculation imposed in the window, variations against linear."""
+    fig = plt.figure(figsize=(F.TW, 3.3))
+    gs = GridSpec(2, len(boxes), figure=fig, height_ratios=[1.3, 1], hspace=0.08, wspace=0.22, left=0.09, right=0.99, top=0.86, bottom=0.13)
+    rng = np.random.default_rng(1)
+    for c, box in enumerate(boxes):
+        d, lab, no, idx = load(box); s = slice(no, 2*no)
+        Y = d['Y_joint'][:, s]; yc = d['y_central'][s]; se = Y.std(0, ddof=1); sb = boot_sd(Y, rng)
+        ii = idx['thrust']; e, xl = edges_of(d, 'thrust')
+        ax = fig.add_subplot(gs[0, c]); bx = fig.add_subplot(gs[1, c], sharex=ax)
+        for a in (ax, bx):
+            a.axvspan(1/20, 1/3, color=F.THEORY, alpha=F.WINDOW_ALPHA, lw=0, zorder=0)
+        for k in range(len(Y)):
+            ax.stairs(Y[k, ii]/yc[ii], e, baseline=None, color=F.BASE, lw=0.35, alpha=0.12, zorder=1)
+        mu = Y[:, ii].mean(0)/yc[ii]; sr = se[ii]/yc[ii]
+        ax.stairs(mu + sr, e, baseline=mu - sr, fill=True, color=F.GEN, alpha=F.BAND_ALPHA, lw=0, zorder=2)
+        ax.stairs(mu, e, baseline=None, color=F.GEN, lw=1.0, zorder=3)
+        sl = np.sqrt(np.maximum(np.diag(model_cov(d, 'lin_flat', 'after', no)), 0))[ii]/yc[ii]
+        for sg in (1, -1):
+            ax.stairs(1 + sg*sl, e, baseline=None, color=F.METHOD, lw=1.1, zorder=4)
+        F.unit_line(ax)
+        dev = np.nanpercentile(np.abs(Y[:, ii]/yc[ii] - 1), 97.5, axis=0)
+        lim = float(np.clip(1.15*np.nanmax(dev), 0.05, 0.8)); ax.set_ylim(1 - lim, 1 + lim)
+        ax.set_ylabel('ratio to center' if c == 0 else ''); plt.setp(ax.get_xticklabels(), visible=False)
+        F.title(ax, 'thrust with the calculation, ' + {'tune': 'tune-sized ranges', 'full': 'full box'}.get(box, box))
+        bx.axhline(1, color=F.REF, lw=0.6); rse = sb[ii]/se[ii]
+        bx.stairs(1 + rse, e, baseline=1 - rse, fill=True, color=F.BASE, alpha=0.28, lw=0)
+        for name, nm, ls in MODELS:
+            Cm = model_cov(d, name, 'after', no)
+            if Cm is not None:
+                bx.stairs(np.sqrt(np.maximum(np.diag(Cm), 0))[ii]/se[ii], e, baseline=None, color=F.METHOD, lw=1.0, ls=ls)
+        bx.set_ylim(0.3, 1.7); bx.set_xlim(e[0], e[-1]); bx.set_xlabel(xl, labelpad=1.5)
+        bx.set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm variations}$' if c == 0 else '')
+        for a in (ax, bx):
+            F.trim(a)
+    h = [plt.Line2D([], [], color=F.BASE, lw=0.6), plt.Rectangle((0, 0), 1, 1, color=F.GEN, alpha=F.BAND_ALPHA),
+         plt.Line2D([], [], color=F.METHOD, lw=1.1)] + [plt.Line2D([], [], color=F.METHOD, lw=1.0, ls=ls) for _, _, ls in MODELS[1:]] \
+        + [plt.Rectangle((0, 0), 1, 1, color=F.THEORY, alpha=0.2)]
+    lb = ['400 variations', r'variations, $\pm1\sigma$', r'linear, $\pm1\sigma$'] + [nm for _, nm, _ in MODELS[1:]] + ['window']
+    fig.legend(h, lb, loc='upper center', ncol=3, fontsize=7.2, bbox_to_anchor=(0.54, 1.0), handlelength=1.8)
+    F.save(fig, 'envelope_after')
 
 
 if __name__ == '__main__':
     F.style()
+    if os.environ.get('PNG'):                                       # also write a png of every figure, for a quick look
+        _save = F.save
+        def _both(fig, name):
+            fig.savefig(os.path.join(F.OUT, f'r8_{name}.png'), dpi=200); _save(fig, name)
+        F.save = _both
     have = [b for b in BOXES if os.path.exists(f'{PREFIX}_{b}.npz')]
     for b in have:
         env(b); corrfig(b); env(b, 'after', keys=('thrust',))
     if len(have) > 1:
         ratios(have)
+    if 'tune' in have and 'full' in have:
+        env_pair(); corr_pair(); env_after_pair()

@@ -18,7 +18,7 @@ sys.path.insert(0, 'lepcov')
 from lepdata_cov import lepdata_split
 
 WLO, WHI = 0.05, 1.0/3.0
-CS = json.load(open('output/chain_summary_nlo.json')); asc, a0c = float(CS['alpha_s']), float(CS['alpha_0'])
+CP = json.load(open(os.environ.get('CALC_POINT', 'output/calc_point.json'))); asc, a0c = float(CP['alpha_s']), float(CP['alpha_0'])
 G = np.load('output/thrust_targets_nlo_point.npz', allow_pickle=True)
 assert abs(float(G['alphas'][0]) - asc) < 1e-12 and abs(float(G['alpha0'][0]) - a0c) < 1e-12
 _cache = {}

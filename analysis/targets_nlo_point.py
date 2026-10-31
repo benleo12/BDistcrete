@@ -2,8 +2,9 @@
 """The calculated moments of the NNLL+NLO chain at one fixed point, in the file layout of the theory
 grid, so every reweighting script reads it as a grid with a single node.
 
-The point is the pair (alpha_s, alpha_0) of the chain's own fit to the ALEPH window
-(THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python thrust_chain.py). At that point: the fourteen windowed
+The point is the pair (alpha_s, alpha_0) of output/calc_point.json (CALC_POINT overrides it): the published
+fit of Gehrmann, Luisoni and Monni in the log-R scheme. (Draft r8 used the chain's own fit to the ALEPH window,
+output/chain_summary_nlo.json from THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python thrust_chain.py.) At that point: the fourteen windowed
 moments of Eq. (thrustmoments), the window fraction, every scale and scheme variation of the
 calculation at the SAME point (not refitted), the three variations of the dispersive model (Milan
 factor +-20 percent, third-order subtraction term), and the covariance Sigma_c of Eq. (sigmac): the
@@ -26,7 +27,7 @@ FUN = {k: (lambda t, a=a, b=b: t**a*np.log(t)**b*((t >= WLO) & (t < WHI))) for k
 
 SFX = os.environ.get('CHAIN_SUFFIX', '_nlo'); OUT = os.environ.get('TARGETS_OUT', 'output/thrust_targets_nlo_point.npz')
 TF = np.linspace(WLO, WHI, 200001); TMID = 0.5*(TF[1:] + TF[:-1]); FW = np.array([FUN[k](TMID) for k in keys])
-CS = json.load(open(f'output/chain_summary{SFX}.json')); asc, a0c = float(CS['alpha_s']), float(CS['alpha_0'])
+CP = json.load(open(os.environ.get('CALC_POINT', 'output/calc_point.json'))); asc, a0c = float(CP['alpha_s']), float(CP['alpha_0'])
 assert asc in TC.ASGRID or min(abs(asc - a) for a in TC.ASGRID) < 1e-9 or True
 SCALE_VARS = TC.VARS[1:]; NP_VARS = ['milan_up', 'milan_dn', 'sub3']
 assert all(v[3] == 1.0 for v in SCALE_VARS), 'the NLO chain has no third-order variation'
@@ -75,7 +76,7 @@ np.savez(OUT, keys=np.array(keys), alphas=np.array([asc]), alpha0=np.array([a0c]
          central=central[None, None], pwin=np.array([[pwin]]), scale=scale[None, None], pwin_scale=pwin_scale[None, None],
          scale_labels=np.array([str(v) for v in SCALE_VARS]), np_vars=npv[None, None], np_labels=np.array(NP_VARS),
          sigma_pert=Sig[None, None], window=np.array([WLO, WHI]), milan=N.MILAN, sub_order_central=N.SUB_ORDER,
-         order=2, chain_summary=json.dumps(CS))
+         order=2, calc_point=json.dumps(CP))
 print(f'NNLL+NLO point: alpha_s = {asc:.4f}, alpha_0 = {a0c:.4f}, window fraction {pwin:.4f}, {len(SCALE_VARS)} scale and scheme variations')
 for k, cc, s in zip(keys, central, sd):
     print(f'  {k:8s} {cc:11.5g}  +- {s/abs(cc):6.2%}')

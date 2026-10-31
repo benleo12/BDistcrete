@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Why the prediction of Sec. 4 lies below DELPHI above tau = 0.2: the NNLL+NLO calculation at the paper's
-fixed point (chain_summary_nlo.json), ALEPH merged into DELPHI's bins, and the prediction with the
+fixed point (output/calc_point.json), ALEPH merged into DELPHI's bins, and the prediction with the
 calculation imposed (three_bands npz), each against DELPHI, in the twelve DELPHI bins 0.05 <= tau < 0.30
 that lie wholly inside the window, all normalized over these twelve bins. The calculation is binned with
 the functions of fig_thrust_vs_aleph.py (the head of that script, before its plotting, is executed here
@@ -17,10 +17,11 @@ assert 'def binned' in head and 'def build' in head
 exec(compile(head.replace('setup(usetex=True)', ''), 'fig_thrust_vs_aleph.py', 'exec'))
 sys.path.insert(0, 'lepcov')
 from lepdata_cov import lepdata_split
-CS = json.load(open('output/chain_summary_nlo.json')); ASC, A0C = CS['alpha_s'], CS['alpha_0']
+CP = json.load(open(os.environ.get('CALC_POINT', 'output/calc_point.json'))); ASC, A0C = float(CP['alpha_s']), float(CP['alpha_0'])
 la, ha, ya, sta, sya = lepdata_split('aleph'); ld, hd, yd, std, syd = lepdata_split('delphi')
 Z = np.load(os.environ.get('NPZ', f'output/three_bands_{tag}.npz'))
-assert abs(ASC - 0.11350) < 1e-4 and abs(A0C - 0.4312) < 1e-3, (ASC, A0C)
+G = np.load('output/thrust_targets_nlo_point.npz', allow_pickle=True)
+assert abs(float(G['alphas'][0]) - ASC) < 1e-12 and abs(float(G['alpha0'][0]) - A0C) < 1e-12, 'targets of another point'
 k12 = (ld >= 0.05 - 1e-9) & (hd <= 0.30 + 1e-9); lo, hi = ld[k12], hd[k12]; wid = hi - lo
 D, De = yd[k12], np.hypot(std[k12], syd[k12])
 AL, ALe = [], []

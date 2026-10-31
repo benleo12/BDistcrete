@@ -507,7 +507,7 @@ def coverage():
 # ---- Fig. the calculation against ALEPH and DELPHI (App. C) --------------------------------------
 def aleph():
     """The NNLL+NLO calculation with the dispersive shift at the input values of the demonstration, with its
-    theory band (Eq. thband: the two scale pairs at half weight, the change of scheme once, the three
+    theory band (Eq. thband: each scale pair once per side with its larger displacement, the change of scheme once, the three
     dispersive-model variations as their root mean square, each side kept apart), against ALEPH and
     DELPHI, both normalized to the total rate as published (calc_bins.py)."""
     J = json.load(open(os.environ.get('CALC_BINS', 'output/calc_bins_nlo_point.json')))
@@ -518,7 +518,7 @@ def aleph():
     def band(c):
         cen = np.array(c['central']); dv = {k: np.array(v) - cen for k, v in c.items() if k != 'central'}
         def side(f):
-            t = sum(0.5*f(dv[a])**2 + 0.5*f(dv[b])**2 for a, b in PAIRS) + f(dv[SCH])**2
+            t = sum(np.maximum(f(dv[a]), f(dv[b]))**2 for a, b in PAIRS) + f(dv[SCH])**2
             return np.sqrt(t + sum(f(dv[k])**2 for k in NPV)/3)
         return cen, side(lambda v: np.maximum(v, 0)), side(lambda v: np.maximum(-v, 0))
 

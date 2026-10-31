@@ -12,8 +12,9 @@ of one point (targets_nlo_point.py):
   learning band    at the central point, the propagated covariance of the wifi weights:
                    sigma^2(<O>) = g^T C g with g = d<O>/dw through the re-solved multipliers
   theory band      at the central point, the multipliers solved again for every variation of the
-                   calculation, combined as Eq. (sigmac): the scale pairs at half weight, the scheme
-                   once; the dispersive-model variations kept separate
+                   calculation, signed as Eq. (thband): each scale pair once per side with the larger of
+                   its two displacements, the scheme once, the dispersive-model variations as their root
+                   mean square
   statistical      at the central point, the statistical error of every prediction from the finite
                    reference sample (paper r8), which no band contains
   combined         the three bands and the statistical error added in quadrature; theory_up/down and
@@ -159,10 +160,11 @@ np_band = {}; np_hist = []
 for v, lab in enumerate([str(l) for l in G['np_labels']]):
     ov, hv, _ = predict(central, which=f'np:{v}'); np_band[lab] = {k: ov[k] - o_c[k] for k in o_c}; np_hist.append(hv - h_c)
 np_hist = np.array(np_hist)
-# signed theory bands (paper r8): each variation moves the prediction one way, so the band above the
-# prediction collects the upward displacements and the band below the downward ones, with the weights of
-# Eq. (sigmac), the scale pairs at half weight and the change of scheme once, and the three variations
-# of the dispersive model enter the theory band as their root mean square. th_band and th_hist above are
+# signed theory bands (Eq. thband): each variation moves the prediction one way, so the band above the
+# prediction collects the upward displacements and the band below the downward ones. Each scale pair counts
+# once on each side, with the larger of its two displacements there, so a pair that moves the prediction by
+# +-delta gives delta on both sides, as one standard deviation of Sigma_c does; the change of scheme counts
+# once, and the three variations of the dispersive model enter as their root mean square. th_band and th_hist above are
 # the symmetric band without the dispersive model, kept for reference.
 NPL = [str(l) for l in G['np_labels']]
 npi = {lab: np_hist[i] for i, lab in enumerate(NPL)}
@@ -170,7 +172,7 @@ npi = {lab: np_hist[i] for i, lab in enumerate(NPL)}
 
 def _signed(get, up):
     f = (lambda v: np.maximum(v, 0.0)) if up else (lambda v: np.maximum(-v, 0.0))
-    tot = sum(0.5*f(get(a))**2 + 0.5*f(get(b))**2 for a, b in PAIRS) + f(get(SCHEME))**2
+    tot = sum(np.maximum(f(get(a)), f(get(b)))**2 for a, b in PAIRS) + f(get(SCHEME))**2
     return np.sqrt(tot + sum(f(get(l))**2 for l in NPL)/len(NPL))
 
 

@@ -70,7 +70,7 @@ names, `figs_r8.py` draws only those figures.
 python phase2tools/make_numbers.py output
 ```
 
-writes `phase2tools/numbers.tex`, 616 macros identical to the paper's `numbers.tex`, and
+writes `phase2tools/numbers.tex`, 624 macros identical to the paper's `numbers.tex`, and
 `phase2tools/numbers.json`, from the result files in `output/` and the held-out points of the
 208-run set in `data_stagePURE17/meta.json`. Copy `numbers.tex` into the paper
 source. `LC_DIR` can point the learning-curve and coverage files to another folder, and `ENV_DIR` the

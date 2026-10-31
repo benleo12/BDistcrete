@@ -710,6 +710,8 @@ if EV['full'] and EV['tune']:
         rx = _r(EV['tune_xifull'], 'before/joint/lin_flat'); rxq = _r(EV['tune_xifull'], 'before/joint/xi_quad')
         textmacro('EnvXifullMin', _pct(rx.min())); textmacro('EnvXifullMax', _pct(rx.max()))
         textmacro('EnvXifullQuadMin', _pct(rxq.min())); textmacro('EnvXifullQuadMax', _pct(rxq.max()))
+        cx = lambda k: max(EV['tune_xifull']['compare'][k][f'corr_{g}']['max_abs_diff'] for g in ('thrust', 'nch'))
+        textmacro('EnvXifullCorr', f"{cx('before/joint/lin_flat'):.2f}"); textmacro('EnvXifullQuadCorr', f"{cx('before/joint/xi_quad'):.2f}")
     numbers['envelope'] = env
 
 json.dump(numbers, open(os.path.join(HERE, 'numbers.json'), 'w'), indent=1)

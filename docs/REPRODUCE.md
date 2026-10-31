@@ -1,10 +1,11 @@
 # Reproducing the paper
 
-This file maps every figure, table and quoted number of draft r8 of *Combined Uncertainties from
-Event Generators and Precision QCD* to the command and the inputs that make it. Section, figure,
-table and equation numbers are those of draft r8. All commands run from `analysis/`, and the result
-files named below are in `analysis/output/`, which is in git. **(data)** marks a step that needs
-the network exports or event samples of `docs/DATA.md`, and **(GPU)** a training.
+This file maps every figure, table and quoted number of draft r9 of the paper, which presents the
+method as DCTR with a factorized classifier, to the command and the inputs that make it. Section,
+figure, table and equation numbers are those of draft r9. The tag `v2.0.1` has this file for draft
+r8. All commands run from `analysis/`, and the result files named below are in `analysis/output/`,
+which is in git. **(data)** marks a step that needs the network exports or event samples of
+`docs/DATA.md`, and **(GPU)** a training.
 
 ## Before you start
 
@@ -29,8 +30,10 @@ the network exports or event samples of `docs/DATA.md`, and **(GPU)** a training
 
 ## Figures
 
-`python figs_r8.py` draws Figs. 3 to 12 and writes `output/r8_<name>.pdf`. The paper's
-`figs/r8_<name>.pdf` are copies of these files. With names, `figs_r8.py` draws only those figures.
+`python figs_r8.py` draws Figs. 3 to 9 and 13 to 15 and writes `output/r8_<name>.pdf`.
+`python plot_envelope.py output/envelope_test_MIXGEOV3S9 tune full` draws Figs. 10 to 12, and the
+same figures for each box alone. The paper's `figs/r8_<name>.pdf` are copies of these files. With
+names, `figs_r8.py` draws only those figures.
 
 | figure | what it shows | drawn from (`output/`) | inputs made by | drawn by |
 |---|---|---|---|---|
@@ -42,10 +45,13 @@ the network exports or event samples of `docs/DATA.md`, and **(GPU)** a training
 | 6 | the wide coupling scan | `widebox_wb18.json`, `wb/W_P2wb18*_w_9100.npy` | `bash widebox_submit.sh` **(data, GPU)**, which generates the runs into `gen/data_widebox` and trains the three references, then `python widebox_collect.py`. The paper's networks were trained with `STEPS=18000` and the tags `wb18single`, `wb18pool` and `wb18local<run>`, in place of the 324000 steps and the `wb` tags written in the script. The weight files are the ones the training writes into `output/models/` (`LADDER_DUMP_WEIGHTS=1`), copied into `output/wb/` | `python figs_r8.py widebox` |
 | 7 | coverage of the learning band | `wifi_coverage_MIXGEOV3S9.json`, `..._MIXGEOV3S9s1.json`, `..._MIXGEOV3S9s2.json` | `TAG=<tag> sbatch --export=ALL symmetry/wifi_cov.sbatch` for each of the three tags **(data)** | `python figs_r8.py coverage` |
 | 8 | the number of terms | `rank_scan_final.json` | `bash kscan_submit.sh` **(data, GPU)**, then `python kscan_collect.py`, which reads the result files of the scan and the K = 48 cells of Table 1 in `output/` | `python figs_r8.py kscan` |
-| 9 | the cost of a fit step | `bench_final_cpu_4.json`, `bench_final_cuda_12.json` | `sbatch symmetry/bench_final_cpu.sbatch` and `sbatch symmetry/bench_final_gpu.sbatch` (`bench_cost_final.py`) **(data)** | `python figs_r8.py cost` |
-| 10 | the thrust distribution and its three bands | `three_bands_MIXGEOV3S9.npz`, `three_bands_MIXGEOV3S9.json`, `theory_variations_MIX.json` | `TAG=MIXGEOV3S9 sbatch --export=ALL symmetry/three_bands.sbatch` and `sbatch --export=ALL symmetry/theory_variations.sbatch` **(data)** | `python figs_r8.py bands` |
-| 11 | the bands of the seven means | `three_bands_MIXGEOV3S9.json` | as Fig. 10 | `python figs_r8.py obs` |
-| 12 | the calculation against ALEPH and DELPHI | `calc_bins_nlo_point.json` | `THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python calc_bins.py` | `python figs_r8.py aleph` |
+| 9 | the cost at one parameter point | `bench_final_cpu_4.json`, `bench_final_cuda_12.json` | `sbatch symmetry/bench_final_cpu.sbatch` and `sbatch symmetry/bench_final_gpu.sbatch` (`bench_cost_final.py`) **(data)** | `python figs_r8.py cost` |
+| 10 | thrust and charged multiplicity over 400 variations, against the linear covariance, without the calculation | `envelope_test_MIXGEOV3S9_tune.npz`, `envelope_test_MIXGEOV3S9_full.npz` | `symmetry/envelope_test.sbatch` with `BOX=tune` and `BOX=full`, as in "The comparison with 400 variations" below **(data)** | `python plot_envelope.py output/envelope_test_MIXGEOV3S9 tune full` |
+| 11 | the correlations between the bins of Fig. 10 | as Fig. 10 | as Fig. 10 | as Fig. 10 |
+| 12 | thrust over the same variations with the calculation imposed | as Fig. 10 | as Fig. 10 | as Fig. 10 |
+| 13 | the thrust distribution and its three bands | `three_bands_MIXGEOV3S9.npz`, `three_bands_MIXGEOV3S9.json`, `theory_variations_MIX.json` | `TAG=MIXGEOV3S9 sbatch --export=ALL symmetry/three_bands.sbatch` and `sbatch --export=ALL symmetry/theory_variations.sbatch` **(data)** | `python figs_r8.py bands` |
+| 14 | the bands of the seven means | `three_bands_MIXGEOV3S9.json` | as Fig. 13 | `python figs_r8.py obs` |
+| 15 | the calculation against ALEPH and DELPHI | `calc_bins_nlo_point.json` | `THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python calc_bins.py` | `python figs_r8.py aleph` |
 
 ## Tables
 
@@ -53,7 +59,7 @@ the network exports or event samples of `docs/DATA.md`, and **(GPU)** a training
 |---|---|---|---|
 | 1 | closure widths of every model, both networks, three sets of members | Stages A to C: `p2augfull_<S>_<net>_s<k>.json` and `p2augfullstrict_<S>_<net>_s<k>.json`, with the `p2aug` files where a `p2augfull` file is absent. Stages D and E: `p2v3full{,strict}_{E,F}_<net>_s<k>.json`. Mixture: `stage_mixture_MIXGEOV3S9{,s1,s2}.json` and `p2v3fullstrict_MIX_fac_s<k>.json` (factorized), `p2v3full{,strict}_MIX_cat_s<k>.json` (concatenation) | the trainings and strict tests of "Trained models" below **(data, GPU)**, then `make_numbers.py` (`\Acc{Aug,Dense}*`) |
 | 2 | closure widths per observable, Stages D and E and the mixture | as Table 1 | `make_numbers.py` (`\ObsDense*`) |
-| 3 | the seven means and their bands | `three_bands_MIXGEOV3S9.json`, `three_bands_MIXGEOV3S9.npz` | as Fig. 10, then `make_numbers.py` (`\Tb<observable>*`) |
+| 3 | the seven means and their bands | `three_bands_MIXGEOV3S9.json`, `three_bands_MIXGEOV3S9.npz` | as Fig. 13, then `make_numbers.py` (`\Tb<observable>*`) |
 | 4 | parameters of Stages A to C | the designs `gen/designs/stage{A,B,C}_design_aug.csv` (App. A.1) | typed in `main.tex` |
 | 5 | parameters of Stages D and E | the designs `analysis/release/generators/stage{E,F}_design_v3all.csv` and the boxes in `analysis/release/STAGES.md` | typed in `main.tex` |
 | 6 | loss and closure width of the mean of members and of the fitted basis weights | `wifi_MIXGEOV3S9{,s1,s2}_diag.json` | `wifi_diag.py`, run by `symmetry/wifi_cov.sbatch` **(data)**, then `make_numbers.py` (`\Wifi{Loss,Width}*`) |
@@ -64,26 +70,28 @@ the network exports or event samples of `docs/DATA.md`, and **(GPU)** a training
 python phase2tools/make_numbers.py output
 ```
 
-writes `phase2tools/numbers.tex`, 575 macros identical to the paper's `numbers.tex`, and
+writes `phase2tools/numbers.tex`, 613 macros identical to the paper's `numbers.tex`, and
 `phase2tools/numbers.json`, from the result files in `output/` and the held-out points of the
 208-run set in `data_stagePURE17/meta.json`. Copy `numbers.tex` into the paper
-source. `LC_DIR` can point the learning-curve and coverage files to another folder. The macros
+source. `LC_DIR` can point the learning-curve and coverage files to another folder, and `ENV_DIR` the
+files of the comparison with 400 variations. The macros
 come in families:
 
 | macros | where in the paper | read from (`output/`) | made by |
 |---|---|---|---|
-| `\Acc{Aug,Dense}*`, `\AccFinal*`, `\ObsDense*`, `\Mix{Sherpa,Herwig}Points*` | Tables 1 and 2, Secs. 3.4 and 3.7 | the files of Table 1 | the trainings and strict tests below |
+| `\Acc{Aug,Dense}*`, `\AccFinal*`, `\ObsDense*`, `\Mix{Sherpa,Herwig}Points*` | Tables 1 and 2, Secs. 3.4, 3.6 and 3.7 | the files of Table 1 | the trainings and strict tests below |
 | `\LcRunsThreeStrictAll`, `\LcMembersStrictAll` | Sec. 3.1 | `widths_v2_<tag>{,h400}{,r415}.json` of the learning-curve trainings, `p2origfull*_MIX_fac_s<k>.json`, `p2origfull48*_MIX_fac_s<k>.json` | `symmetry/train_mixgeo.sbatch`, `strict_closure.sbatch`, `rescore_v4.sbatch`, `train_p2.sbatch` and `score_p2.sbatch` **(data, GPU)** |
 | `\Calib*` | Sec. 3.2, two halves of one fresh run | `p2augfull_{A,B,C}_fac_s0.json` | the trainings of Stages A to C |
 | `\Toy*` | Sec. 3.3 | `toy_final_K<K>_s<k>.json` | `symmetry/toy_final.sbatch` |
 | `\Map*`, `\XpNullMean` | Sec. 3.5, Fig. 5 | `valid_map_C_P2augfullfac0_report.json`, `xp_null.json` | as Fig. 5 **(data)** |
 | `\Wide*` | Sec. 3.5 | `p2wb18{single,pool,local9100,...,local9105}_W_fac_s0.json` | `widebox_submit.sh` with the settings of Fig. 6 **(data, GPU)** |
-| `\Cov*`, `\CovEight*` | Secs. 3.6 and 5, Fig. 7 | `wifi_coverage_MIXGEOV3S9{,s1,s2}.json`, `wifi_coverage_MIXGEOV3M8S9.json` | `symmetry/wifi_cov.sbatch` **(data)** |
+| `\Cov*`, `\CovEight*` | Secs. 3.6 and 6, Fig. 7 | `wifi_coverage_MIXGEOV3S9{,s1,s2}.json`, `wifi_coverage_MIXGEOV3M8S9.json` | `symmetry/wifi_cov.sbatch` **(data)** |
 | `\SvdRank*` | Sec. 3.7 | `p2trunc_{A,B,C,E,MIX}_cat_s0.json` | `symmetry/score_p2.sbatch` with `LADDER_TRUNCATE=1` on the first concatenation training of each model **(data)** |
-| `\Cost*` | Sec. 3.7, Fig. 9 (rounded in Secs. 1 and 5) | `bench_final_cpu_4.json`, `bench_final_cuda_12.json` | as Fig. 9. The fit times multiply the time of one step by 6000 steps, `COST_STEPS` in `make_numbers.py` |
-| `\CalcAlphas`, `\CalcAlphaZero` | Sec. 4.1, Eq. (C.9) | `three_bands_MIXGEOV3S9.json` | as Fig. 10, from the fixed point of the calculation below |
-| `\Tb*` | Secs. 1, 2.3, 2.7, 4.1 to 4.3 and 5, Apps. C.2 and D.2, Table 3 | `three_bands_MIXGEOV3S9{,s1,s2}.{json,npz}`, `theory_variations_MIX.json`, `calc_vs_delphi_MIXGEOV3S9.json`, `band_checks_MIXGEOV3S9.json` | as Fig. 10, `TAG=<tag> sbatch --export=ALL symmetry/three_bands.sbatch` for `s1` and `s2`, `TAG=MIXGEOV3S9 sbatch --export=ALL symmetry/band_checks.sbatch` **(data)**, and `NPZ=output/three_bands_MIXGEOV3S9.npz python calc_vs_delphi.py MIXGEOV3S9` |
+| `\Cost*` | Secs. 1, 3.7, 4.2, 4.3 and 6, Fig. 9 | `bench_final_cpu_4.json`, `bench_final_cuda_12.json` | as Fig. 9. `\CostVar*` multiply the time of the network at one point by the 400 variations of Sec. 4.3. The fit times `\CostFit*` of draft r8 (6000 steps, `COST_STEPS` in `make_numbers.py`) are written but not used |
+| `\CalcAlphas`, `\CalcAlphaZero` | Sec. 5.2, Eq. (C.9) | `three_bands_MIXGEOV3S9.json` | as Fig. 13, from the fixed point of the calculation below |
+| `\Tb*` | Secs. 1, 2.3, 5.2 to 5.5 and 6, Apps. C.2 and D.2, Table 3 | `three_bands_MIXGEOV3S9{,s1,s2}.{json,npz}`, `theory_variations_MIX.json`, `calc_vs_delphi_MIXGEOV3S9.json`, `band_checks_MIXGEOV3S9.json` | as Fig. 13, `TAG=<tag> sbatch --export=ALL symmetry/three_bands.sbatch` for `s1` and `s2`, `TAG=MIXGEOV3S9 sbatch --export=ALL symmetry/band_checks.sbatch` **(data)**, and `NPZ=output/three_bands_MIXGEOV3S9.npz python calc_vs_delphi.py MIXGEOV3S9` |
 | `\Kappa*`, `\Single*`, `\TruncMaxPercent`, `\WifiNewton*`, `\Wifi{Loss,Width}*` | Sec. 3.6, App. A.2, Table 6 | the training results of Table 1, `single_members_C_P2augfullfac0.json`, `truncation_fraction.json`, `wifi_MIXGEOV3S9{,s1,s2}_{fit,diag}.json` | `python single_members.py C_P2augfullfac0 C ../gen/data_abc`, `python trunc_frac.py` and `symmetry/wifi_cov.sbatch` **(data)** |
+| `\Env*` | Secs. 1, 4.3, 5.3 and 6 | `envelope_test_MIXGEOV3S9_<box>.{json,npz}` for the boxes `full`, `tune`, `tune_xifull`, `tune_sherpa` and `tune_herwig` | "The comparison with 400 variations" below **(data)** |
 
 Some statements of App. A.2 rest on result files without a macro. The number of coefficients of
 the event network comes from `python param_count.py` (`output/param_count.json`). The comparison
@@ -188,17 +196,40 @@ The samples themselves come from `gen/` (`gen/README.md`).
 export RIVET_REF=rivet_ref
 THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python thrust_chain.py    # output/chain_summary_nlo.json, moments_joint_nlo.json
 python targets_nlo_point.py                                # output/thrust_targets_nlo_point.npz
-THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python calc_bins.py       # output/calc_bins_nlo_point.json, Fig. 12
+THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python calc_bins.py       # output/calc_bins_nlo_point.json, Fig. 15
 ```
 
 The fixed point α_s(M_Z) = 0.1135, α_0 = 0.43 of Eq. (C.9) is the pair at which the χ² of the
 calculation alone against ALEPH in the window is smallest. `thrust_chain.py` finds it and writes it
 to `output/chain_summary_nlo.json`. `targets_nlo_point.py` evaluates the fourteen windowed moments,
 the window fraction, every scale and scheme variation and the three variations of the dispersive
-model at that point, and the covariance Σ_c of Eq. (4.2). These steps run from the repository
+model at that point, and the covariance Σ_c of Eq. (5.6). These steps run from the repository
 alone. The resummation tables of ARES (`ares_recovered/`) and the fixed-order coefficients of
 EERAD3 (`output/eerad_*.npy`) ship with it. Rebuilding those needs ARES and EERAD3 themselves
 (`ares_recovered/ares_edits.txt`, `eerad3/`).
+
+## The comparison with 400 variations
+
+`envelope_test.py` tests the linear covariance of Sec. 4.2 against 400 variations, each an exact
+reweighting of the reference sample to one draw from the prior of Sec. 4.1, first without the
+calculation (Sec. 4.3) and then with it imposed (Sec. 5.3). `BOX` sets the ranges: `full` (the
+trained box), `tune` (each range a third of its width around the default tunes, and ξ in [1/3, 2/3]),
+`tune_xifull` (the same with ξ over [0, 1]), and `tune_sherpa` and `tune_herwig` (one generator
+alone, ξ fixed at 0 or 1). It reads the export, reference bundle and learning fit of `MIXGEOV3S9`
+and the calculation of `output/thrust_targets_nlo_point.npz` **(data)**.
+
+```bash
+export MAXENT_DIR=$PWD TAG=MIXGEOV3S9
+BOX=full NREF=1000 sbatch --export=ALL symmetry/envelope_test.sbatch
+for b in tune tune_xifull tune_sherpa tune_herwig; do BOX=$b sbatch --export=ALL symmetry/envelope_test.sbatch; done
+python plot_envelope.py output/envelope_test_MIXGEOV3S9 tune full    # Figs. 10 to 12
+```
+
+Each box takes about an hour and a half on eight CPU threads and needs 4 GB of memory. It writes
+`output/envelope_test_MIXGEOV3S9_<box>.json`, with the bands, their ratios and bootstrap
+uncertainties and the comparison of the correlations, and `.npz`, with the draws and the
+covariances. On the full box, `NREF=1000` adds 1000 more draws, which measure the sampling noise
+of 400 variations. `make_numbers.py` reads these files for the `\Env*` macros.
 
 ## The released networks
 
@@ -216,13 +247,13 @@ files of `analysis/release/models/` and checks them against the trained networks
 
 ## Earlier draft with an α_s fit (not in the paper)
 
-The earlier draft fitted α_s(M_Z) and α_0 to the LEP data with the generator parameters profiled,
-in its own Sec. 6, on networks trained to an earlier standard and on the samples of the release
-`data-v1`. Draft r8 has none of this. Its scripts and result files stay in the repository, and
-`python make_sec6_numbers.py` recomputes the numbers of that Sec. 6 from `output/`. The
+The earlier draft fitted α_s(M_Z) and α_0 to the LEP data with the generator parameters profiled, in
+its own Sec. 6, on networks trained to an earlier standard and on the samples of the release
+`data-v1`. Drafts r8 and r9 have none of this. Its scripts and result files stay in the repository,
+and `python make_sec6_numbers.py` recomputes the numbers of that Sec. 6 from `output/`. The
 walk-throughs of that draft, section by section with the archives each one needs, are in the git
-history: `git show 1d66811:docs/REPRODUCE.md`. Two things of draft r8 go back to it. The cost
-estimate of Sec. 3.7 takes its 6000 steps per fit from the forty pseudo-data fits of that draft,
-which needed a median of 6315 evaluations of the χ² and its gradient per fit.
-Its seed study (`perlmutter/seedstudy.sbatch`) is superseded by the three sets of members of every
-model in Table 1.
+history: `git show 1d66811:docs/REPRODUCE.md`. Two things of draft r8 go back to it. Its cost
+estimate (`\CostFit*`) took its 6000 steps per fit from the forty pseudo-data fits of that draft,
+which needed a median of 6315 evaluations of the χ² and its gradient per fit. Draft r9 quotes the
+cost of the 400 variations instead. The seed study of that draft (`perlmutter/seedstudy.sbatch`) is
+superseded by the three sets of members of every model in Table 1.

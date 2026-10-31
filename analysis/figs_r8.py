@@ -324,7 +324,7 @@ def cost():
     nc, ng, rest = c['n_network_step_seconds'], g['n_network_step_seconds'], c['b_tilt_and_chi2_seconds']
     gpu = g.get('gpu', 'GPU').replace('NVIDIA ', '')
     ROWS = [('factorized', 'factorized network', METHOD), ('late', r'$\theta$ after the sum', BASE),
-            ('concatenation', 'concatenation network', BASE_DARK)]
+            ('concatenation', 'DCTR network', BASE_DARK)]
 
     def human(s):
         if s >= 60: return f'{s/60:.0f} min'
@@ -334,7 +334,7 @@ def cost():
     fig, ax = plt.subplots(figsize=(TW, 1.8))
     y = np.arange(len(ROWS))[::-1].astype(float)
     ax.axvline(rest, color=REF, lw=0.8, ls=(0, (4, 3)), zorder=0)
-    ax.text(rest*1.15, y.max() + 0.42, 'maximum-entropy weight and $\\chi^2$ on the CPU,\nthe same for every network',
+    ax.text(rest*1.15, y.max() + 0.42, 'maximum-entropy weight on the CPU,\nthe same for every network',
             fontsize=7.5, color=REF, va='top', ha='left', linespacing=1.0)
     for yi, (k, lab, col) in zip(y, ROWS):
         ax.plot([ng[k], nc[k]], [yi, yi], color=col, lw=1.0, alpha=0.55, zorder=1)
@@ -348,7 +348,7 @@ def cost():
     for s in ('top', 'right', 'left'):
         ax.spines[s].set_visible(False)
     ax.tick_params(which='both', top=False)
-    ax.set_xlabel('time of the network part of one fit step [s]')
+    ax.set_xlabel('time of the network at one parameter point [s]')
     from matplotlib.lines import Line2D
     ax.legend(handles=[Line2D([0], [0], marker='o', lw=0, ms=5, color=REF, label='one CPU process, 4 threads'),
                        Line2D([0], [0], marker='o', lw=0, ms=5, mfc='white', mec=REF, mew=1.2, label=f'one {gpu}')],

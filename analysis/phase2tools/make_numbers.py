@@ -618,6 +618,10 @@ if os.path.exists(fc) and os.path.exists(fg):
         textmacro('CostFitFacHours', sig(fh['factorized'])); textmacro('CostFitLateDays', sig(fh['late']/24))
         textmacro('CostFitFacMin', f'{60*fh["factorized"]:.0f}')
         textmacro('CostFitCatDays', f'{fh["concatenation"]/24:.0f}')
+        # the 400 variations of Sec. 4.3: the network part only (weights and derivatives at each point)
+        NVAR = 400; nv = {k: NVAR*v for k, v in nc.items()}; numbers['cost']['variations'] = dict(n=NVAR, cpu_seconds=nv)
+        textmacro('CostVarFacSec', f'{nv["factorized"]:.0f}'); textmacro('CostVarLateHours', f'{nv["late"]/3600:.1f}')
+        textmacro('CostVarCatDays', f'{nv["concatenation"]/86400:.1f}')
 
 
 # ---- the envelope of 400 variations against the linear covariance (Secs. 4.3 and 5.3, envelope_test.py) ---

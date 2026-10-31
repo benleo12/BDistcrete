@@ -70,7 +70,7 @@ names, `figs_r8.py` draws only those figures.
 python phase2tools/make_numbers.py output
 ```
 
-writes `phase2tools/numbers.tex`, 613 macros identical to the paper's `numbers.tex`, and
+writes `phase2tools/numbers.tex`, 616 macros identical to the paper's `numbers.tex`, and
 `phase2tools/numbers.json`, from the result files in `output/` and the held-out points of the
 208-run set in `data_stagePURE17/meta.json`. Copy `numbers.tex` into the paper
 source. `LC_DIR` can point the learning-curve and coverage files to another folder, and `ENV_DIR` the
@@ -87,7 +87,7 @@ come in families:
 | `\Wide*` | Sec. 3.5 | `p2wb18{single,pool,local9100,...,local9105}_W_fac_s0.json` | `widebox_submit.sh` with the settings of Fig. 6 **(data, GPU)** |
 | `\Cov*`, `\CovEight*` | Secs. 3.6 and 6, Fig. 7 | `wifi_coverage_MIXGEOV3S9{,s1,s2}.json`, `wifi_coverage_MIXGEOV3M8S9.json` | `symmetry/wifi_cov.sbatch` **(data)** |
 | `\SvdRank*` | Sec. 3.7 | `p2trunc_{A,B,C,E,MIX}_cat_s0.json` | `symmetry/score_p2.sbatch` with `LADDER_TRUNCATE=1` on the first concatenation training of each model **(data)** |
-| `\Cost*` | Secs. 1, 3.7, 4.2, 4.3 and 6, Fig. 9 | `bench_final_cpu_4.json`, `bench_final_cuda_12.json` | as Fig. 9. `\CostVar*` multiply the time of the network at one point by the 400 variations of Sec. 4.3. The fit times `\CostFit*` of draft r8 (6000 steps, `COST_STEPS` in `make_numbers.py`) are written but not used |
+| `\Cost*` | Secs. 1, 3.7, 4.2, 4.3 and 6, Fig. 9 | `bench_final_cpu_4.json`, `bench_final_cuda_12.json` | as Fig. 9. Fig. 9 and `\Cost{Fac,Late,Cat}{Cpu,Gpu}` time the weights and one backward pass (the derivatives of one prediction), `\CostW*` the weights alone, and `\CostVar*` the weights alone at the 400 variations of Sec. 4.3. `\CostRestCpu` is the rest of a step of `bench_cost_final.py`, mostly the maximum-entropy weight and its derivatives, to one figure. The fit times `\CostFit*` of draft r8 (6000 steps, `COST_STEPS` in `make_numbers.py`) are written but not used |
 | `\CalcAlphas`, `\CalcAlphaZero` | Sec. 5.2, Eq. (C.9) | `three_bands_MIXGEOV3S9.json` | as Fig. 13, from the fixed point of the calculation below |
 | `\Tb*` | Secs. 1, 2.3, 5.2 to 5.5 and 6, Apps. C.2 and D.2, Table 3 | `three_bands_MIXGEOV3S9{,s1,s2}.{json,npz}`, `theory_variations_MIX.json`, `calc_vs_delphi_MIXGEOV3S9.json`, `band_checks_MIXGEOV3S9.json` | as Fig. 13, `TAG=<tag> sbatch --export=ALL symmetry/three_bands.sbatch` for `s1` and `s2`, `TAG=MIXGEOV3S9 sbatch --export=ALL symmetry/band_checks.sbatch` **(data)**, and `NPZ=output/three_bands_MIXGEOV3S9.npz python calc_vs_delphi.py MIXGEOV3S9` |
 | `\Kappa*`, `\Single*`, `\TruncMaxPercent`, `\WifiNewton*`, `\Wifi{Loss,Width}*` | Sec. 3.6, App. A.2, Table 6 | the training results of Table 1, `single_members_C_P2augfullfac0.json`, `truncation_fraction.json`, `wifi_MIXGEOV3S9{,s1,s2}_{fit,diag}.json` | `python single_members.py C_P2augfullfac0 C ../gen/data_abc`, `python trunc_frac.py` and `symmetry/wifi_cov.sbatch` **(data)** |

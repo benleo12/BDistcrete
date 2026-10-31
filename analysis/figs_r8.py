@@ -222,11 +222,11 @@ def map_():
     for i, (o, lab) in enumerate(OBS):
         va = np.array([p[o] for p in pts.values()]); vb = np.array([p[o] for p in anc.values()])
         ax.scatter(i + rng.uniform(-0.15, 0.15, len(va)), va, s=8, color=METHOD, alpha=0.85, lw=0, zorder=3,
-                   label='twelve blind runs' if i == 0 else None)
+                   label='twelve further runs' if i == 0 else None)
         ax.scatter(i + rng.uniform(-0.15, 0.15, len(vb)), vb, s=12, marker='D', facecolor='white', edgecolor=METHOD,
                    lw=0.8, zorder=4, label='five held-out points' if i == 0 else None)
         ax.plot([i - 0.26, i + 0.26], [np.nanmean(va)]*2, color=METHOD_DARK, lw=1.5, zorder=5,
-                label='mean of the blind runs' if i == 0 else None)
+                label='mean of the further runs' if i == 0 else None)
         if o == 'x_p' and np.isfinite(xp_null):
             ax.plot([i - 0.3, i + 0.3], [xp_null]*2, color=REF, lw=0.9, ls=(0, (1.2, 1.2)), zorder=2)
     unit_line(ax)
@@ -236,7 +236,7 @@ def map_():
     title(ax, '(a) closure width per observable'); trim(ax)
     bx = fig.add_subplot(gs[0, 1])
     norm = [(0.120, 0.008), (0.475, 0.175), (1.30, 0.50)]
-    for coll, mk, fc, lab, s in ((pts, 'o', METHOD, 'blind runs', 10), (anc, 'D', 'white', 'held-out points', 13)):
+    for coll, mk, fc, lab, s in ((pts, 'o', METHOD, 'further runs', 10), (anc, 'D', 'white', 'held-out points', 13)):
         dd = [max(abs((p['theta'][i] - norm[i][0])/norm[i][1]) for i in range(3)) for p in coll.values()]
         zz = [abs(p.get('nbaryon_z', np.nan)) for p in coll.values()]
         bx.scatter(dd, zz, s=s, marker=mk, facecolor=fc, edgecolor=METHOD, lw=0.8, zorder=3, label=lab)

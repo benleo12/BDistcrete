@@ -2073,12 +2073,24 @@
   "cpu_name": "Intel(R) Xeon(R) Gold 6148 CPU @ 2.40GHz",
   "gpu_name": "NVIDIA H200",
   "gradcheck_ok": true,
+  "weights": {
+   "cpu": {
+    "factorized": 0.027849198086187243,
+    "late": 9.645234397961758,
+    "concatenation": 413.38227117806673
+   },
+   "gpu": {
+    "factorized": 0.002541997004300356,
+    "late": 0.04383396403864026,
+    "concatenation": 1.9190111379139125
+   }
+  },
   "variations": {
    "n": 400,
    "cpu_seconds": {
-    "factorized": 22.920534014701843,
-    "late": 7484.159308765084,
-    "concatenation": 562074.0788463969
+    "factorized": 11.139679234474897,
+    "late": 3858.0937591847032,
+    "concatenation": 165352.9084712267
    }
   }
  },

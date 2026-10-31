@@ -598,28 +598,34 @@ if all((48, s) in toys for s in range(3)):
     rest = [v for k, v in scan.items() if k >= 2]
     macro('ToyWidthScanMin', min(rest), 2); macro('ToyWidthScanMax', max(rest), 2)
 
-# ---- the cost of a fit step (Sec. 3.7, Fig. cost): bench_cost_final.py on the final mixture ---------
-# the network part of a step (the weights of the reference events and their derivatives) on one CPU
-# process with four threads and on one H200, the rest of the step (the maximum-entropy weight and the
-# chi^2, the same for every network) on the CPU, and a profile fit of COST_STEPS steps
+# ---- the cost per parameter point (Sec. 3.7, Fig. cost): bench_cost_final.py on the final mixture -----
+# (a) the weights of the reference events alone, and (n) the weights and one backward pass, the derivatives
+# of one prediction (Fig. cost), on one CPU process with four threads and on one H200. The rest of a step
+# (the maximum-entropy weight and its derivatives, with a chi^2 that adds a few percent, the same for every
+# network) on the CPU, quoted to one figure. The profile fit of COST_STEPS steps (\CostFit*) belongs to
+# draft r8 and is not used by r9.
 COST_STEPS = 6000
 fc, fg = f'{D}/bench_final_cpu_4.json', f'{D}/bench_final_cuda_12.json'
 if os.path.exists(fc) and os.path.exists(fg):
     bc, bg = json.load(open(fc)), json.load(open(fg))
     nc, ng, rest = bc['n_network_step_seconds'], bg['n_network_step_seconds'], bc['b_tilt_and_chi2_seconds']
+    ac, ag = bc['a_weights_seconds'], bg['a_weights_seconds']
     if 'concatenation' in nc and 'concatenation' in ng:
         fh = {k: COST_STEPS*(v + rest)/3600 for k, v in nc.items()}
         numbers['cost'] = dict(cpu=nc, gpu=ng, rest=rest, steps=COST_STEPS, fit_hours=fh, cpu_name=bc.get('cpu'),
                                gpu_name=bg.get('gpu'), gradcheck_ok=bg.get('gradcheck_ok'))
-        textmacro('CostFacCpu', sig(nc['factorized']) + '\\,s'); textmacro('CostRestCpu', sig(rest) + '\\,s')
+        textmacro('CostFacCpu', sig(nc['factorized']) + '\\,s'); textmacro('CostRestCpu', sig(rest, 1) + '\\,s')
+        textmacro('CostWFacCpu', sig(ac['factorized']) + '\\,s'); textmacro('CostWCatCpuMin', f'{ac["concatenation"]/60:.0f}')
+        textmacro('CostWCatGpu', sig(ag['concatenation']) + '\\,s')
         textmacro('CostLateCpu', sig(nc['late']) + '\\,s'); textmacro('CostCatCpuMin', f'{nc["concatenation"]/60:.0f}')
         textmacro('CostFacGpu', sig(1e3*ng['factorized']) + '\\,ms'); textmacro('CostLateGpu', sig(ng['late']) + '\\,s')
         textmacro('CostCatGpu', sig(ng['concatenation']) + '\\,s')
         textmacro('CostFitFacHours', sig(fh['factorized'])); textmacro('CostFitLateDays', sig(fh['late']/24))
         textmacro('CostFitFacMin', f'{60*fh["factorized"]:.0f}')
         textmacro('CostFitCatDays', f'{fh["concatenation"]/24:.0f}')
-        # the 400 variations of Sec. 4.3: the network part only (weights and derivatives at each point)
-        NVAR = 400; nv = {k: NVAR*v for k, v in nc.items()}; numbers['cost']['variations'] = dict(n=NVAR, cpu_seconds=nv)
+        numbers['cost']['weights'] = dict(cpu=ac, gpu=ag)
+        # the 400 variations of Sec. 4.3 need only the weights at each point
+        NVAR = 400; nv = {k: NVAR*v for k, v in ac.items()}; numbers['cost']['variations'] = dict(n=NVAR, cpu_seconds=nv)
         textmacro('CostVarFacSec', f'{nv["factorized"]:.0f}'); textmacro('CostVarLateHours', f'{nv["late"]/3600:.1f}')
         textmacro('CostVarCatDays', f'{nv["concatenation"]/86400:.1f}')
 

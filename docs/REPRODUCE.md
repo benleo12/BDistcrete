@@ -194,19 +194,23 @@ The samples themselves come from `gen/` (`gen/README.md`).
 
 ```bash
 export RIVET_REF=rivet_ref
-THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python thrust_chain.py    # output/chain_summary_nlo.json, moments_joint_nlo.json
-python targets_nlo_point.py                                # output/thrust_targets_nlo_point.npz
+THRUST_ORDER=2 python targets_nlo_point.py                 # output/thrust_targets_nlo_point.npz
 THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python calc_bins.py       # output/calc_bins_nlo_point.json, Fig. 15
+NPZ=output/three_bands_MIXGEOV3S9.npz python calc_vs_delphi.py MIXGEOV3S9   # after three_bands, below
 ```
 
-The fixed point α_s(M_Z) = 0.1135, α_0 = 0.43 of Eq. (C.9) is the pair at which the χ² of the
-calculation alone against ALEPH in the window is smallest. `thrust_chain.py` finds it and writes it
-to `output/chain_summary_nlo.json`. `targets_nlo_point.py` evaluates the fourteen windowed moments,
-the window fraction, every scale and scheme variation and the three variations of the dispersive
-model at that point, and the covariance Σ_c of Eq. (5.6). These steps run from the repository
-alone. The resummation tables of ARES (`ares_recovered/`) and the fixed-order coefficients of
-EERAD3 (`output/eerad_*.npy`) ship with it. Rebuilding those needs ARES and EERAD3 themselves
-(`ares_recovered/ares_edits.txt`, `eerad3/`).
+The fixed point α_s(M_Z) = 0.1137, α_0(2 GeV) = 0.524 of Eq. (C.9) is the fit of Gehrmann, Luisoni
+and Monni in the log-R scheme (Eur. Phys. J. C 73 (2013) 2265, Eq. (42)), which `output/calc_point.json`
+holds and the three scripts read (`CALC_POINT` points them to another file). Their fit goes to
+NNLL+NNLO, one order beyond the NNLL+NLO calculation here. Draft r8 used instead the pair at which the
+χ² of this calculation alone against ALEPH in the window is smallest (0.1135, 0.43), which
+`THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python thrust_chain.py` writes to `output/chain_summary_nlo.json`.
+`targets_nlo_point.py` evaluates the fourteen windowed moments, the window fraction, every scale and
+scheme variation and the three variations of the dispersive model at the fixed point, and the
+covariance Σ_c of Eq. (5.6). The shift a_τP = 0.012 of App. C.2 is `np_shift.shift(1.0, 0.524,
+asmz=0.1137)`. These steps run from the repository alone. The resummation tables of ARES
+(`ares_recovered/`) and the fixed-order coefficients of EERAD3 (`output/eerad_*.npy`) ship with it.
+Rebuilding those needs ARES and EERAD3 themselves (`ares_recovered/ares_edits.txt`, `eerad3/`).
 
 ## The comparison with 400 variations
 

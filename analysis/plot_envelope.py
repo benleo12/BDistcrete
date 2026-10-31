@@ -26,7 +26,7 @@ BOXES = sys.argv[2:] or ['full', 'tune', 'tune_xifull', 'tune_sherpa', 'tune_her
 NBOOT = 300
 BOX_TITLE = dict(full='full box', tune='tune-sized box', tune_xifull=r'tune-sized box, $\xi\in[0,1]$',
                  tune_sherpa=r'tune-sized box, Sherpa ($\xi=0$)', tune_herwig=r'tune-sized box, Herwig ($\xi=1$)')
-MODELS = [('lin_flat', 'linear', '-'), ('lin_z', r'slopes in $z$', (0, (1, 1.2))), ('xi_quad', r'quadrature in $\xi$', (0, (4, 2)))]
+MODELS = [('lin_flat', 'linear', '-'), ('lin_z', r'slopes in $z$', (0, (1, 1.2)))]
 
 
 def load(box):

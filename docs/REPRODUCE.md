@@ -201,14 +201,16 @@ NPZ=output/three_bands_MIXGEOV3S9.npz python calc_vs_delphi.py MIXGEOV3S9   # af
 
 The fixed point α_s(M_Z) = 0.1137, α_0(2 GeV) = 0.524 of Eq. (C.9) is the fit of Gehrmann, Luisoni
 and Monni in the log-R scheme (Eur. Phys. J. C 73 (2013) 2265, Eq. (42)), which `output/calc_point.json`
-holds and the three scripts read (`CALC_POINT` points them to another file). Their fit goes to
-NNLL+NNLO, one order beyond the NNLL+NLO calculation here. Draft r8 used instead the pair at which the
+holds and the three scripts read (`CALC_POINT` points them to another file). The same file sets the
+subtraction of the power correction to their order α_s³ (`np_sub_order`, Eq. (40) of that paper), since
+their α_0 was fitted with it. Their fit goes to NNLL+NNLO and includes bottom-quark masses, while the
+calculation here is NNLL+NLO and massless. Draft r8 used instead the pair at which the
 χ² of this calculation alone against ALEPH in the window is smallest (0.1135, 0.43), which
 `THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python thrust_chain.py` writes to `output/chain_summary_nlo.json`.
 `targets_nlo_point.py` evaluates the fourteen windowed moments, the window fraction, every scale and
 scheme variation and the three variations of the dispersive model at the fixed point, and the
-covariance Σ_c of Eq. (5.6). The shift a_τP = 0.012 of App. C.2 is `np_shift.shift(1.0, 0.524,
-asmz=0.1137)`. These steps run from the repository alone. The resummation tables of ARES
+covariance Σ_c of Eq. (5.6). The third variation of the model drops the term of order α_s³ (`sub2`).
+The shift a_τP = 0.0093 of App. C.2 is `np_shift.shift(1.0, 0.524, asmz=0.1137)` with `NP_SUB_ORDER=3`. These steps run from the repository alone. The resummation tables of ARES
 (`ares_recovered/`) and the fixed-order coefficients of EERAD3 (`output/eerad_*.npy`) ship with it.
 Rebuilding those needs ARES and EERAD3 themselves (`ares_recovered/ares_edits.txt`, `eerad3/`).
 
@@ -233,7 +235,10 @@ Each box takes about an hour and a half on eight CPU threads and needs 4 GB of m
 `output/envelope_test_MIXGEOV3S9_<box>.json`, with the bands, their ratios and bootstrap
 uncertainties and the comparison of the correlations, and `.npz`, with the draws and the
 covariances. On the full box, `NREF=1000` adds 1000 more draws, which measure the sampling noise
-of 400 variations. `make_numbers.py` reads these files for the `\Env*` macros.
+of 400 variations. `make_numbers.py` reads these files for the `\Env*` macros. With all five boxes,
+`plot_envelope.py` also draws `r8_env_cases`, `r8_env_cases_ratio`, `r8_env_cases_coverage` (how many of
+the variations lie inside the linear band) and `r8_corr_cases`, which leave out the three bins under 100
+effective events (thrust 0.40-0.50 and n_ch below 4). These are not in the paper.
 
 ## The released networks
 
@@ -247,7 +252,9 @@ sbatch --export=ALL symmetry/accuracy_r8.sbatch    # release_r8_table/: accuracy
 **(data)** The packager converts `E_P2v3fullfac0`, `F_P2v3fullfac0` and `MIXGEOV3S9` to the numpy
 files of `analysis/release/models/` and checks them against the trained networks.
 `table_r8.sbatch` also writes `output/precision_gap_r8.json`. The files are then copied into
-`analysis/release/`. `release/models/MIX17_wifi.npz` is a copy of `output/wifi_MIXGEOV3S9_fit.npz`.
+`analysis/release/`. `release/models/MIX17_wifi.npz` is a copy of `output/wifi_MIXGEOV3S9_fit.npz`. When
+only the calculation changes, `python release/tools_build_targets.py output/thrust_targets_nlo_point.npz
+targets_thrust_nlo.npz` rebuilds the targets file of the deposit and leaves the reference sample alone.
 
 ## Earlier draft with an α_s fit (not in the paper)
 

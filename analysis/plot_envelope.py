@@ -259,6 +259,32 @@ def ratio_summary(boxes=('tune', 'tune_herwig', 'tune_sherpa', 'tune_xifull', 'f
     F.save(fig, 'env_cases_ratio')
 
 
+def coverage_summary(boxes=('tune', 'tune_herwig', 'tune_sherpa', 'tune_xifull', 'full')):
+    """How many of the variations lie inside the linear band around the prediction at the center, prior only, against
+    the 68 percent of a Gaussian one sigma, for slopes in the parameters (top) and in z (bottom). In gray the binomial
+    error of a fraction from the number of draws."""
+    style = dict(tune=(F.METHOD, '-', 1.5), tune_herwig=('#56B4E9', '-', 1.1), tune_sherpa=(F.THEORY, (0, (4, 1.5)), 1.1),
+                 tune_xifull=(F.GEN, '-', 1.5), full=(F.BASE_DARK, (0, (1, 1.2)), 1.2))
+    label = dict(BOX_SHORT, tune=r'tune-sized, $\xi\in[1/3,2/3]$')
+    fig, axs = plt.subplots(2, 2, figsize=(F.TW, 4.4), sharey=True, sharex='col', gridspec_kw=dict(wspace=0.07, hspace=0.14, left=0.08, right=0.99, bottom=0.095, top=0.87))
+    for r, (model, tag) in enumerate((('lin_flat', 'slopes in the parameters'), ('lin_z', r'slopes in $z$'))):
+        for c, key in enumerate(('thrust', 'nch')):
+            ax = axs[r, c]
+            for box in boxes:
+                d, lab, no, idx = load(box); ii = idx[key]; e, xl = edges_of(d, key); col, ls, lw = style[box]
+                Y = d['Y_joint'][:, :no]; yc = d['y_central'][:no]; sl = np.sqrt(np.maximum(np.diag(model_cov(d, model, 'before', no)), 0))
+                ax.stairs(100*(np.abs(Y[:, ii] - yc[ii]) <= sl[ii]).mean(0), e, baseline=None, color=col, ls=ls, lw=lw, label=label.get(box, box))
+            se = 100*np.sqrt(0.68*0.32/len(Y)); ax.axhspan(68 - se, 68 + se, color=F.BASE, alpha=0.28, lw=0, label='68 percent, sampling error of 400 draws')
+            ax.axhline(68, color=F.REF, lw=0.6); ax.set_xlim(e[0], e[-1]); ax.set_ylim(35, 95); F.trim(ax)
+            F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity'}[key] + ', ' + tag)
+            if r == 1:
+                ax.set_xlabel(xl, labelpad=1.5)
+        axs[r, 0].set_ylabel(r'inside the band [\%]')
+    h, l = axs[0, 0].get_legend_handles_labels()
+    fig.legend(h, l, loc='upper center', ncol=3, fontsize=7.2, bbox_to_anchor=(0.54, 1.0), handlelength=2.2)
+    F.save(fig, 'env_cases_coverage')
+
+
 def env_after_pair(boxes=('tune', 'full')):
     """The application figure: thrust with the calculation imposed in the window, variations against linear."""
     fig = plt.figure(figsize=(F.TW, 3.3))
@@ -320,4 +346,4 @@ if __name__ == '__main__':
         # the cases one at a time: where the linear covariance holds and what breaks it
         sh = dict(BOX_SHORT, tune=r'tune-sized, $\xi\in[1/3,2/3]$')
         env_pair(('tune', 'tune_herwig', 'tune_sherpa', 'tune_xifull'), save_as='env_cases', short=sh)
-        corr_pair(('tune', 'tune_xifull'), save_as='corr_cases', short=dict(tune=r'$\xi\in[1/3,2/3]$', tune_xifull=r'$\xi\in[0,1]$')); ratio_summary()
+        corr_pair(('tune', 'tune_xifull'), save_as='corr_cases', short=dict(tune=r'$\xi\in[1/3,2/3]$', tune_xifull=r'$\xi\in[0,1]$')); ratio_summary(); coverage_summary()

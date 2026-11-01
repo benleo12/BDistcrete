@@ -362,7 +362,7 @@ if os.path.exists(f3 + '.json') and os.path.exists(f3 + '.npz'):
     textmacro('TbOpalPull', sig(tb['opal_pull'])); textmacro('TbLThreeBands', sig(tb['l3_in_gen_bands']))
     tb['theory_window_mean_percent'] = [100*c3['theory_up']['tau_win']/c3['imposed']['tau_win'], 100*c3['theory_down']['tau_win']/c3['imposed']['tau_win']]
     textmacro('TbTheoryTauWinUpPercent', sig(tb['theory_window_mean_percent'][0])); textmacro('TbTheoryTauWinDownPercent', sig(tb['theory_window_mean_percent'][1]))
-    textmacro('CalcAlphas', f'{d3["calc"]["alpha_s"]:.4f}'); textmacro('CalcAlphaZero', f'{d3["calc"]["alpha_0"]:.2f}')
+    textmacro('CalcAlphas', f'{d3["calc"]["alpha_s"]:.4f}'); textmacro('CalcAlphaZero', f'{d3["calc"]["alpha_0"]:.3f}')
     textmacro('TbNodes', str(d3['nodes']))
     # the statistical error of the prediction from the finite reference sample (in every combined band)
     if 'stat_hist' in z3.files:

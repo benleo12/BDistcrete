@@ -26,6 +26,7 @@ BOXES = sys.argv[2:] or ['full', 'tune', 'tune_xifull', 'tune_sherpa', 'tune_her
 NBOOT = 300
 BOX_TITLE = dict(full='full box', tune='tune-sized box', tune_xifull=r'tune-sized box, $\xi\in[0,1]$',
                  tune_sherpa=r'tune-sized box, Sherpa ($\xi=0$)', tune_herwig=r'tune-sized box, Herwig ($\xi=1$)')
+BOX_SHORT = dict(full='full box', tune='tune-sized ranges', tune_xifull=r'tune-sized, $\xi\in[0,1]$', tune_sherpa='Sherpa alone', tune_herwig='Herwig alone')
 MODELS = [('lin_flat', 'linear', '-'), ('lin_z', r'slopes in $z$', (0, (1, 1.2)))]
 
 
@@ -161,10 +162,10 @@ def ratios(boxes, key='thrust'):
     F.save(fig, 'env_ratios')
 
 
-def env_pair(boxes=('tune', 'full'), keys=('thrust', 'nch')):
-    """The paper figure: env() for two boxes stacked, prior only."""
-    fig = plt.figure(figsize=(F.TW, 6.3))
-    outer = GridSpec(2, 1, figure=fig, hspace=0.3, left=0.09, right=0.99, top=0.93, bottom=0.07)
+def env_pair(boxes=('tune', 'full'), keys=('thrust', 'nch'), save_as='envelope', short=BOX_SHORT):
+    """The paper figure: env() for several boxes stacked, prior only."""
+    H = 3.15*len(boxes); fig = plt.figure(figsize=(F.TW, H))
+    outer = GridSpec(len(boxes), 1, figure=fig, hspace=0.3, left=0.09, right=0.99, top=1 - 0.441/H, bottom=0.441/H)
     rng = np.random.default_rng(1)
     for r, box in enumerate(boxes):
         d, lab, no, idx = load(box)
@@ -185,7 +186,7 @@ def env_pair(boxes=('tune', 'full'), keys=('thrust', 'nch')):
             dev = np.nanpercentile(np.abs(Y[:, ii]/yc[ii] - 1), 97.5, axis=0)
             lim = float(np.clip(1.15*np.nanmax(dev), 0.05, 0.8)); ax.set_ylim(1 - lim, 1 + lim)
             ax.set_ylabel('ratio to center' if c == 0 else ''); plt.setp(ax.get_xticklabels(), visible=False)
-            F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity'}[key] + ', ' + {'tune': 'tune-sized ranges', 'full': 'full box'}.get(box, box))
+            F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity'}[key] + ', ' + short.get(box, box))
             bx.axhline(1, color=F.REF, lw=0.6)
             rse = sb[ii]/se[ii]
             bx.stairs(1 + rse, e, baseline=1 - rse, fill=True, color=F.BASE, alpha=0.28, lw=0)
@@ -201,10 +202,10 @@ def env_pair(boxes=('tune', 'full'), keys=('thrust', 'nch')):
          plt.Line2D([], [], color=F.METHOD, lw=1.1)] + [plt.Line2D([], [], color=F.METHOD, lw=1.0, ls=ls) for _, _, ls in MODELS[1:]]
     lb = ['400 variations', r'variations, $\pm1\sigma$', r'linear, $\pm1\sigma$'] + [nm for _, nm, _ in MODELS[1:]]
     fig.legend(h, lb, loc='upper center', ncol=len(h), fontsize=7.2, bbox_to_anchor=(0.54, 1.0), handlelength=1.8)
-    F.save(fig, 'envelope')
+    F.save(fig, save_as)
 
 
-def corr_pair(boxes=('tune', 'full'), keys=('thrust', 'nch')):
+def corr_pair(boxes=('tune', 'full'), keys=('thrust', 'nch'), save_as='envelope_corr', short=BOX_SHORT):
     """The paper figure: correlation matrices for two boxes, variations below the diagonal, linear above."""
     corr = lambda A: A/np.sqrt(np.outer(np.diag(A), np.diag(A)))
     fig, axs = plt.subplots(len(boxes), len(keys), figsize=(F.TW, 5.6),
@@ -225,12 +226,37 @@ def corr_pair(boxes=('tune', 'full'), keys=('thrust', 'nch')):
             ax.set_xticks(ticks); ax.set_xticklabels([fmt(lows[t]) for t in ticks], fontsize=6.5)
             ax.set_yticks(ticks); ax.set_yticklabels([fmt(lows[t]) for t in ticks], fontsize=6.5)
             ax.set_xlabel(xl + ' (lower bin edge)', labelpad=1.5)
-            F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity'}[key] + ', ' + {'tune': 'tune-sized ranges', 'full': 'full box'}.get(box, box))
+            F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity'}[key] + ', ' + short.get(box, box))
             bb = dict(fc='white', ec='none', alpha=0.85, pad=1.0)
             ax.text(0.97, 0.04, 'variations', transform=ax.transAxes, ha='right', fontsize=7, color=F.INK, bbox=bb)
             ax.text(0.03, 0.96, 'linear', transform=ax.transAxes, ha='left', va='top', fontsize=7, color=F.INK, bbox=bb)
     cax = fig.add_axes([0.91, 0.25, 0.015, 0.5]); fig.colorbar(im, cax=cax).set_label('correlation', fontsize=7.5)
-    F.save(fig, 'envelope_corr')
+    F.save(fig, save_as)
+
+
+def ratio_summary(boxes=('tune', 'tune_herwig', 'tune_sherpa', 'tune_xifull', 'full')):
+    """The linear band over the spread of the variations, prior only, for every box on one panel per distribution,
+    with the bootstrap uncertainty of the tune-sized box in gray."""
+    style = dict(tune=(F.METHOD, '-', 1.5), tune_herwig=('#56B4E9', '-', 1.1), tune_sherpa=(F.THEORY, (0, (4, 1.5)), 1.1),
+                 tune_xifull=(F.GEN, '-', 1.5), full=(F.BASE_DARK, (0, (1, 1.2)), 1.2))
+    label = dict(BOX_SHORT, tune=r'tune-sized, $\xi\in[1/3,2/3]$')
+    fig, axs = plt.subplots(1, 2, figsize=(F.TW, 2.75), sharey=True, gridspec_kw=dict(wspace=0.07, left=0.08, right=0.99, bottom=0.15, top=0.8))
+    rng = np.random.default_rng(1)
+    d0, _, no0, idx0 = load('tune'); Y0 = d0['Y_joint'][:, :no0]; rel = boot_sd(Y0, rng)/Y0.std(0, ddof=1)
+    for ax, key in zip(axs, ('thrust', 'nch')):
+        e0, _ = edges_of(d0, key); r0 = rel[idx0[key]]
+        ax.stairs(1 + r0, e0, baseline=1 - r0, fill=True, color=F.BASE, alpha=0.28, lw=0, label='bootstrap uncertainty')
+        ax.axhline(1, color=F.REF, lw=0.6)
+        for box in boxes:
+            d, lab, no, idx = load(box); ii = idx[key]; e, xl = edges_of(d, key); col, ls, lw = style[box]
+            se = d['Y_joint'][:, :no].std(0, ddof=1); Cm = model_cov(d, 'lin_flat', 'before', no)
+            ax.stairs(np.sqrt(np.maximum(np.diag(Cm), 0))[ii]/se[ii], e, baseline=None, color=col, ls=ls, lw=lw, label=label.get(box, box))
+        ax.set_xlim(e[0], e[-1]); ax.set_ylim(0.25, 1.25); ax.set_xlabel(xl, labelpad=1.5); F.trim(ax)
+        F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity'}[key])
+    axs[0].set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm variations}$')
+    h, l = axs[0].get_legend_handles_labels()
+    fig.legend(h, l, loc='upper center', ncol=3, fontsize=7.2, bbox_to_anchor=(0.54, 1.0), handlelength=2.2)
+    F.save(fig, 'env_cases_ratio')
 
 
 def env_after_pair(boxes=('tune', 'full')):
@@ -290,3 +316,8 @@ if __name__ == '__main__':
         ratios(have)
     if 'tune' in have and 'full' in have:
         env_pair(); corr_pair(); env_after_pair()
+    if set(BOXES) >= {'tune', 'tune_herwig', 'tune_sherpa', 'tune_xifull', 'full'} and set(have) == set(BOXES):
+        # the cases one at a time: where the linear covariance holds and what breaks it
+        sh = dict(BOX_SHORT, tune=r'tune-sized, $\xi\in[1/3,2/3]$')
+        env_pair(('tune', 'tune_herwig', 'tune_sherpa', 'tune_xifull'), save_as='env_cases', short=sh)
+        corr_pair(('tune', 'tune_xifull'), save_as='corr_cases', short=dict(tune=r'$\xi\in[1/3,2/3]$', tune_xifull=r'$\xi\in[0,1]$')); ratio_summary()

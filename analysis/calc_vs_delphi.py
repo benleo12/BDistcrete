@@ -18,6 +18,7 @@ exec(compile(head.replace('setup(usetex=True)', ''), 'fig_thrust_vs_aleph.py', '
 sys.path.insert(0, 'lepcov')
 from lepdata_cov import lepdata_split
 CP = json.load(open(os.environ.get('CALC_POINT', 'output/calc_point.json'))); ASC, A0C = float(CP['alpha_s']), float(CP['alpha_0'])
+N.SUB_ORDER = int(CP.get('np_sub_order', 2))       # the subtraction order of the fit that sets alpha_0
 la, ha, ya, sta, sya = lepdata_split('aleph'); ld, hd, yd, std, syd = lepdata_split('delphi')
 Z = np.load(os.environ.get('NPZ', f'output/three_bands_{tag}.npz'))
 G = np.load('output/thrust_targets_nlo_point.npz', allow_pickle=True)

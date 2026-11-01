@@ -513,13 +513,14 @@ def aleph():
     J = json.load(open(os.environ.get('CALC_BINS', 'output/calc_bins_nlo_point.json')))
     WLO, WHI = J['window']
     PAIRS = [("(2.0, 1.0, 'logR', 1.0)", "(0.5, 1.0, 'logR', 1.0)"), ("(1.0, 2.0, 'logR', 1.0)", "(1.0, 0.5, 'logR', 1.0)")]
-    SCH = "(1.0, 1.0, 'modR', 1.0)"; NPV = ['milan_up', 'milan_dn', 'sub3']
+    SCH = "(1.0, 1.0, 'modR', 1.0)"; NPV = ['milan_up', 'milan_dn', 'sub2', 'sub3']   # those present are used
 
     def band(c):
         cen = np.array(c['central']); dv = {k: np.array(v) - cen for k, v in c.items() if k != 'central'}
         def side(f):
             t = sum(np.maximum(f(dv[a]), f(dv[b]))**2 for a, b in PAIRS) + f(dv[SCH])**2
-            return np.sqrt(t + sum(f(dv[k])**2 for k in NPV)/3)
+            npv = [k for k in NPV if k in dv]
+            return np.sqrt(t + sum(f(dv[k])**2 for k in npv)/len(npv))
         return cen, side(lambda v: np.maximum(v, 0)), side(lambda v: np.maximum(-v, 0))
 
     A, Dl = J['aleph'], J['delphi']

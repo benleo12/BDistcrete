@@ -19,6 +19,7 @@ from lepdata_cov import lepdata_split
 
 WLO, WHI = 0.05, 1.0/3.0
 CP = json.load(open(os.environ.get('CALC_POINT', 'output/calc_point.json'))); asc, a0c = float(CP['alpha_s']), float(CP['alpha_0'])
+N.SUB_ORDER = int(CP.get('np_sub_order', 2)); ALT = 2 if N.SUB_ORDER == 3 else 3
 G = np.load('output/thrust_targets_nlo_point.npz', allow_pickle=True)
 assert abs(float(G['alphas'][0]) - asc) < 1e-12 and abs(float(G['alpha0'][0]) - a0c) < 1e-12
 _cache = {}
@@ -62,7 +63,7 @@ VARS = [((1.0, 1.0, 'logR'), {}, 'central'),
         ((1.0, 2.0, 'logR'), {}, "(1.0, 2.0, 'logR', 1.0)"), ((1.0, 0.5, 'logR'), {}, "(1.0, 0.5, 'logR', 1.0)"),
         ((1.0, 1.0, 'modR'), {}, "(1.0, 1.0, 'modR', 1.0)"),
         ((1.0, 1.0, 'logR'), dict(milan=1.2*N.MILAN), 'milan_up'), ((1.0, 1.0, 'logR'), dict(milan=0.8*N.MILAN), 'milan_dn'),
-        ((1.0, 1.0, 'logR'), dict(sub=3), 'sub3')]
+        ((1.0, 1.0, 'logR'), dict(sub=ALT), f'sub{ALT}')]
 out = dict(alpha_s=asc, alpha_0=a0c, window=[WLO, WHI], moments_check='passed')
 for ex in ('aleph', 'delphi'):
     lo, hi, y, st, sy = lepdata_split(ex)

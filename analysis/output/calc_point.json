@@ -3,5 +3,6 @@
  "alpha_0": 0.524,
  "mu_I": 2.0,
  "scheme": "logR",
- "source": "T. Gehrmann, G. Luisoni and P. F. Monni, Eur. Phys. J. C 73 (2013) 2265, arXiv:1210.6945, Eq. (42): fit of NNLL+NNLO thrust with the dispersive model, log-R matching, mu_I = 2 GeV"
+ "source": "T. Gehrmann, G. Luisoni and P. F. Monni, Eur. Phys. J. C 73 (2013) 2265, arXiv:1210.6945, Eq. (42): fit of NNLL+NNLO thrust with the dispersive model and its leading renormalon subtracted to O(alpha_s^3) (their Eq. (40), np_sub_order 3), log-R matching, mu_I = 2 GeV",
+ "np_sub_order": 3
 }

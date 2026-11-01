@@ -29,7 +29,8 @@ SFX = os.environ.get('CHAIN_SUFFIX', '_nlo'); OUT = os.environ.get('TARGETS_OUT'
 TF = np.linspace(WLO, WHI, 200001); TMID = 0.5*(TF[1:] + TF[:-1]); FW = np.array([FUN[k](TMID) for k in keys])
 CP = json.load(open(os.environ.get('CALC_POINT', 'output/calc_point.json'))); asc, a0c = float(CP['alpha_s']), float(CP['alpha_0'])
 assert asc in TC.ASGRID or min(abs(asc - a) for a in TC.ASGRID) < 1e-9 or True
-SCALE_VARS = TC.VARS[1:]; NP_VARS = ['milan_up', 'milan_dn', 'sub3']
+N.SUB_ORDER = int(CP.get('np_sub_order', 2)); ALT = 2 if N.SUB_ORDER == 3 else 3   # the fit's subtraction order, and the other one
+SCALE_VARS = TC.VARS[1:]; NP_VARS = ['milan_up', 'milan_dn', f'sub{ALT}']
 assert all(v[3] == 1.0 for v in SCALE_VARS), 'the NLO chain has no third-order variation'
 PAIRS = [((2.0, 1.0, 'logR', 1.0), (0.5, 1.0, 'logR', 1.0)), ((1.0, 2.0, 'logR', 1.0), (1.0, 0.5, 'logR', 1.0))]
 SCHEME = (1.0, 1.0, 'modR', 1.0)
@@ -64,7 +65,7 @@ central, pwin = moments_at(1.0, 1.0, 'logR', asc, a0c)
 scale = np.array([moments_at(*v[:3], asc, a0c)[0] for v in SCALE_VARS])
 pwin_scale = np.array([moments_at(*v[:3], asc, a0c)[1] for v in SCALE_VARS])
 npv = np.array([moments_at(1.0, 1.0, 'logR', asc, a0c, milan=1.2*N.MILAN)[0], moments_at(1.0, 1.0, 'logR', asc, a0c, milan=0.8*N.MILAN)[0],
-                moments_at(1.0, 1.0, 'logR', asc, a0c, sub=3)[0]])
+                moments_at(1.0, 1.0, 'logR', asc, a0c, sub=ALT)[0]])
 idx = {v: i for i, v in enumerate(SCALE_VARS)}
 Sig = np.zeros((len(keys), len(keys)))
 for a, b in PAIRS:

@@ -26,6 +26,8 @@ BOXES = sys.argv[2:] or ['full', 'tune', 'tune_xifull', 'tune_sherpa', 'tune_her
 NBOOT = 300
 BOX_TITLE = dict(full='full box', tune='tune-sized box', tune_xifull=r'tune-sized box, $\xi\in[0,1]$',
                  tune_sherpa=r'tune-sized box, Sherpa ($\xi=0$)', tune_herwig=r'tune-sized box, Herwig ($\xi=1$)')
+# bins under 100 effective reference events at the centre (68, 7 and 223 raw events): masked in the case plots
+THIN = {'thr_0.400_0.500', 'nch_0_2', 'nch_2_4'}
 BOX_SHORT = dict(full='full box', tune='tune-sized ranges', tune_xifull=r'tune-sized, $\xi\in[0,1]$', tune_sherpa='Sherpa alone', tune_herwig='Herwig alone')
 MODELS = [('lin_flat', 'linear', '-'), ('lin_z', r'slopes in $z$', (0, (1, 1.2)))]
 
@@ -162,7 +164,7 @@ def ratios(boxes, key='thrust'):
     F.save(fig, 'env_ratios')
 
 
-def env_pair(boxes=('tune', 'full'), keys=('thrust', 'nch'), save_as='envelope', short=BOX_SHORT):
+def env_pair(boxes=('tune', 'full'), keys=('thrust', 'nch'), save_as='envelope', short=BOX_SHORT, mask_thin=False):
     """The paper figure: env() for several boxes stacked, prior only."""
     H = 3.15*len(boxes); fig = plt.figure(figsize=(F.TW, H))
     outer = GridSpec(len(boxes), 1, figure=fig, hspace=0.3, left=0.09, right=0.99, top=1 - 0.441/H, bottom=0.441/H)
@@ -193,7 +195,10 @@ def env_pair(boxes=('tune', 'full'), keys=('thrust', 'nch'), save_as='envelope',
             for name, nm, ls in MODELS:
                 Cm = model_cov(d, name, 'before', no)
                 if Cm is not None:
-                    bx.stairs(np.sqrt(np.maximum(np.diag(Cm), 0))[ii]/se[ii], e, baseline=None, color=F.METHOD, lw=1.0, ls=ls)
+                    v = np.sqrt(np.maximum(np.diag(Cm), 0))[ii]/se[ii]
+                    if mask_thin:
+                        v[[lab[i] in THIN for i in ii]] = np.nan
+                    bx.stairs(v, e, baseline=None, color=F.METHOD, lw=1.0, ls=ls)
             bx.set_ylim(0.3, 1.7); bx.set_xlim(e[0], e[-1]); bx.set_xlabel(xl, labelpad=1.5)
             bx.set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm variations}$' if c == 0 else '')
             for a in (ax, bx):
@@ -250,7 +255,8 @@ def ratio_summary(boxes=('tune', 'tune_herwig', 'tune_sherpa', 'tune_xifull', 'f
         for box in boxes:
             d, lab, no, idx = load(box); ii = idx[key]; e, xl = edges_of(d, key); col, ls, lw = style[box]
             se = d['Y_joint'][:, :no].std(0, ddof=1); Cm = model_cov(d, 'lin_flat', 'before', no)
-            ax.stairs(np.sqrt(np.maximum(np.diag(Cm), 0))[ii]/se[ii], e, baseline=None, color=col, ls=ls, lw=lw, label=label.get(box, box))
+            v = np.sqrt(np.maximum(np.diag(Cm), 0))[ii]/se[ii]; v[[lab[i] in THIN for i in ii]] = np.nan
+            ax.stairs(v, e, baseline=None, color=col, ls=ls, lw=lw, label=label.get(box, box))
         ax.set_xlim(e[0], e[-1]); ax.set_ylim(0.25, 1.25); ax.set_xlabel(xl, labelpad=1.5); F.trim(ax)
         F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity'}[key])
     axs[0].set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm variations}$')
@@ -273,7 +279,8 @@ def coverage_summary(boxes=('tune', 'tune_herwig', 'tune_sherpa', 'tune_xifull',
             for box in boxes:
                 d, lab, no, idx = load(box); ii = idx[key]; e, xl = edges_of(d, key); col, ls, lw = style[box]
                 Y = d['Y_joint'][:, :no]; yc = d['y_central'][:no]; sl = np.sqrt(np.maximum(np.diag(model_cov(d, model, 'before', no)), 0))
-                ax.stairs(100*(np.abs(Y[:, ii] - yc[ii]) <= sl[ii]).mean(0), e, baseline=None, color=col, ls=ls, lw=lw, label=label.get(box, box))
+                v = 100*(np.abs(Y[:, ii] - yc[ii]) <= sl[ii]).mean(0); v[[lab[i] in THIN for i in ii]] = np.nan
+                ax.stairs(v, e, baseline=None, color=col, ls=ls, lw=lw, label=label.get(box, box))
             se = 100*np.sqrt(0.68*0.32/len(Y)); ax.axhspan(68 - se, 68 + se, color=F.BASE, alpha=0.28, lw=0, label='68 percent, sampling error of 400 draws')
             ax.axhline(68, color=F.REF, lw=0.6); ax.set_xlim(e[0], e[-1]); ax.set_ylim(35, 95); F.trim(ax)
             F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity'}[key] + ', ' + tag)
@@ -345,5 +352,5 @@ if __name__ == '__main__':
     if set(BOXES) >= {'tune', 'tune_herwig', 'tune_sherpa', 'tune_xifull', 'full'} and set(have) == set(BOXES):
         # the cases one at a time: where the linear covariance holds and what breaks it
         sh = dict(BOX_SHORT, tune=r'tune-sized, $\xi\in[1/3,2/3]$')
-        env_pair(('tune', 'tune_herwig', 'tune_sherpa', 'tune_xifull'), save_as='env_cases', short=sh)
+        env_pair(('tune', 'tune_herwig', 'tune_sherpa', 'tune_xifull'), save_as='env_cases', short=sh, mask_thin=True)
         corr_pair(('tune', 'tune_xifull'), save_as='corr_cases', short=dict(tune=r'$\xi\in[1/3,2/3]$', tune_xifull=r'$\xi\in[0,1]$')); ratio_summary(); coverage_summary()

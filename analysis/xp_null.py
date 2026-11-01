@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """The closure width of the energy-fraction spectrum between two halves of one fresh run, the
-statistical expectation of that width in App. B. Its uncertainty per bin counts the events that
+statistical expectation of that width in Sec. 3.4. Its uncertainty per bin counts the events that
 contribute to the bin (xp_closure.width_xp), which slightly overstates the fluctuation of a
-normalized spectrum, so the expectation lies below one. As for the other observables (App. B,
-Single observables), the comparison half of each held-out run of Stage C is split into two random
+normalized spectrum, so the expectation lies below one. As for the other observables (Sec. 3.2),
+the comparison half of each held-out run of Stage C is split into two random
 halves, ten times per run. Writes output/xp_null.json.
 
     python xp_null.py ../gen/data_abc

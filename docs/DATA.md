@@ -17,20 +17,23 @@ Zenodo.
 
 | file | bytes | what | read by |
 |---|---|---|---|
-| `reference_MIX17.npz` | 865,353,418 | the 1,149,840 reference events of the mixture, released as `MIX17`, as the event vectors a(Φ) of `MIXGEOV3S9_cond.npz` and the per-event observables of `MIXGEOV3S9_ref_v2_slim.npz`, with the run and the generator of every event | `analysis/release/examples/reproduce_paper.py`, `generator_band.py` and `learning_band.py` with `--reference-file`, `gentune.maxent` (`analysis/release/IMPOSE.md`) |
-| `targets_thrust_nlo.npz` | 30,034 | the NNLL+NLO thrust calculation imposed in the paper, its 14 moments in the window, their covariance and its variations, copied from `output/thrust_targets_nlo_point.npz` | `gentune.maxent.load_targets` |
+| `reference_MIX17.npz` | 865,353,418 | the 1,149,840 reference events of the mixture, released as `MIX17`, as the event vectors a(Φ) of `MIXGEOV3S9_cond.npz` and the per-event observables of `MIXGEOV3S9_ref_v2_slim.npz`, with the run and the generator of every event | `analysis/release/examples/reproduce_paper.py` with `--reference`, `generator_band.py` and `learning_band.py` with `--reference-file`, `gentune.maxent` (`analysis/release/IMPOSE.md`) |
+| `targets_thrust_nlo.npz` | 30,098 | the NNLL+NLO thrust calculation imposed in the paper, its 14 moments in the window, their covariance and its variations, copied from `output/thrust_targets_nlo_point.npz` | `gentune.maxent.load_targets` |
 
-With them, numpy alone reproduces the central predictions of Sec. 4, the generator band and the
-learning band, without the exports below. To download and check them into `analysis/release`,
-where the examples look for them:
+With them, numpy alone reproduces the central predictions of Sec. 5, the generator band and the
+learning band, without the exports below. To download and check them in `analysis/release`, where
+the commands below run:
 
 ```bash
 cd analysis/release
 for f in reference_MIX17.npz targets_thrust_nlo.npz REFERENCE.md SHA256SUMS; do
-  curl -LO https://github.com/benleo12/BDistcrete/releases/download/data-r8/$f
+  curl -fLO https://github.com/benleo12/BDistcrete/releases/download/data-r8/$f
 done
-shasum -a 256 -c SHA256SUMS          # sha256sum -c SHA256SUMS on Linux; every line must say OK
+shasum -a 256 -c SHA256SUMS
+python examples/reproduce_paper.py --reference reference_MIX17.npz --targets targets_thrust_nlo.npz
 ```
+
+Every line must say OK. On Linux, use `sha256sum -c SHA256SUMS`.
 
 ### On request: the other exports and samples
 
@@ -49,12 +52,12 @@ which `rebuild_ref_lowmem.py` makes from it.
 
 | files | what | read by |
 |---|---|---|
-| `output/models/MIXGEOV3S9_*` | the seventeen-parameter mixture of Sec. 4, first set of members, released as `MIX17` | `three_bands.py`, `theory_variations.py`, `band_checks.py`, `wifi_fit.py`, `wifi_diag.py`, `wifi_coverage.py`, `fig_closure_mix.py`, `bench_cost_final.py`, `package_release.py` |
+| `output/models/MIXGEOV3S9_*` | the seventeen-parameter mixture of Secs. 4 and 5, first ensemble, released as `MIX17` | `three_bands.py`, `theory_variations.py`, `band_checks.py`, `envelope_test.py`, `wifi_fit.py`, `wifi_diag.py`, `wifi_coverage.py`, `fig_closure_mix.py`, `bench_cost_final.py`, `package_release.py` |
 | `output/models/MIXGEOV3S9_ref.npz` | its reference sample with the particles of every event | `bench_cost_final.py`, `package_release.py` |
-| `output/models/MIXGEOV3S9s1_*`, `output/models/MIXGEOV3S9s2_*` | the second and third sets of members of the mixture | `three_bands.py` (the spread of Sec. 4.3), `wifi_*.py` (Fig. 7, Table 6), the strict test of Table 1 |
-| `output/wifi_MIXGEOV3S9_basis.npz`, `..._MIXGEOV3S9s1_basis.npz`, `..._MIXGEOV3S9s2_basis.npz` | the basis functions of the learning band on the fit set and on the held-out runs, written by `wifi_embed.py` | `wifi_fit.py`, `wifi_diag.py`, `wifi_gensplit.py` |
-| `output/models/E_P2v3fullfac0_*`, `output/models/F_P2v3fullfac0_*` | Stage D (Sherpa) and Stage E (Herwig), first set of members, released as `E` and `F` | `package_release.py`, `make_stage_table.py`, `precision_gap.py`, `closure_vs_distance.py` |
-| `output/models/C_P2augfullfac0_*` | Stage C, first set of members | `eval_valid.py` (Fig. 5), `single_members.py` |
+| `output/models/MIXGEOV3S9s1_*`, `output/models/MIXGEOV3S9s2_*` | the second and third ensembles of the mixture | `three_bands.py` (the spread of Sec. 5.5), `wifi_*.py` (Fig. 5, Table 5), the strict test of Table 1 |
+| `output/wifi_MIXGEOV3S9_basis.npz`, `..._MIXGEOV3S9s1_basis.npz`, `..._MIXGEOV3S9s2_basis.npz` | the basis functions of the learning band on the events set aside for the fit and on the held-out runs, written by `wifi_embed.py` | `wifi_fit.py`, `wifi_diag.py`, `wifi_gensplit.py` |
+| `output/models/E_P2v3fullfac0_*`, `output/models/F_P2v3fullfac0_*` | Stage D (Sherpa) and Stage E (Herwig), first ensemble, released as `E` and `F` | `package_release.py`, `make_stage_table.py`, `precision_gap.py`, `closure_vs_distance.py` |
+| `output/models/C_P2augfullfac0_*` | Stage C, first ensemble | `eval_valid.py` (Fig. 4), `single_members.py` |
 
 ### Event samples
 
@@ -67,15 +70,15 @@ Each run is two files, `particles_full_<run>.npz` (the particles the networks re
 | `data_stagePURE17_v3/` | the 720 training runs of Stages D and E (352 Sherpa, 368 Herwig) and their 48 held-out points, with `meta.json` | the training of Stages D and E and of the mixture, the standard test, `fig_closure_mix.py`, `trunc_frac.py` |
 | `data_stagePURE17_v3_h400/` | the same with every held-out run at 4 × 10^5 events, the run and its four extensions | the strict test, `wifi_coverage.py`, `make_stage_table.py`, `closure_vs_distance.py` |
 | `gen/data_abc/` | Stages A to C: the training runs of the densified designs `gen/designs/stage{A,B,C}_design_aug.csv` and their 16 held-out runs | the training of Stages A to C, `eval_valid.py`, `xp_null.py`, `single_members.py`, `trunc_frac.py` |
-| `gen/data_abc_blind/` | the twelve blind runs 6950 to 6961 of Stage C (Sec. 3.5) | `eval_valid.py` (Fig. 5) |
+| `gen/data_abc_blind/` | the twelve further fresh runs 6950 to 6961 of Stage C (Sec. 3.4) | `eval_valid.py` (Fig. 4) |
 | `gen/data_abc_ext/k1/` to `k4/` | four extensions of each of the 16 held-out runs of Stages A to C | `make_abc_strict.py`, which builds `data_abc_h400/` for the strict test of Stages A to C |
 
 ### Other trainings and samples
 
-The second and third sets of members of Stages A to E, every concatenation network
-(`<S>_P2<tag>cat<k>_concat.pt`, `MIXP2v3fullcat<k>_concat.pt`), the trainings of the term-count
-scan, of the wide coupling scan (with its runs in `gen/data_widebox/`) and of the learning curve of
-Sec. 3.1, and their data sets, are kept as well and are available on request. Their result files
+The second and third ensembles of Stages A to E, every DCTR network
+(`<S>_P2<tag>cat<k>_concat.pt`, `MIXP2v3fullcat<k>_concat.pt`), the trainings of the scan of the
+number of terms, of the wide coupling scan (with its runs in `gen/data_widebox/`) and of the
+learning curve of Sec. 3.1, and their data sets, are kept as well and are available on request. Their result files
 are in `analysis/output/`.
 
 ### Regenerating the samples
@@ -95,7 +98,7 @@ The samples and exports of the earlier draft, which fitted α_s(M_Z) and α_0 to
 the assets of the GitHub release `data-v1`. They hold its Stages A to C, its seven-parameter
 mixture, its networks `E`, `Fauglong`, `MIX17aug` and `C_1M`, and the EERAD3 logs. The paper reads
 none of these archives. Some of its runs have the run number and parameter point of an archived
-run, for example the Stage D and E training runs of the archives `C7` and `C8` and the blind runs
+run, for example the Stage D and E training runs of the archives `C7` and `C8` and the fresh runs
 6950 to 6961 of `B3_held_C_valid`. `tools/get_data.sh --list` lists the archives, and `tools/get_data.sh <archive or
 group>` downloads one, checks it against the `SHA256SUMS` of the release and unpacks it into
 `analysis/`. That `SHA256SUMS` lists only `A0_theory_logs.tar`, and the archives `C7b` to `C9b`

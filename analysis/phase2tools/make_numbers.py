@@ -231,7 +231,7 @@ for tags, pre in ((COV_TAGS, 'Cov'), (['MIXGEOV3M8S9'], 'CovEight')):     # the 
     for key, tname, dg in (('z_without', 'ZWithout', 1), ('z_with', 'ZWith', 2), ('rel_error_percent', 'Err', 1)):
         macro(f'{pre}{tname}Min', cov[key][0], dg); macro(f'{pre}{tname}Max', cov[key][1], dg)
 
-# ---- the three uncertainties of Sec. 4 (three_bands.py on the final mixture) ----------------------
+# ---- the three uncertainties of Sec. 5 (three_bands.py on the final mixture) ----------------------
 # Bands to two significant figures, central values to the decimal place of the combined band's second
 # significant figure. "Inside the window" means the DELPHI bins whose lower edge lies in [0.05, 1/3).
 THREE_TAG = os.environ.get('THREE_TAG', 'MIXGEOV3S9')
@@ -260,7 +260,7 @@ f3 = f'{D}/three_bands_{THREE_TAG}'
 if os.path.exists(f3 + '.json') and os.path.exists(f3 + '.npz'):
     d3 = json.load(open(f3 + '.json')); c3 = d3['central']; g3 = d3['generator_band']; z3 = np.load(f3 + '.npz')
     tb = dict(tag=THREE_TAG, table={})
-    # The theory band is signed (three_bands.py, paper r8): the band above the prediction collects the upward
+    # The theory band is signed (three_bands.py): the band above the prediction collects the upward
     # displacements of the variations and the band below the downward ones, with the three variations of
     # the dispersive model included. The combined band is signed through it.
     def updown(u, d):
@@ -518,7 +518,7 @@ if os.path.exists(fsm):
     sm = json.load(open(fsm)); numbers['single_members'] = sm
     ws = [v['width'] for k, v in sm.items() if k.startswith('member_')]
     macro('SingleMin', min(ws), 2); macro('SingleMax', max(ws), 2); macro('SingleMean', sm['mean_of_members']['width'], 2)
-# ---- the three trainings at the central point of Sec. 4: the spread of <1-T> with the calculation imposed
+# ---- the three trainings at the central point of Sec. 5: the spread of <1-T> with the calculation imposed
 th3 = [json.load(open(f))['central']['imposed']['thrust'] for f in
        (f'{D}/three_bands_{t}.json' for t in WIFI_TAGS) if os.path.exists(f)]
 if len(th3) == 3:
@@ -528,7 +528,7 @@ if len(th3) == 3:
     textmacro('SeedThrustSdEFour', f'{1e4*float(np.std(th3, ddof=1)):.1f}')
     if 'three_bands' in numbers:
         textmacro('TbThrustLearnEFour', f'{1e4*numbers["three_bands"]["table"]["thrust"]["learning"]:.1f}')
-# ---- the wide coupling scan (Sec. 3.5): three references of equal size, mean width per held point -
+# ---- the wide coupling scan (Sec. 3.4): three references of equal size, mean width per held point -
 def _pt(f):
     """{coupling: mean width over the observables} of one stage-W result"""
     return {float(k.strip('()').split(',')[0]): float(np.mean(list(v.values()))) for k, v in load(f)['per_point'].items()}
@@ -548,7 +548,7 @@ if os.path.exists(fs) and os.path.exists(fp) and all(os.path.exists(f) for f in 
     macro('WidePoolMin', min(pool.values()), 2); macro('WidePoolMax', max(pool.values()), 2)
     macro('WideLocalMin', min(local.values()), 2); macro('WideLocalMax', max(local.values()), 2)
 
-# ---- the concatenation network truncated to its leading singular components (Sec. 3.7) ------------
+# ---- the DCTR network truncated to its leading singular components (Sec. 3.6) ---------------------
 # r2_ladder.py with LADDER_TRUNCATE=1 on the first concatenation training of each model: the smallest
 # number of components whose closure width comes within 0.02 of that of the full network
 svd = {}
@@ -598,7 +598,7 @@ if all((48, s) in toys for s in range(3)):
     rest = [v for k, v in scan.items() if k >= 2]
     macro('ToyWidthScanMin', min(rest), 2); macro('ToyWidthScanMax', max(rest), 2)
 
-# ---- the cost per parameter point (Sec. 3.7, Fig. cost): bench_cost_final.py on the final mixture -----
+# ---- the cost per parameter point (Sec. 3.6, Fig. cost): bench_cost_final.py on the final mixture -----
 # (a) the weights of the reference events alone, and (n) the weights and one backward pass, the derivatives
 # of one prediction (Fig. cost), on one CPU process with four threads and on one H200. The rest of a step
 # (the maximum-entropy weight and its derivatives, with a chi^2 that adds a few percent, the same for every

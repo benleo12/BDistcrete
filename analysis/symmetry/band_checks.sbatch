@@ -5,7 +5,7 @@
 #SBATCH -t 2:00:00
 #SBATCH -J bandchk
 #SBATCH -o logs/band_checks_%j.out
-# Checks behind the bands of Sec. 4 (band_checks.py): statistical errors, the part of the generator band
+# Checks behind the bands of Sec. 5 (band_checks.py): statistical errors, the part of the generator band
 # from the mixing fraction, the largest weight. Same model, point and hypercube as three_bands.sbatch.
 #   TAG=MIXGEOV3S9 sbatch --export=ALL band_checks.sbatch
 set -uo pipefail

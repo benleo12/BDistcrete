@@ -13,7 +13,7 @@ the samples can be rebuilt, and so the parameter that a run id corresponds to is
 | `stageF_design.csv` | the original Herwig design, 64 training and 8 held |
 | `stageF_augment_design.csv` | 48 further Herwig points, added to fix the design's conditioning |
 | `stageF_design_aug.csv` | the two Herwig files combined, 112 training points |
-| `stageE_design_v3all.csv` | the Sherpa design of the released `E`: the points of `stageE_design.csv` plus 256 training and 16 held points from `gen/make_design_v3.py`, 352 training and 24 held in all |
+| `stageE_design_v3all.csv` | the Sherpa design of the released `E`: the points of `stageE_design.csv` plus 256 training and 16 held points from `gen/make_design_v3.py`, at the top of the checkout, 352 training and 24 held in all |
 | `stageF_design_v3all.csv` | the Herwig design of the released `F`: the points of `stageF_design_aug.csv` plus 256 training and 16 held points, 368 training and 24 held in all |
 | `extract_particles_full_flavor.py` | HepMC to the per-particle arrays the models read |
 | `compute_shapes_only.py` | HepMC to the event-shape table used for closure |
@@ -40,7 +40,8 @@ design rather than being a design of its own.
 Both generators come from CVMFS and are built for EL9. Run them in an EL9 container. The
 original Perlmutter scripts instead pointed the loader at the host's `libreadline.so.7` under
 the name `libreadline.so.8`, which worked because Herwig only uses readline for interactive
-line editing, but it is not a recipe to hand anyone.
+line editing, but it is not a recipe to hand anyone. Run the commands of this file from
+`analysis/release/generators`.
 
 ```bash
 podman-hpc pull docker.io/library/almalinux:9
@@ -81,7 +82,8 @@ run id, which is why there is one shift and not two.
 ## Sample sizes and conventions
 
 Training runs are 80,000 events. The held runs of `E`, `F` and `MIX17` hold 400,000, the run
-itself and four more of 80,000 at the same point with independent seeds (`gen/gen_one.sh`), and
+itself and four more of 80,000 at the same point with independent seeds (`gen/gen_one.sh`, at the
+top of the checkout), and
 the `n_held` column of their closure tables reads 400,000 throughout. The mixture is trained on
 the runs of both generators, so its 48 held points are the 24 of each.
 Both generators keep every hadron with `c*tau` greater than 10 mm undecayed. Herwig decays
@@ -102,7 +104,7 @@ Verified on 2026-09-21, inside the container described above:
   GSL 2.7 and took it from the host's `/usr/lib64` while LCG's GSL 2.8 was also loaded, so two
   versions of GSL were in one process, whereas `c7a43` loads GSL 2.8 alone.
 - **The two builds were checked against each other rather than assumed equivalent**: 2000 events
-  on the Stage F card at the box centre with seed 8000 give byte-identical HepMC, the same md5
+  on the card of `gen_stageF.sh` at the box centre with seed 8000 give byte-identical HepMC, the same md5
   and the same 39,670,649 bytes. So the pinned recipe reproduces the released sample, and the
   duplicated GSL had no effect on the output.
 
@@ -125,7 +127,7 @@ remains valid as a test of the reweighting.
 
 `gentune/features.py` keeps the old finder on purpose. It only sets the frame the per-particle
 features are expressed in, and `extract_particles_full_flavor.py` built the training samples of
-every released network in that frame, the current ones included. A user's events must be
+every released network in that frame, those of the paper included. A user's events must be
 embedded in the same frame. The two are separated so that the observable is right and the
 embedding is consistent.
 

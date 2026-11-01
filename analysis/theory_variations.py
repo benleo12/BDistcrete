@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""The signed displacement of every theory variation of Sec. 4, bin by bin and for the means, at the
+"""The signed displacement of every theory variation of Sec. 5, bin by bin and for the means, at the
 central point of three_bands.py (the default tunes, xi = 1/2), with the calculation imposed: the four
 scale variations, the change of scheme and the three variations of the dispersive model. three_bands.py
-combines them into a symmetric band and keeps only the combination. Also the generator-only and
+combines them into the signed theory band and keeps only the combination. Also the generator-only and
 imposed predictions at xi = 0 and xi = 1 (each generator alone at its default tune). Same Model, grid
 and test data as three_bands.py. The predictions are also given in the bins below the fitted ones,
 with the same normalization, under keys ending in _low. Writes output/theory_variations_<tag>.json.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Single networks against the mean of members, on a trained Stage A to C model (App. B).
+"""Single networks against the ensemble average, on a trained Stage A to C model (App. A.2).
 
 Each member of the ensemble is used alone, calibrated on its own on the selection half (the
 temperature grid of r2_ladder.py), and scored on the comparison half, with the splits, the bins,

@@ -3,11 +3,11 @@
 grid, so every reweighting script reads it as a grid with a single node.
 
 The point is the pair (alpha_s, alpha_0) of output/calc_point.json (CALC_POINT overrides it): the published
-fit of Gehrmann, Luisoni and Monni in the log-R scheme. (Draft r8 used the chain's own fit to the ALEPH window,
+fit of Gehrmann, Luisoni and Monni in the log-R scheme. (An earlier draft used the chain's own fit to the ALEPH window,
 output/chain_summary_nlo.json from THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python thrust_chain.py.) At that point: the fourteen windowed
 moments of Eq. (thrustmoments), the window fraction, every scale and scheme variation of the
 calculation at the SAME point (not refitted), the three variations of the dispersive model (Milan
-factor +-20 percent, third-order subtraction term), and the covariance Sigma_c of Eq. (sigmac): the
+factor +-20 percent, dropping the third-order subtraction term), and the covariance Sigma_c of Eq. (sigmac): the
 two log-R scale pairs at half weight plus the modified-R scheme at central scales once. The paper's
 diagonal floor is added by the reader (directlib.Model.sigma).
 

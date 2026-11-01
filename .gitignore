@@ -25,3 +25,13 @@ gen/tasks/
 # what `pip install analysis/release` leaves in a checkout
 analysis/release/build/
 *.egg-info/
+
+# what the quick starts leave in a checkout
+.venv/
+analysis/release/weights.npz
+analysis/release/my_targets.npz
+analysis/release/reference_MIX17.npz
+analysis/release/targets_thrust_nlo.npz
+analysis/release/SHA256SUMS
+analysis/output/r8_*.pdf
+analysis/output/thrust_anchor_targets_nlo.npz

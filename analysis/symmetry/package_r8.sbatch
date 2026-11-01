@@ -5,7 +5,7 @@
 #SBATCH -t 2:00:00
 #SBATCH -J pkg_r8
 #SBATCH -o logs/package_r8_%j.out
-# Package the networks of paper r8 for the public release: Stage D (Sherpa, export E_P2v3fullfac0,
+# Package the networks of the paper for the public release: Stage D (Sherpa, export E_P2v3fullfac0,
 # public name E), Stage E (Herwig, F_P2v3fullfac0, public F) and the seventeen-parameter mixture
 # (MIXGEOV3S9, public MIX17), on their v3 designs.
 set -uo pipefail

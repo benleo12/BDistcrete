@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Why the prediction of Sec. 4 lies below DELPHI above tau = 0.2: the NNLL+NLO calculation at the paper's
+"""Why the prediction of Sec. 5 lies below DELPHI above tau = 0.2: the NNLL+NLO calculation at the paper's
 fixed point (output/calc_point.json), ALEPH merged into DELPHI's bins, and the prediction with the
 calculation imposed (three_bands npz), each against DELPHI, in the twelve DELPHI bins 0.05 <= tau < 0.30
 that lie wholly inside the window, all normalized over these twelve bins. The calculation is binned with

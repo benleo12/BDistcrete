@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cost of the generator weights in a profile fit (Sec. 3.6, Fig. cost) for the networks of the paper,
+"""Cost of the generator weights at a new parameter point (Sec. 3.6, Fig. 7) for the networks of the paper,
 on the 1.15M-event reference sample of the seventeen-parameter mixture. Each design is an ensemble of
 four networks in the multiplicative mixture of Eq. (geomix), log w = (1 - xi) l_S + xi l_H:
 
@@ -23,7 +23,7 @@ Timed as the median over BENCH_REPS repeats after one warm-up:
       reject (on by default on the GPU);
   (b) on the CPU, one fit step through directlib: the chi^2 to the thrust distributions of ALEPH,
       DELPHI and OPAL above tau = 0.05 and the L3 multiplicity, and its gradient in the seventeen
-      parameters, with the windowed thrust moments of Sec. 4 imposed again; and the part of it that
+      parameters, with the windowed thrust moments of Sec. 5 imposed again; and the part of it that
       is the same for every design (the maximum-entropy weight and the chi^2).
 The concatenation network is timed in its fastest form: particles packed (padded slots skipped), and
 the pooled features of the forward pass kept for the gradient, which then needs one more pass of the

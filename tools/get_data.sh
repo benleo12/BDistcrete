@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Download data archives of docs/DATA.md, check their SHA256 and unpack them into analysis/.
+# Section, table and figure numbers here are those of an earlier draft. Only A0_theory_logs (group
+# appD) can be fetched for now, because the SHA256SUMS of the release lists no other (docs/DATA.md).
 #
-#   tools/get_data.sh sec6                     # the archives one paper item needs (groups below)
-#   tools/get_data.sh B1_exports_ABC B2_held_ABC
+#   tools/get_data.sh appD                     # the archives one paper item needs (groups below)
+#   tools/get_data.sh A0_theory_logs
 #   tools/get_data.sh --list                   # archives, sizes and groups
 #   tools/get_data.sh --unlink                 # remove the reference links (before retraining)
 #
@@ -17,7 +19,7 @@ REPO=$(cd "$(dirname "$0")/.." && pwd)
 A=$REPO/analysis
 DL=$A/data_downloads          # matches the data_* rule of .gitignore
 
-# name, approximate size, what it is for (docs/DATA.md has the full table)
+# name, approximate size, what it is for (the full table: git show 1d66811:docs/DATA.md)
 ARCHIVES="
 A0_theory_logs.tar        0.04  raw EERAD3 logs, to rebuild the fixed-order cumulant (App. D)
 B1_exports_ABC.tar        0.77  Stage A, B, C networks and references (Table 1, Secs. 5.2, 5.3, App. B)
@@ -167,6 +169,8 @@ while [ $# -gt 0 ]; do
     --keep) KEEP=1 ;;
     --force) FORCE=1 ;;
     --list)
+      echo "Section, table and figure numbers here are those of an earlier draft."
+      echo "Only A0_theory_logs (group appD) can be fetched for now, see docs/DATA.md."
       printf '%s\n' "$ARCHIVES" | awk 'NF {printf "  %-26s %5s GB  ", $1, $2; $1 = $2 = ""; sub(/^ +/, ""); print}'
       echo "groups: $GROUPS_HELP"; exit 0 ;;
     --unlink) unlink_all; exit 0 ;;
@@ -191,4 +195,4 @@ mkdir -p "$DL"
 rm -f "$DL/SHA256SUMS"; fetch SHA256SUMS
 for n in $(printf '%s\n' "${SEL[@]}" | awk '!seen[$0]++'); do get_one "$n"; done
 make_links
-echo "done. Data are in $A (see docs/DATA.md for what each archive unlocks)."
+echo "done. Data are in $A (what each archive unlocks: git show 1d66811:docs/DATA.md)."

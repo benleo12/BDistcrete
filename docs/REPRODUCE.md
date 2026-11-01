@@ -7,8 +7,10 @@ which is in git. **(data)** marks a step that needs the network exports or event
 
 ## Before you start
 
-- Create the environment with `conda env create -f environment.yml`. The figures are typeset with
-  LaTeX (`usetex`, with `amsmath` and `amssymb`), which the environment does not install.
+- Create the environment with `conda env create -f ../environment.yml`. The figures are typeset with
+  LaTeX (`usetex`, with `amsmath` and `amssymb`), which the environment does not install; a full
+  TeX Live has everything they need. The
+  comparison with the energyflow PFN needs a second environment, `conda env create -f ../environment-tf.yml`.
 - The scripts that read the LEP measurements (`thrust_chain.py`, `calc_bins.py`, and everything
   that imports `directlib.py`) look for them in a local Rivet installation. Set
   `export RIVET_REF=rivet_ref` to use the copies that ship in `analysis/rivet_ref/`.
@@ -21,8 +23,8 @@ which is in git. **(data)** marks a step that needs the network exports or event
   `r2_ladder.py` alone defaults to other settings.
 - `kscan_submit.sh` and `widebox_submit.sh` change to `MAXENT_DIR`, by default the Symmetry copy
   `/mnt/beegfs/bassi/reweighting/maxent_code`, and submit the batch scripts by name from there, as
-  they sit in the analysis folder on Symmetry. Elsewhere they need copies of `symmetry/*.sbatch` in
-  `analysis/`.
+  they sit in the analysis folder on Symmetry. Elsewhere, first run `export MAXENT_DIR=$PWD` and
+  `cp symmetry/*.sbatch .` in `analysis/`.
 - A rerun writes its result files and exports under the published names. Copy the shipped files
   first if you want to compare with them.
 
@@ -48,17 +50,17 @@ names, `figs_r8.py` draws only those figures.
 | 11 | the thrust distribution and its three bands | `three_bands_MIXGEOV3S9.npz`, `three_bands_MIXGEOV3S9.json`, `theory_variations_MIX.json` | `TAG=MIXGEOV3S9 sbatch --export=ALL symmetry/three_bands.sbatch` and `sbatch --export=ALL symmetry/theory_variations.sbatch` **(data)** | `python figs_r8.py bands` |
 | 12 | the bands of the seven means | `three_bands_MIXGEOV3S9.json` | as Fig. 11 | `python figs_r8.py obs` |
 | 13 | the toy model | `toy_final_K48_s0.npz`, `toy_final_K48_s0.json` | `sbatch --array=0-8 --export=ALL symmetry/toy_final.sbatch` (`toy_final.py`, which generates its own events) | `python figs_r8.py toy` |
-| 14 | the calculation against ALEPH and DELPHI | `calc_bins_nlo_point.json` | `THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python calc_bins.py` | `python figs_r8.py aleph` |
+| 14 | the calculation against ALEPH and DELPHI | `calc_bins_nlo_point.json` | `RIVET_REF=rivet_ref THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python calc_bins.py` | `python figs_r8.py aleph` |
 
 ## Tables
 
 | table | what it shows | from (`output/` unless stated) | made by |
 |---|---|---|---|
-| 1 | closure widths of every model, both networks, three sets of members | Stages A to C: `p2augfull_<S>_<net>_s<k>.json` and `p2augfullstrict_<S>_<net>_s<k>.json`, with the `p2aug` files where a `p2augfull` file is absent. Stages D and E: `p2v3full{,strict}_{E,F}_<net>_s<k>.json`. Mixture: `stage_mixture_MIXGEOV3S9{,s1,s2}.json` and `p2v3fullstrict_MIX_fac_s<k>.json` (factorized), `p2v3full{,strict}_MIX_cat_s<k>.json` (concatenation) | the trainings and strict tests of "Trained models" below **(data, GPU)**, then `make_numbers.py` (`\Acc{Aug,Dense}*`) |
+| 1 | closure widths of every model, both networks, three ensembles | Stages A to C: `p2augfull_<S>_<net>_s<k>.json` and `p2augfullstrict_<S>_<net>_s<k>.json`, with the `p2aug` files where a `p2augfull` file is absent. Stages D and E: `p2v3full{,strict}_{E,F}_<net>_s<k>.json`. Mixture: `stage_mixture_MIXGEOV3S9{,s1,s2}.json` and `p2v3fullstrict_MIX_fac_s<k>.json` (factorized), `p2v3full{,strict}_MIX_cat_s<k>.json` (DCTR network) | the trainings and strict tests of "Trained models" below **(data, GPU)**, then `make_numbers.py` (`\Acc{Aug,Dense}*`) |
 | 2 | closure widths per observable, Stages D and E and the mixture | as Table 1 | `make_numbers.py` (`\ObsDense*`) |
 | 3 | parameters of Stages A to C | the designs `gen/designs/stage{A,B,C}_design_aug.csv` (App. A.1) | typed in `main.tex` |
 | 4 | parameters of Stages D and E | the designs `analysis/release/generators/stage{E,F}_design_v3all.csv` and the boxes in `analysis/release/STAGES.md` | typed in `main.tex` |
-| 5 | loss and closure width of the mean of members and of the fitted basis weights | `wifi_MIXGEOV3S9{,s1,s2}_diag.json` | `wifi_diag.py`, run by `symmetry/wifi_cov.sbatch` **(data)**, then `make_numbers.py` (`\Wifi{Loss,Width}*`) |
+| 5 | loss and closure width of the ensemble average and of the fitted combination | `wifi_MIXGEOV3S9{,s1,s2}_diag.json` | `wifi_diag.py`, run by `symmetry/wifi_cov.sbatch` **(data)**, then `make_numbers.py` (`\Wifi{Loss,Width}*`) |
 
 ## Quoted numbers
 
@@ -77,13 +79,13 @@ come in families:
 |---|---|---|---|
 | `\Acc{Aug,Dense}*`, `\AccFinal*`, `\ObsDense*`, `\Mix{Sherpa,Herwig}Points*` | Tables 1 and 2, Secs. 3.3, 3.5 and 3.6 | the files of Table 1 | the trainings and strict tests below |
 | `\LcRunsThreeStrictAll`, `\LcMembersStrictAll` | Sec. 3.1 | `widths_v2_<tag>{,h400}{,r415}.json` of the learning-curve trainings, `p2origfull*_MIX_fac_s<k>.json`, `p2origfull48*_MIX_fac_s<k>.json` | `symmetry/train_mixgeo.sbatch`, `strict_closure.sbatch`, `rescore_v4.sbatch`, `train_p2.sbatch` and `score_p2.sbatch` **(data, GPU)** |
-| `\Calib*` | Sec. 3.2, two halves of one fresh run | `p2augfull_{A,B,C}_fac_s0.json` | the trainings of Stages A to C |
+| `\Calib*` | Sec. 3.2, two halves of one fresh run | `p2augfull_{A,C}_fac_s0.json`, `p2aug_B_fac_s0.json` | the trainings of Stages A to C |
 | `\Toy*` | App. B.1 | `toy_final_K<K>_s<k>.json` | `symmetry/toy_final.sbatch` |
 | `\Map*`, `\XpNullMean` | Sec. 3.4, Fig. 4 | `valid_map_C_P2augfullfac0_report.json`, `xp_null.json` | as Fig. 4 **(data)** |
-| `\Wide*` | Sec. 3.4 | `p2wb18{single,pool,local9100,...,local9105}_W_fac_s0.json` | `bash widebox_submit.sh` **(data, GPU)**, which generates the runs into `gen/data_widebox` and trains the three references, then `python widebox_collect.py`. The paper's networks were trained with `STEPS=18000` and the tags `wb18single`, `wb18pool` and `wb18local<run>`, in place of the 324000 steps and the `wb` tags written in the script. `python figs_r8.py widebox` draws these results, which the paper quotes without a figure |
+| `\Wide*` | Sec. 3.4 | `p2wb18{single,pool,local9100,...,local9105}_W_fac_s0.json` | `mkdir -p ../gen/tasks ../gen/logs && bash widebox_submit.sh` **(data, GPU)**, which generates the runs into `gen/data_widebox` and trains the three references, then `python widebox_collect.py`, which reads the `wb18` results named here and `output/models/W_P2wb18*_w_9100.npy` **(data)**. The paper's networks were trained with `STEPS=18000` and the tags `wb18single`, `wb18pool` and `wb18local<run>`, in place of the 324000 steps and the `wb` tags written in the script. `python figs_r8.py widebox` draws these results, which the paper quotes without a figure |
 | `\Cov*`, `\CovEight*` | Secs. 3.5 and 6, Fig. 5 | `wifi_coverage_MIXGEOV3S9{,s1,s2}.json`, `wifi_coverage_MIXGEOV3M8S9.json` | `symmetry/wifi_cov.sbatch` **(data)** |
-| `\SvdRank*` | Sec. 3.6 | `p2trunc_{A,B,C,E,MIX}_cat_s0.json` | `symmetry/score_p2.sbatch` with `LADDER_TRUNCATE=1` on the first concatenation training of each model **(data)** |
-| `\Cost*` | Secs. 1, 3.6, 4.2, 4.3 and 6, Fig. 7 | `bench_final_cpu_4.json`, `bench_final_cuda_12.json` | as Fig. 7. Fig. 7 and `\Cost{Fac,Late,Cat}{Cpu,Gpu}` time the weights and one backward pass (the derivatives of one prediction), `\CostW*` the weights alone, and `\CostVar*` the weights alone at the 400 variations of Sec. 4.3. `\CostRestCpu` is the rest of a step of `bench_cost_final.py`, mostly the maximum-entropy weight and its derivatives, to one figure. The fit times `\CostFit*` of an earlier draft (6000 steps, `COST_STEPS` in `make_numbers.py`) are written but not used |
+| `\SvdRank*` | Sec. 3.6 | `p2trunc_{A,B,C,E,MIX}_cat_s0.json` | `symmetry/score_p2.sbatch` with `LADDER_TRUNCATE=1` on the first DCTR-network training of each model **(data)** |
+| `\Cost*` | Secs. 1, 3.6, 4.2 and 6, Fig. 7 | `bench_final_cpu_4.json`, `bench_final_cuda_12.json` | as Fig. 7. Fig. 7 and `\Cost{Fac,Late,Cat}{Cpu,Gpu}` time the weights and one backward pass (the derivatives of one prediction), `\CostW*` the weights alone, and `\CostVar*` the weights alone at the 400 variations of Sec. 4.3. `\CostRestCpu` is the rest of a step of `bench_cost_final.py`, mostly the maximum-entropy weight and its derivatives, to one figure. The fit times `\CostFit*` of an earlier draft (6000 steps, `COST_STEPS` in `make_numbers.py`) are written but not used |
 | `\CalcAlphas`, `\CalcAlphaZero` | Sec. 5.2, Eq. (C.9) | `three_bands_MIXGEOV3S9.json` | as Fig. 11, from the fixed point of the calculation below |
 | `\Tb*` | Secs. 1, 2.3, 5.2 to 5.5 and 6, Apps. C.2 and D.2 | `three_bands_MIXGEOV3S9{,s1,s2}.{json,npz}`, `theory_variations_MIX.json`, `calc_vs_delphi_MIXGEOV3S9.json`, `band_checks_MIXGEOV3S9.json` | as Fig. 11, `TAG=<tag> sbatch --export=ALL symmetry/three_bands.sbatch` for `s1` and `s2`, `TAG=MIXGEOV3S9 sbatch --export=ALL symmetry/band_checks.sbatch` **(data)**, and `NPZ=output/three_bands_MIXGEOV3S9.npz python calc_vs_delphi.py MIXGEOV3S9` |
 | `\Kappa*`, `\Single*`, `\TruncMaxPercent`, `\WifiNewton*`, `\Wifi{Loss,Width}*` | Sec. 3.5, App. A.2, Table 5 | the training results of Table 1, `single_members_C_P2augfullfac0.json`, `truncation_fraction.json`, `wifi_MIXGEOV3S9{,s1,s2}_{fit,diag}.json` | `python single_members.py C_P2augfullfac0 C ../gen/data_abc`, `python trunc_frac.py` and `symmetry/wifi_cov.sbatch` **(data)** |
@@ -100,12 +102,12 @@ events of the other generator rests on `python wifi_gensplit.py output/wifi_MIXG
 
 ## Trained models
 
-Every model of Table 1 is trained three times, the three sets of members, with seeds 0, 1 and 2
+Every model of Table 1 is trained three times, the three ensembles, with seeds 0, 1 and 2
 (`LADDER_SEED_OFFSET` 0, 1000 and 2000). Each training writes its result on the standard test, and
 the strict test scores the saved model again on held-out runs with five times the statistics.
 
 **Stages A to C.** The densified designs are `gen/designs/stage{A,B,C}_design_aug.csv` and the runs
-are in `gen/data_abc`. The strict test reads `data_abc_h400`, made by `python make_abc_strict.py`
+are in `gen/data_abc`. The strict test reads `data_abc_h400`, made by `MAXENT_DIR=$PWD python make_abc_strict.py`
 from `gen/data_abc` and the extensions in `gen/data_abc_ext/` **(data)**.
 
 ```bash
@@ -117,11 +119,11 @@ sbatch --array=0-17 --dependency=aftercorr:$J --export=ALL symmetry/score_p2_arr
 
 This writes `output/p2augfull{,strict}_<S>_<net>_s<k>.json` and the exports
 `output/models/<S>_P2augfull<net><k>_*`. Five trainings of the published table (B factorized, seeds 0 to
-2, and C factorized and C concatenation, seed 2) are read from the `p2aug` files of a run with
+2, and C factorized and C with the DCTR network, seed 2) are read from the `p2aug` files of a run with
 `DESIGN_TAG=aug`. That run had early stopping switched on but trained the full 324000 steps, and
 `make_numbers.py` uses a `p2aug` file only when its training reached 324000 steps.
 
-**Stages D and E, and the concatenation network of the mixture.** The designs are
+**Stages D and E, and the DCTR network of the mixture.** The designs are
 `stageE_design_v3all.csv` and `stageF_design_v3all.csv` in `analysis/`, and the runs are those of
 `data_stagePURE17_v3` **(data)**.
 
@@ -190,14 +192,17 @@ The samples themselves come from `gen/` (`gen/README.md`).
 
 ```bash
 export RIVET_REF=rivet_ref
-THRUST_ORDER=2 python targets_nlo_point.py                 # output/thrust_targets_nlo_point.npz
-THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python calc_bins.py       # output/calc_bins_nlo_point.json, Fig. 14
-NPZ=output/three_bands_MIXGEOV3S9.npz python calc_vs_delphi.py MIXGEOV3S9   # after three_bands, below
+THRUST_ORDER=2 python targets_nlo_point.py
+THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python calc_bins.py
+NPZ=output/three_bands_MIXGEOV3S9.npz python calc_vs_delphi.py MIXGEOV3S9
 ```
 
+The first writes `output/thrust_targets_nlo_point.npz`, the second `output/calc_bins_nlo_point.json` for
+Fig. 14, and the third needs the output of `three_bands` (Fig. 11).
+
 The fixed point α_s(M_Z) = 0.1137, α_0(2 GeV) = 0.524 of Eq. (C.9) is the fit of Gehrmann, Luisoni
-and Monni in the log-R scheme (Eur. Phys. J. C 73 (2013) 2265, Eq. (42)), which `output/calc_point.json`
-holds and the three scripts read (`CALC_POINT` points them to another file). The same file sets the
+and Monni in the log-R scheme (Eur. Phys. J. C 73 (2013) 2265, the table after Eq. (43)), which
+`output/calc_point.json` holds and the three scripts read (`CALC_POINT` points them to another file). The same file sets the
 subtraction of the power correction to their order α_s³ (`np_sub_order`, Eq. (40) of that paper), since
 their α_0 was fitted with it. Their fit goes to NNLL+NNLO and includes bottom-quark masses, while the
 calculation here is NNLL+NLO and massless. An earlier draft used instead the pair at which the
@@ -224,26 +229,31 @@ and the calculation of `output/thrust_targets_nlo_point.npz` **(data)**.
 export MAXENT_DIR=$PWD TAG=MIXGEOV3S9
 BOX=full NREF=1000 sbatch --export=ALL symmetry/envelope_test.sbatch
 for b in tune tune_xifull tune_sherpa tune_herwig; do BOX=$b sbatch --export=ALL symmetry/envelope_test.sbatch; done
-python plot_envelope.py output/envelope_test_MIXGEOV3S9 tune full    # Figs. 8 to 10
+python plot_envelope.py output/envelope_test_MIXGEOV3S9 tune full
 ```
 
-Each box takes about an hour and a half on eight CPU threads and needs 4 GB of memory. It writes
+`plot_envelope.py` draws Figs. 8 to 10. Each box takes about an hour and a half on eight CPU threads, the full box with `NREF=1000` about
+four hours, and each needs 4 GB of memory. It writes
 `output/envelope_test_MIXGEOV3S9_<box>.json`, with the bands, their ratios and bootstrap
 uncertainties and the comparison of the correlations, and `.npz`, with the draws and the
 covariances. On the full box, `NREF=1000` adds 1000 more draws, which measure the sampling noise
 of 400 variations. `make_numbers.py` reads these files for the `\Env*` macros. With all five boxes,
-`plot_envelope.py` also draws `r8_env_cases`, `r8_env_cases_ratio`, `r8_env_cases_coverage` (how many of
-the variations lie inside the linear band) and `r8_corr_cases`, which leave out the three bins under 100
-effective events (thrust 0.40-0.50 and n_ch below 4). These are not in the paper.
+`plot_envelope.py` also draws `r8_env_cases`, `r8_env_cases_ratio` and `r8_env_cases_coverage` (how many of
+the variations lie inside the linear band), which leave out the three bins under 100 effective events
+(thrust 0.40-0.50 and n_ch below 4), and `r8_corr_cases`. These are not in the paper.
 
 ## The released networks
 
 ```bash
 export MAXENT_DIR=$PWD
-sbatch --export=ALL symmetry/package_r8.sbatch     # release_r8/: E, F and MIX17
-sbatch --export=ALL symmetry/table_r8.sbatch       # release_r8_table/: STAGES.md, closure_*.csv, closure_summary.json
-sbatch --export=ALL symmetry/accuracy_r8.sbatch    # release_r8_table/: accuracy_law.json, accuracy_law_points.csv
+sbatch --export=ALL symmetry/package_r8.sbatch
+sbatch --export=ALL symmetry/table_r8.sbatch
+sbatch --export=ALL symmetry/accuracy_r8.sbatch
 ```
+
+The first writes `release_r8/`, with E, F and MIX17. The other two write to `release_r8_table/`:
+`STAGES.md`, `closure_*.csv` and `closure_summary.json`, then `accuracy_law.json` and
+`accuracy_law_points.csv`.
 
 **(data)** The packager converts `E_P2v3fullfac0`, `F_P2v3fullfac0` and `MIXGEOV3S9` to the numpy
 files of `analysis/release/models/` and checks them against the trained networks.
@@ -262,4 +272,4 @@ walk-throughs of that draft, section by section with the archives each one needs
 history: `git show 1d66811:docs/REPRODUCE.md`. The macros `\CostFit*`, which the paper
 no longer uses, take their 6000 steps per fit from the forty pseudo-data fits of that draft, which
 needed a median of 6315 evaluations of the χ² and its gradient per fit. The seed study of that draft (`perlmutter/seedstudy.sbatch`) is
-superseded by the three sets of members of every model in Table 1.
+superseded by the three ensembles of every model in Table 1.

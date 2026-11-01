@@ -1,6 +1,6 @@
 # Installs the gentune package and nothing else:
 #
-#   pip install 'git+https://github.com/benleo12/BDistcrete@v2.0.1#subdirectory=analysis/release'
+#   pip install 'git+https://github.com/benleo12/BDistcrete#subdirectory=analysis/release'
 #
 # The networks in models/, the examples and the generator scripts are not part of the package.
 # They stay in the repository, and README.md says how to point the package at them.
@@ -29,5 +29,5 @@ Repository = "https://github.com/benleo12/BDistcrete"
 packages = ["gentune"]
 
 [tool.setuptools.dynamic]
-# One version for the package and the release, the one in VERSION.
+# The package version, read from VERSION for packaging.
 version = {file = "VERSION"}

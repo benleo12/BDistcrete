@@ -1,5 +1,5 @@
 #!/bin/bash
-# The wide coupling scan of Sec. 3.5 (Fig. 6) at the final standard.
+# The wide coupling scan of Sec. 3.4 at the final standard.
 # Data: the coupling alone over [0.08, 0.20], 21 training runs spaced by 0.006 (9000-9020) and six
 # held-out runs (9100-9105 at 0.083, 0.107, 0.131, 0.155, 0.179, 0.197), 80k events each, the Stage A
 # card of gen_stageABC.sh (Sherpa 3.0.4, CSS, Ahadic, every other parameter at its default), into

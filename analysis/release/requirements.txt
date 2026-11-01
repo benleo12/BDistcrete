@@ -1,6 +1,6 @@
 # The shipped library imports numpy and nothing else outside the standard library. Verified by
 # tracing every import in gentune/, examples/ and head_direction_response.py: the only others are
-# os, sys, json, glob, gzip and argparse.
+# os, sys, json, glob, gzip, argparse, csv, hashlib, re, time and warnings.
 #
 # The floor is 1.20 because the loader uses np.load with allow_pickle left off and the
 # broadcasting and linear algebra here are long-stable. It is a floor, not a pin.

@@ -25,7 +25,7 @@ if ORDER == 2:
     cumC = np.zeros_like(cumA)
 LABEL = 'NNLL+NNLO' if ORDER == 3 else 'NNLL+NLO'
 # FIXED_POINT=1 draws every variation at the central (alpha_s, alpha_0) instead of refitting the pair
-# under each variation, which is the convention of the theory band of the paper's Sec. 4.
+# under each variation, which is the convention of the theory band of the paper's Sec. 5.
 FIXED = os.environ.get('FIXED_POINT', '') == '1'
 
 def build(mu, xv, scheme, asmz, cfac=1.0):

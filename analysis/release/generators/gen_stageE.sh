@@ -1,5 +1,5 @@
 #!/bin/bash
-# One Stage E run: write the card, run Sherpa 3.0.4 from CVMFS, extract, drop the HepMC.
+# One run for the released head `E`, Stage D of the paper: write the card, run Sherpa 3.0.4 from CVMFS, extract, drop the HepMC.
 # usage: gen_stageE.sh <rid> <alphas> <pt_max> <alpha_l> <gamma_l> <strange> <baryon> <alpha_g> <beta_l> <events>
 set -e
 rid=$1; as=$2; ptmax=$3; al=$4; gl=$5; sf=$6; bf=$7; ag=$8; bl=$9; ev=${10}

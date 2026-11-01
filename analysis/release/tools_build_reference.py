@@ -13,7 +13,7 @@ What the weights need. A head reads an event only through its event-side vector 
 features (0.62 GB compressed) and have the user run gentune.Trunk.embed on them. The other is to
 ship the vectors themselves (0.83 GB compressed), and that is what this file does. They are the
 exact array of the export (MIXGEOV3S9_cond.npz, key AE) that every number in the paper was
-computed from. The trunk reproduces them only to float32 rounding, about 2e-5, and takes about
+computed from. The trunk reproduces them only to float32 rounding, about 4e-5, and takes about
 1.7e13 multiply-adds over the whole sample. The features route is still used below, as the check
 of the event order.
 
@@ -35,7 +35,9 @@ After writing, both files are read back, every array is checked against its sha2
 metadata, and the paper check is run again on what was read.
 
     python build_reference.py          # on Symmetry, in /mnt/beegfs/bassi/reweighting/release_ref
-Writes reference_MIX17.npz, targets_thrust_nlo.npz and build_reference.json next to itself.
+Writes reference_MIX17.npz, targets_thrust_nlo.npz and build_reference.json next to itself. The
+deposited targets_thrust_nlo.npz was later rebuilt alone by tools_build_targets.py, when the
+calculation changed. REFERENCE.md says which revision of which script made which file.
 """
 import os, sys, json, time, hashlib, zipfile, argparse, datetime, platform
 import numpy as np
@@ -75,7 +77,7 @@ POWERS = {'logt': (0, 1), 'tau': (1, 0), 'tlogt': (1, 1), 'log2t': (0, 2), 'tau2
           't3logt': (3, 1), 't2log2t': (2, 2), 'log4t': (0, 4), 'tau4': (4, 0)}
 FLOOR_REL = 0.002       # the paper's diagonal floor of Sigma, Model(floor_rel=0.002) in three_bands.py
 PER_RUN = 8             # events per run in the order check, 5760 in all
-TOL_A = 1e-3            # a(Phi) from the trunk against the export, float32 pooling sits near 2e-5
+TOL_A = 1e-3            # a(Phi) from the trunk against the export, float32 pooling sits near 4e-5
 TOL_LOGIT = 1e-3        # the self-test tolerance of gentune.selftest
 TOL_PAPER = 1e-5        # relative, float32 head in the paper's torch code against float64 here
 DOC = {

@@ -3,12 +3,14 @@ r"""The learning band of an observable at one point: how well the network knows 
 
     python examples/learning_band.py --stage MIX17 --reference
     python examples/learning_band.py --stage MIX17 --reference-file reference_MIX17.npz --bins paper
-    python examples/learning_band.py --stage MIX17 --hepmc my_herwig.hepmc.gz \
+    python examples/learning_band.py --stage MIX17 --hepmc examples/data/herwig_default.hepmc.gz \
         --from herwig-default --at herwig-default H:pwtdiquark=0.40
+
+The last command reads the Herwig example file. Your own file goes in its place.
 
 This is the learning band of the paper, from the WiFi fit of the ensemble (Benevedes and Thaler,
 arXiv:2506.00113). head.learning_band() gives sqrt(g^T C g), with C the covariance of the fitted
-basis weights in models/MIX17_wifi.npz and g the derivative of the weighted mean with respect to
+coefficients in models/MIX17_wifi.npz and g the derivative of the weighted mean with respect to
 them, which is the weighted covariance of the observable with the basis functions of
 head.wifi_basis(). It is the band for the generator alone. With a calculation imposed the
 derivative also runs through the re-solved multipliers of the maximum-entropy step, which is in
@@ -18,9 +20,10 @@ analysis/three_bands.py and is not part of this release.
 followed by name=value changes, as --to of reweight_own_events.py. By default it is the paper's
 central point, both generators at their own defaults and a fraction of one half. The events come
 from --reference-file, --reference or --hepmc and --from, as in generator_band.py. On the paper's
-reference sample (--reference-file reference_MIX17.npz) this gives the paper's learning band:
-<1-T> 0.000286, <n_ch> 0.0594, <n_baryon> 0.00954. On a sample of your own the band is that of
-the log ratio between --from and --at, so it vanishes when the two are the same point.
+reference sample (--reference-file reference_MIX17.npz) this gives the paper's learning band for
+the generators alone: <1-T> 0.000286, <n_ch> 0.0594, <n_baryon> 0.00954. On a sample of your own
+the band is that of the log ratio between --from and --at, so it vanishes when the two are the
+same point.
 
 Next to each band, "stat. error" is the statistical error of the mean, sqrt(sum_i w_i^2 (O_i -
 <O>)^2). On the 2000 reference events it is about 24 times the paper's and larger than the

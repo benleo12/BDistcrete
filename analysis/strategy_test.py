@@ -14,7 +14,7 @@ a float64 copy of it (LIN_DTYPE), so that derivatives and finite differences are
       checked against central finite differences with full re-solves for FD_PARAMS
   S2  the same at the central point of three_bands.py (CENTRAL, the default tunes with xi = 1/2)
   LJ  the linear joint covariance of Jesse's proposal, J_th Cov_th J_th^T + J_w C J_w^T + J_c Sigma_c J_c^T,
-      at the box centre (against S5) and at the central point (against the r8 quadrature), with its correlations
+      at the box centre (against S5) and at the central point (against the quadrature of the paper), with its correlations
   S3  width scan: the S0 hypercube shrunk by s around the box centre, re-solved SD against s times the S1
       band and against the S1 tangent on the same nodes; R^2 of a least-squares linear fit over the nodes
   S4  theory: J_c = dy/dc through the solve, with the explicit dependence of the moment functions m - c and
@@ -24,7 +24,7 @@ a float64 copy of it (LIN_DTYPE), so that derivatives and finite differences are
       (Eq. sigmac, built by targets_nlo_point.py), written as D D^T over the variations. Also Jesse's literal
       form, h = m - c held fixed and c only the target (the terms App. D calls not small are then missing)
   S5  joint Monte Carlo: MC_N draws theta uniform on the box, omega = w_at + N(0, C), c = c + N(0, Sigma_c),
-      each re-solved; SD and correlation matrix against the r8 quadrature generator (S0) + symmetric theory
+      each re-solved; SD and correlation matrix against the quadrature of the paper, generator (S0) + symmetric theory
       (S4) + learning (no statistical error), against the linear joint (LJ), and against three one-source MCs
       on the same draws (the other sources at the central point): their quadrature isolates the cross terms
       (var_joint - sum var_i), their linear sum is reported as well
@@ -56,7 +56,7 @@ checks.lnw_chain_rule_in_band: the finite-difference log w derivatives of D1 aga
 MC_NP=1 adds the three dispersive-model variations to Sigma_c at weight 1/3 each (their root mean square,
 as in the signed bands of three_bands.py); by default Sigma_c is that of Eq. (sigmac) alone.
 MC_CRN=1 draws S5 on common random numbers: theta at the S0 nodes in turn (MC_N a multiple of NODES, so the generator
-part of the joint and of the r8 quadrature is the same sample, and the bootstrap resamples the nodes with the draws),
+part of the joint and of the quadrature of the paper is the same sample, and the bootstrap resamples the nodes with the draws),
 omega and c made orthogonal to the nodes and whitened together (sample covariance exactly C and Sigma_c, no sample
 correlation between the sources), so that joint against quadrature carries no sampling difference to linear order:
 what remains is the cross terms and the one-source differences (Gaussian Sigma_c against the re-solved variations,
@@ -603,7 +603,7 @@ if Sj is not None and not MC_NP:
 print(f'[{tag}] S4: <1-T> theory re-solved {th_res[2]:.2e}, Gaussian {th_gauss[2]:.2e} (h fixed {th_gauss_h[2]:.2e}); worst '
       f'variation error in units of the band {max(v["max_error_in_band"] for v in res["S4"]["variations"].values()):.2f} '
       f'(h fixed {max(v["max_error_in_band_fixed_h"] for v in res["S4"]["variations"].values()):.2f})', flush=True)
-q0, q1 = np.sqrt(gen0**2 + learn0**2), np.sqrt(gen1**2 + th_res**2 + learn1**2)      # the r8 quadrature, no statistical error
+q0, q1 = np.sqrt(gen0**2 + learn0**2), np.sqrt(gen1**2 + th_res**2 + learn1**2)      # the quadrature of the paper, no statistical error
 res['linear_joint'] = {k: dict(band=ba(dg(A0), dg(A1)), correlation_after=corr(A1).tolist(), correlation_before=corr(A0).tolist())
                        for k, (A0, A1) in LJ.items()}
 res['linear_joint']['central']['ratio_to_r8'] = ba(rat(dg(LJ['central'][0]), q0), rat(dg(LJ['central'][1]), q1))
@@ -674,7 +674,7 @@ ZJ = dict(joint=(GB, np.arange(len(GB[0])), np.c_[np.sqrt(3)*Ut, Zw, Zc], RB), t
           omega=(GC, IC['omega'], Zw, RC), c=(GC, IC['c'], Zc, RC))
 res['S5']['diagnostics'] = {k: dict(measured=dsum(DS[k], R), predicted=pred(G, sel), predicted_draws=pred(G, sel, Z)) for k, (G, sel, Z, R) in ZJ.items()}
 s5j0, s5j1 = sd(Q['joint'][0]), sd(Q['joint'][1])
-print(f'[{tag}] S5: <1-T> joint {s5j1[2]:.2e}, r8 quadrature {q1[2]:.2e}, linear joint {dg(LJ["box_centre"][1])[2]:.2e}, '
+print(f'[{tag}] S5: <1-T> joint {s5j1[2]:.2e}, quadrature of the paper {q1[2]:.2e}, linear joint {dg(LJ["box_centre"][1])[2]:.2e}, '
       f'one-source quadrature {res["S5"]["after"]["quadrature_one_source"]["thrust"]:.2e}', flush=True)
 done('S5')
 

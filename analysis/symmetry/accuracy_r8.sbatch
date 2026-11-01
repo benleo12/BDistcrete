@@ -5,7 +5,7 @@
 #SBATCH -t 1:00:00
 #SBATCH -J acc_r8
 #SBATCH -o logs/accuracy_r8_%j.out
-# The accuracy law of the r8 release networks, from the closure tables table_r8.sbatch writes:
+# The accuracy fit of the released networks, from the closure tables table_r8.sbatch writes:
 # per-point error against displacement (closure_vs_distance.py), then the robust floor-plus-slope
 # fit (fit_accuracy_law.py), both into the scratch release directory.
 set -uo pipefail

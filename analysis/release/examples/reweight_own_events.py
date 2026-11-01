@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 r"""Weight your own event sample from the parameters it was generated at to any other point.
 
-    python examples/reweight_own_events.py --stage E --hepmc my_sample.hepmc.gz \
+    python examples/reweight_own_events.py --stage E --hepmc examples/data/sherpa_default.hepmc.gz \
         --from 0.118 0.68 3.9 0.48 0.46 0.17 0.97 0.18 \
         --to   0.120 0.68 3.9 0.48 0.46 0.17 0.97 0.18 --out weights.npz
+
+The commands here read the example files of examples/data. Your own file goes in their place.
 
 --from is the parameter point YOUR sample was generated at and --to is where you want it. Both
 must lie inside the training box, which --list prints, as it does when no --hepmc is given. The
@@ -13,7 +15,7 @@ is the number that tells you whether the shift you asked for is one this sample 
 A point is either one number per parameter, in the order the listing prints, or a preset
 followed by any parameters you want to change, by name. The command above is the same as
 
-    python examples/reweight_own_events.py --stage E --hepmc my_sample.hepmc.gz \
+    python examples/reweight_own_events.py --stage E --hepmc examples/data/sherpa_default.hepmc.gz \
         --from sherpa-default --to sherpa-default alphas=0.120
 
 sherpa-default and herwig-default are the generator's own defaults, the values a card that sets
@@ -23,7 +25,7 @@ Sherpa and 1 for Herwig, where the other generator's block drops out of the weig
 The presets put that block at the centre of its box, where the training runs had it, so a
 Herwig sample at its defaults is reweighted to a larger diquark weight with
 
-    python examples/reweight_own_events.py --stage MIX17 --hepmc my_herwig.hepmc.gz \
+    python examples/reweight_own_events.py --stage MIX17 --hepmc examples/data/herwig_default.hepmc.gz \
         --from herwig-default --to herwig-default H:pwtdiquark=0.40
 
 and --to default takes the same sample to the paper's central point.

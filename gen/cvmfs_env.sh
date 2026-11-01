@@ -15,7 +15,7 @@
 # The hash pinned here is NOT the one that glob resolved to. The released sample was generated
 # with 18d2e, which wants GSL 2.7 and took it from the host while LCG's 2.8 was also loaded.
 # c7a43 is the build the LCG_109 view itself selects and it loads GSL 2.8 alone. The two were
-# checked against each other rather than assumed equivalent: 2000 events on the Stage F card at
+# checked against each other rather than assumed equivalent: 2000 events on the card of gen_stageF.sh at
 # the box centre with seed 8000 give byte-identical HepMC. See README.md.
 LCG_VIEW=/cvmfs/sft.cern.ch/lcg/views/LCG_109/x86_64-el9-gcc13-opt
 HERWIG_BUILD=7.3.0p1-c7a43

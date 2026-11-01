@@ -4,7 +4,7 @@
 #SBATCH -t 4:00:00
 #SBATCH -J benchcpu
 #SBATCH -o logs/bench_final_cpu_%j.out
-# Cost benchmark of Sec. 3.7 (bench_cost_final.py) on one CPU process with four threads, on a node of
+# Cost benchmark of Sec. 3.6 (bench_cost_final.py) on one CPU process with four threads, on a node of
 # its own so that no other job shares its memory bandwidth. The concatenation network is timed once
 # without warm-up (tens of minutes per call), and its full fit step is left out (it is its network
 # step plus the design-independent part, both measured).

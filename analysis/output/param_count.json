@@ -183,5 +183,5 @@
  },
  "published": 82457,
  "published_matches": "K1",
- "note": "the published 82457 is the event side at K=1, the matched crosscheck configuration (equal to the energyflow PFN with output_dim=1: Phi 36456 + F 45900 + output 101); the K=24 production event side holds 84780 (one 100->24 head layer instead of 100->1)"
+ "note": "the published 82457 is the event side at K=1, the matched crosscheck configuration (equal to the energyflow PFN with output_dim=1: Phi 36456 + F 45900 + output 101); the event side with the K=24 head of an earlier draft holds 84780 (one 100->24 head layer instead of 100->1)"
 }

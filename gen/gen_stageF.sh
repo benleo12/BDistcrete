@@ -1,5 +1,5 @@
 #!/bin/bash
-# One Stage F run: Herwig 7.3.0p1 from CVMFS at the Z pole, extract, drop the HepMC.
+# One run for the released head `F`, Stage E of the paper: Herwig 7.3.0p1 from CVMFS at the Z pole, extract, drop the HepMC.
 # usage: gen_stageF.sh <rid> <alpha_fsr> <ptmin> <clmax> <clpow> <psplit> <pwtsq> <pwtdiq> <clsmr> <events>
 set -e
 rid=$1; af=$2; pt=$3; cm=$4; cp_=$5; ps=$6; sq=$7; dq=$8; sm=$9; ev=${10}

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Archive the event-side parameter count quoted in App. B ("identical event-side parameter
-count of 82457"), previously stored nowhere.
+"""Archive the event-side parameter count quoted in App. A.2 (the same 82457 adjustable coefficients
+as the network of the energyflow package), previously stored nowhere.
 
 The count is measured on the actual production architecture: CondPFN of r2_ladder.py in the
 kinematic 4-feature configuration (Stage A: cos theta, phi, log z, log sin^2 theta), EVENT
@@ -13,10 +13,10 @@ counted:
           sigmoid output unit). This is how the published 82457 was counted, and it is the
           number the "identical parameter count" claim refers to: both implementations of
           the SAME K=1 classification task hold 82457 event-side parameters.
- * K=24 : the production head. The event side then ends in a 100->24 layer instead of
-          100->1, adding 23*(100+1) = 2323 parameters for a total of 84780. The published
-          82457 is therefore NOT the K=24 production event side; it is the matched K=1
-          crosscheck configuration.
+ * K=24 : the head of an earlier draft. The event side then ends in a 100->24 layer instead
+          of 100->1, adding 23*(100+1) = 2323 parameters for a total of 84780. The published
+          82457 is therefore NOT the K=24 event side; it is the matched K=1 crosscheck
+          configuration.
 CPU-only. Writes output/param_count.json with the layer-by-layer breakdown.
 """
 import os, json
@@ -70,9 +70,9 @@ def main():
     out['published_matches'] = 'K1'
     out['note'] = ('the published 82457 is the event side at K=1, the matched crosscheck '
                    'configuration (equal to the energyflow PFN with output_dim=1: Phi '
-                   '36456 + F 45900 + output 101); the K=24 production event side holds '
-                   f'{out["K24"]["event_side_total"]} (one 100->24 head layer instead of '
-                   '100->1)')
+                   '36456 + F 45900 + output 101); the event side with the K=24 head of an '
+                   f'earlier draft holds {out["K24"]["event_side_total"]} (one 100->24 head layer '
+                   'instead of 100->1)')
     assert out['K1']['event_side_total'] == 82457, out['K1']['event_side_total']
     json.dump(out, open('output/param_count.json', 'w'), indent=1)
     print('-> output/param_count.json')

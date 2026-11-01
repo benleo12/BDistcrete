@@ -7,18 +7,20 @@ calculation the paper imposes on them. This file describes the deposit that hold
 | file | bytes | sha256 |
 |---|---|---|
 | `reference_MIX17.npz` | 865,353,418 | `a22b834d357f5fb954d07346436ce7fd85c6cd6450d918f27961cd17fdf73bfe` |
-| `targets_thrust_nlo.npz` | 30,034 | `89a65043ae9b04698678bfd261bbe21dfbac5cf4d05e7fb6cb2703b431ecdf20` |
+| `targets_thrust_nlo.npz` | 30,098 | `7e125ae4e03da92255f0f2ae92b91553a86cd016b334eaf11b01ea3873a835ca` |
 
 Both are public, with this file and `SHA256SUMS`, as the assets of the GitHub release
 https://github.com/benleo12/BDistcrete/releases/tag/data-r8, and will also be archived at Zenodo.
-In `analysis/release` of a checkout, where the examples look for them:
+In `analysis/release` of a checkout, where the commands below run:
 
 ```bash
 for f in reference_MIX17.npz targets_thrust_nlo.npz REFERENCE.md SHA256SUMS; do
-  curl -LO https://github.com/benleo12/BDistcrete/releases/download/data-r8/$f
+  curl -fLO https://github.com/benleo12/BDistcrete/releases/download/data-r8/$f
 done
-shasum -a 256 -c SHA256SUMS          # sha256sum -c SHA256SUMS on Linux; every line must say OK
+shasum -a 256 -c SHA256SUMS
 ```
+
+Every line must say OK. On Linux, use `sha256sum -c SHA256SUMS`.
 
 Both files are plain numpy archives. `np.load(path)` opens them, with no `allow_pickle`, no torch
 and no other package.
@@ -122,9 +124,9 @@ against the paper's numbers. The other two give the generator band and the learn
 generators alone, on the paper's observables and in the paper's thrust bins, with the
 statistical error of each (`README.md`, under Bands).
 
-The build script carries its own implementation of the same step, `tilt()` in
-`tools_build_reference.py`, written independently from the paper's `directlib.Model.tilt_on`.
-That is the one the checks below use.
+The build script of the reference carries its own copy of the same step, `tilt()` in
+`tools_build_reference.py`, written out in numpy step for step as the paper's
+`directlib.Model.tilt_on`. Its own checks use that copy.
 
 ## reference_MIX17.npz
 
@@ -134,7 +136,7 @@ N = 1,149,840. Event i of every per-event array is the event of `AE[:, i]`.
 |---|---|---|
 | `AE` | (4, N, 48) float32 | a(Phi) per ensemble member and event, the input of `head.weights` and `head.logit` |
 | `1_minus_thrust` | (N,) float64 | tau = 1 - T, with the exact thrust axis |
-| `B_total` | (N,) float64 | total jet broadening B_W + B_N, each B = sum \|p_i x n\| / (2 sum \|p_i\|) over a hemisphere |
+| `B_total` | (N,) float64 | total jet broadening B_W + B_N, each B = sum of \|p_i x n\| over a hemisphere, divided by 2 sum of \|p_i\| over the event |
 | `rho_heavy` | (N,) float64 | heavy hemisphere mass M_H^2 / E_vis^2 |
 | `nch` | (N,) int16 | charged particles among the stored particles (at most 100, the hardest) |
 | `nbaryon` | (N,) float32 | baryons plus antibaryons in the full event |
@@ -150,7 +152,7 @@ N = 1,149,840. Event i of every per-event array is the event of `AE[:, i]`.
 | `run_generator` | (720,) int8 | the generator of each run |
 | `theta_names` | (17,) str | `S:alphas` ... `S:beta_l`, `H:alpha_fsr` ... `H:clsmr`, `fraction`, as `gentune.axes.NAMES['MIX17']` |
 | `nper` | () int64 | 1597, the events per run |
-| `meta` | () str | JSON: the event order, the source files and their sha256, the sha256 of every array, a line on every key, the checks below |
+| `meta` | () str | JSON: the event order, the source files and their sha256, the sha256 of every array, a line on every key, the checks of its build (last section) |
 
 The event shapes are dimensionless, and the masses are in GeV. Final state means every stable
 particle except neutrinos, with hadrons of c tau above 10 mm kept stable in both generators.
@@ -195,7 +197,7 @@ bitwise.
 | `np_labels` | (3,) str | `milan_up milan_dn sub2` |
 | `milan`, `sub_order_central`, `order` | () | 1.49, 3 and 2: the central Milan factor, the subtraction order and the fixed-order order |
 | `calc_point` | () str | JSON of the point and its source |
-| `meta` | () str | JSON: the source and its sha256, the sha256 of every array, a line on every key |
+| `meta` | () str | JSON: the source and its sha256, the sha256 of every array, over its dtype, shape and bytes in that order (`sha_array` in `tools_build_targets.py`), a line on every key |
 
 `sigma_pert` sums d d^T over three groups of scale variations:
 
@@ -205,15 +207,18 @@ bitwise.
 
 ## How it was made, and what was checked
 
-`tools_build_reference.py` is the exact script that built both files. It ran on Symmetry, in
-`/mnt/beegfs/bassi/reweighting/release_ref` as `build_reference.py`, with numpy 2.2.4 and no
-torch. It copies its arrays from these files:
+`reference_MIX17.npz` was built by `tools_build_reference.py`, in the revision its `meta` names by
+sha256 (commit 79f93de). That revision differs from this one only in comments and in the lines that
+write the targets file. It ran on Symmetry, in `/mnt/beegfs/bassi/reweighting/release_ref` as
+`build_reference.py`, with numpy 2.2.4 and no torch. `targets_thrust_nlo.npz` was rebuilt alone by
+`tools_build_targets.py` when the calculation changed, and its `meta` names that script by sha256.
+
+The reference build copies its arrays from these files:
 
 - the training export, `MIXGEOV3S9_cond.npz`;
 - the paper's reference bundle, `MIXGEOV3S9_ref_v2_slim.npz`, which holds the observables with
   the exact thrust axis;
-- the run list, `data_stagePURE17_v3/meta.json`, with the runs and their parameters;
-- the calculation, `thrust_targets_nlo_point.npz`.
+- the run list, `data_stagePURE17_v3/meta.json`, with the runs and their parameters.
 
 Before writing anything, it checks the following.
 
@@ -230,13 +235,22 @@ Before writing anything, it checks the following.
   shipped one exactly. On the shipped `AE`, the released head reproduces three sets of logits:
   the training run's own 18 x 2000 logits exactly, the self-test's logits to 1.3e-5, and the
   export's 256 checksum logits to 1.3e-7.
-- **The paper.** At the paper's central point, numpy alone on the two files reproduces the stored
-  bands, `output/three_bands_MIXGEOV3S9`. The seven means of the paper are the window mean and
-  fraction, <1 - T>, <B_T>, <rho_H>, <n_ch> and <n_baryon>. They agree to 1.0e-9, and the
-  DELPHI thrust histogram to 6.9e-9, relative, both before and after the calculation is imposed.
-  The tilt acts on 545,623 window events and converges in 4 Newton steps. The paper's torch code
-  ran the head in float32 and this check runs it in float64, which accounts for the residual.
 
-After writing, the script reads both files back and checks every array against its sha256 in
-`meta`. It then repeats the paper check on what it read. The full record is in each file's
-`meta` and in `build_reference.json`, next to the files on Symmetry.
+The script also reproduced the paper at its central point, before writing and again on what it read
+back, and it checked every array against its sha256 in `meta`. That paper check used the calculation
+of the time. So the `paper` and `targets` entries of `checks` in the `meta` of `reference_MIX17.npz`, and the sha256 values of the
+calculation and the stored bands among its `source` files, are those of an earlier calculation. The
+full record of the build is in that `meta` and in `build_reference.json`, next to the files on
+Symmetry.
+
+The `meta` of `targets_thrust_nlo.npz` holds no checks. `tools_build_targets.py` checks that the
+moments, their variations and `sigma_pert` are a bitwise copy of its source and that `sigma_pert` is
+the sum given above.
+
+`examples/reproduce_paper.py` checks the two deposited files together. At the paper's central point,
+numpy alone on the two files reproduces the stored bands, `output/three_bands_MIXGEOV3S9`. The seven
+means of the paper are the window mean and fraction, <1 - T>, <B_T>, <rho_H>, <n_ch> and <n_baryon>.
+They agree to 1.0e-9, and the DELPHI thrust histogram to 6.9e-9, relative, both before and after the
+calculation is imposed. The tilt acts on 545,623 window events and converges in 4 Newton steps. The
+paper's torch code ran the head in float32 and this check runs it in float64, which accounts for the
+residual.

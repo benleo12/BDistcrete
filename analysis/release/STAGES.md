@@ -9,7 +9,7 @@ Every stage was trained on e+e- -> gamma*/Z -> q qbar at sqrt(s) = 91.2 GeV, wit
 - 3 parameters, cond head, rank 24, 4 ensemble members
 - reference sample 1,080,000 events, calibration temperature 1.125
 - own events supported: yes
-- Sherpa 3, an unpinned build (`analysis/gen_stageC_v2.sh`), so the defaults below are those of Sherpa 3.0.4 and hold only if that build had the same. In the paper: an earlier version only
+- Sherpa 3, an unpinned build (`analysis/gen_stageC_v2.sh`), so the defaults below are those of Sherpa 3.0.4 and hold only if that build had the same. In the paper: an earlier draft only
 
 | parameter | name | setting | low | high | centre | default |
 |---|---|---|---|---|---|---|
@@ -97,7 +97,7 @@ Effective sample fraction across the held points: 0.29 to 0.92.
 - 17 parameters, geometric head, rank 48, 4 ensemble members
 - reference sample 1,149,840 events, calibration temperature 1.000
 - own events supported: yes
-- Sherpa 3.0.4 and Herwig 7.3.0. In the paper: the seventeen-parameter mixture of Sec. 4
+- Sherpa 3.0.4 and Herwig 7.3.0. In the paper: the seventeen-parameter mixture of Sec. 3.3
 
 | parameter | name | setting | low | high | centre | default |
 |---|---|---|---|---|---|---|

@@ -20,7 +20,7 @@ The seven means are the mean of 1 - T inside the window of the calculation, the 
 in that window, and the full means of 1 - T, B_T, rho_H, n_ch and n_baryon.
 
 The paper's numbers are written out below (PAPER), copied from the output of three_bands.py, so no
-other file is needed. --paper three_bands_MIXGEOV3S9.npz compares with that file instead, which
+other file is needed. --paper ../output/three_bands_MIXGEOV3S9.npz compares with that file instead, which
 adds the prediction at each of the 200 points and the mean and percentiles of each band.
 
 Every number agrees with the paper to a few 1e-8 relative or better: the means to 1e-9 and the
@@ -201,7 +201,7 @@ def main():
     ap.add_argument('--reference', required=True, help='reference_MIX17.npz')
     ap.add_argument('--targets', required=True, help='targets_thrust_nlo.npz')
     ap.add_argument('--head', default=os.path.join(ROOT, 'models', 'MIX17_head.npz'))
-    ap.add_argument('--paper', help="three_bands_MIXGEOV3S9.npz, the paper's output, to compare "
+    ap.add_argument('--paper', help="../output/three_bands_MIXGEOV3S9.npz, the paper's output, to compare "
                                     "with instead of the numbers in this file")
     ap.add_argument('--nodes', type=int, default=200, help='points of the Latin hypercube')
     ap.add_argument('--seed', type=int, default=11)

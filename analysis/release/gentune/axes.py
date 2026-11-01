@@ -97,7 +97,7 @@ NOTES = {
     'clsmr': 'ClusterDecayer:ClSmrLight, the smearing of the hadron directions in a light '
              'cluster decay. Never fitted by a published Herwig tune, so it is varied wide here '
              'and turns out to be weak',
-    'fraction': 'the share of the sample the Herwig side supplies, 0 for pure Sherpa and 1 for '
+    'fraction': 'the mixing fraction of the multiplicative mixture, 0 for pure Sherpa and 1 for '
                 'pure Herwig',
 }
 

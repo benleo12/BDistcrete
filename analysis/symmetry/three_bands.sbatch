@@ -5,13 +5,13 @@
 #SBATCH -t 12:00:00
 #SBATCH -J 3bands
 #SBATCH -o logs/three_bands_%j.out
-# The three uncertainties of Sec. 4 on one trained mixture (three_bands.py): the calculation
+# The three uncertainties of Sec. 5 on one trained mixture (three_bands.py): the calculation
 # imposed at the default tunes of both generators with the mixing fraction at 1/2, the generator band over 200 points of a Latin hypercube, the learning band
 # from the wifi fit, the theory band from the variations of the calculation, against DELPHI. The
 # mean of members is the prediction (WIFI_CENTRAL=0). The LEP tables are the Rivet reference files
 # in rivet_ref (copied from the laptop's Rivet install, md5 checked).
 #   TAG=MIXGEOV3S9 sbatch --export=ALL three_bands.sbatch
-# EXPORT, REF, WFIT and OUT override the files of TAG (used to rerun the published r7 model).
+# EXPORT, REF, WFIT and OUT override the files of TAG (used to rerun the model of an earlier draft).
 set -uo pipefail
 MAXENT_DIR=${MAXENT_DIR:-/mnt/beegfs/bassi/reweighting/maxent_code}; R=$(dirname "$MAXENT_DIR")   # analysis/ in the repository, R its parent
 cd "$MAXENT_DIR" || exit 1; [ -f $R/env/torch/bin/activate ] && source $R/env/torch/bin/activate

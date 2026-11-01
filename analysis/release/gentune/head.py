@@ -34,8 +34,8 @@ import os
 import numpy as np
 
 
-# head_kind of the two mixture exports: 'mixture' is the additive (1 - f) q_S + f q_H of the
-# earlier release, 'geometric' the multiplicative q_S^(1-f) q_H^f of the paper's MIX17. Every
+# head_kind of the two mixture exports: 'mixture' is the additive (1 - f) q_S + f q_H of an
+# earlier draft, 'geometric' the multiplicative q_S^(1-f) q_H^f of the paper's MIX17. Every
 # other export is a single-generator head.
 MIXTURE_KINDS = ('mixture', 'geometric')
 
@@ -44,7 +44,7 @@ def sigm(z):
 
 
 class Head:
-    """A single-generator head: Stage C, Stage E (Sherpa) or Stage F (Herwig)."""
+    """A single-generator head: `C_1M` or `E` (Sherpa), or `F` (Herwig)."""
 
     def __init__(self, path):
         c = np.load(path)
@@ -143,9 +143,9 @@ class Head:
         the shower cutoff and the cluster fission mass with its power, and so covered a
         six-dimensional locus. The Sobol points fill the rest. The training runs of MIX17 are
         pure runs of one generator, at a fraction of 0 or 1, with the other generator's
-        parameters at the centre of their box. About one point in a thousand drawn uniformly
-        in the box of E, F or MIX17 fails, a corner further from the design than any training
-        point. A head whose design does not fill its box fails far more often, which is the
+        parameters at the centre of their box. About two points in a thousand drawn uniformly
+        in the box of E or MIX17 fail, and fewer for F, a corner further from the design than any
+        training point. A head whose design does not fill its box fails far more often, which is the
         case this test is for.
 
         The test is the design's own covariance. Rotating into its principal directions and

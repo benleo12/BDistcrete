@@ -121,8 +121,8 @@ def check_examples(models='models', examples=EXAMPLES):
                     if not os.path.exists(p)]
     if missing:
         print(f'\nsecond stage SKIPPED, because these files are missing: {", ".join(missing)}. '
-              f'It reads the example HepMC files of examples/data, which a checkout of v2.0.1 or '
-              f'later has. With gentune installed by pip, give that folder as the second '
+              f'It reads the example HepMC files of examples/data, which a checkout has. '
+              f'With gentune installed by pip, give that folder as the second '
               f'argument: python -m gentune.selftest MODELS EXAMPLES_DATA. The first stage does '
               f'not use these files, so its result above stands.')
         return None

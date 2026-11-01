@@ -5,7 +5,7 @@
 #SBATCH -t 2:00:00
 #SBATCH -J table_r8
 #SBATCH -o logs/table_r8_%j.out
-# Closure of the r8 release networks on the held-out runs of their designs, for release/STAGES.md,
+# Closure of the released networks on the held-out runs of their designs, for release/STAGES.md,
 # closure_<stage>.csv and closure_summary.json. C_1M has no bundle here and is read back from its CSV.
 set -uo pipefail
 MAXENT_DIR=${MAXENT_DIR:-/mnt/beegfs/bassi/reweighting/maxent_code}; R=$(dirname "$MAXENT_DIR")   # analysis/ in the repository, R its parent

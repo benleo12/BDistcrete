@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checks behind the bands of Sec. 4 (paper r8), on the Model, grid, central point and Latin hypercube of
+"""Checks behind the bands of Sec. 5, on the Model, grid, central point and Latin hypercube of
 three_bands.py (same SEED and NODES):
   stat      the statistical error of every prediction from the finite reference sample, at the central
             point, for the generators alone and with the calculation imposed. With weights summing to one,

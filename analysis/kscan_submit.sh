@@ -1,5 +1,5 @@
 #!/bin/bash
-# The K scan of Sec. 3.7 (Fig. 8) at the final standard. One factorized
+# The K scan of Sec. 3.6 (Fig. 6) at the final standard. One factorized
 # training per K, seed 0, through train_p2.sbatch exactly as the paper's cells (324k steps, no
 # patience, four bootstrap members, fit fraction 0.2, best stop-split checkpoint, temperature on the
 # stop split), each followed element by element by its strict test (score_p2_array.sbatch).

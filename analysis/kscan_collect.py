@@ -1,7 +1,7 @@
-"""The K scan of App. C at the paper standard, in the form figs_pro.py head reads: for each stage, the
-closure width at every number of terms K on the standard and the strict test, with the spread over
-the held-out points (the standard deviation of the per-point widths) as in the first scan. K = 48 is
-the first training of the Phase 2 cell. Writes output/rank_scan_final.json."""
+"""The K scan of Sec. 3.6 (Fig. 6) at the paper standard, in the form figs_r8.py kscan reads: for each
+stage, the closure width at every number of terms K on the standard and the strict test, with the
+spread over the held-out points (the standard deviation of the per-point widths) as in the first
+scan. K = 48 is the first training of the Phase 2 cell. Writes output/rank_scan_final.json."""
 import json, os
 import numpy as np
 def load(p):

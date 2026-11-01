@@ -1100,7 +1100,7 @@ def run_stage(tag):
             np.save(f'output/models/{tag}{SUF}_w_{rid}.npy', weights_from(logits_at(Es_final, theta), T)[0])
     # LADDER_TRUNCATE=1: the ensemble's log ratio on the reference at the held-out points and at 48
     # points uniform in the box, truncated to its leading r singular components and scored at the
-    # held-out points as above, with the same temperature (App. C, the concatenation network)
+    # held-out points as above, with the same temperature (Sec. 3.6, the DCTR network)
     trunc = None
     if os.environ.get('LADDER_TRUNCATE', '') == '1':
         assert not WHITEN, 'the truncation test takes the box points in the unwhitened convention'

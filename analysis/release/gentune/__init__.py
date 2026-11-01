@@ -4,7 +4,7 @@
 
     head  = Head('models/E_head.npz')            # Sherpa, eight parameters
     trunk = Trunk('models/E_trunk.npz')
-    events = features.parse_hepmc('my_sample.hepmc.gz')
+    events = features.parse_hepmc('examples/data/sherpa_default.hepmc.gz')
     F, M, _ = features.features_from_events(events)
     A = trunk.embed(features.trunk_features(F), M)
     w = head.ratio_weights(A, theta_to, theta_from)     # per event weights, in file order

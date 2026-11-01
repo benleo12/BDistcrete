@@ -1,6 +1,7 @@
-"""The inputs of the wide-scan figure (figs_pro.py widebox) from the stage-W results of the paper
-(DESIGN_TAG wb18): the closure width per held-out coupling of the three references, averaged over
-the observables, and the reference weights at alpha_s = 0.083 of the single run and of the local union.
+"""The inputs of figs_r8.py widebox, from the stage-W results of the paper (DESIGN_TAG wb18). The paper
+quotes them without a figure. They are the closure width per held-out coupling of the three references,
+averaged over the observables, and the reference weights at alpha_s = 0.083 of the single run and of
+the local union.
 Writes output/widebox_wb18.json, output/wb18_weights_single_0.083.npy, output/wb18_weights_union_0.083.npy."""
 import json, shutil
 import numpy as np

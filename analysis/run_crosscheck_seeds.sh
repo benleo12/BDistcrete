@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run-to-run spread of the PFN cross-check (App. B): five seeds of the energyflow PFN, of our
+# Run-to-run spread of the PFN cross-check (App. A.2): five seeds of the energyflow PFN, of our
 # conditional PFN collapsed to K=1, and of a plain PyTorch PFN with the energyflow architecture,
 # one training at a time. Results in output/crosscheck_seeds/, summary at the end.
 set -uo pipefail

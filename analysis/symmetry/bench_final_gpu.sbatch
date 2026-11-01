@@ -6,7 +6,7 @@
 #SBATCH -t 2:00:00
 #SBATCH -J benchgpu
 #SBATCH -o logs/bench_final_gpu_%j.out
-# Cost benchmark of Sec. 3.7 (bench_cost_final.py) on one H200, with the gradient check.
+# Cost benchmark of Sec. 3.6 (bench_cost_final.py) on one H200, with the gradient check.
 set -uo pipefail
 MAXENT_DIR=${MAXENT_DIR:-/mnt/beegfs/bassi/reweighting/maxent_code}; R=$(dirname "$MAXENT_DIR")   # analysis/ in the repository, R its parent
 cd "$MAXENT_DIR" || exit 1; [ -f $R/env/torch/bin/activate ] && source $R/env/torch/bin/activate

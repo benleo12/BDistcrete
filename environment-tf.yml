@@ -1,4 +1,4 @@
-# Only for crosscheck_ef.py (App. B): the energyflow PFN is a Keras model and needs TensorFlow.
+# Only for crosscheck_ef.py (App. A.2): the energyflow PFN is a Keras model and needs TensorFlow.
 # run_crosscheck.sh calls it with ${EF_PYTHON:-python}.
 name: bdistcrete-tf
 channels:

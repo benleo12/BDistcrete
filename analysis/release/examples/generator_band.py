@@ -3,7 +3,9 @@ r"""The generator band of an observable: its spread over the whole parameter box
 
     python examples/generator_band.py --stage MIX17 --reference
     python examples/generator_band.py --stage MIX17 --reference-file reference_MIX17.npz --bins paper
-    python examples/generator_band.py --stage F --hepmc my_herwig.hepmc.gz --from herwig-default
+    python examples/generator_band.py --stage F --hepmc examples/data/herwig_default.hepmc.gz --from herwig-default
+
+The last line reads the Herwig example file. Your own file goes in its place.
 
 This is the generator band of the paper, a flat prior on the box. The prior is sampled by 200
 points of a Latin hypercube with seed 11, the fraction of MIX17 uniform on [0, 1], built as
@@ -17,8 +19,9 @@ The events come from one of three places.
 
   --reference-file FILE       the paper's reference sample, the deposit reference_MIX17.npz
                               (REFERENCE.md), 1,149,840 events with the paper's own per-event
-                              observables, reweighted with weights. This gives the paper's band:
-                              <1-T> 0.00438, <n_ch> 0.677, <n_baryon> 0.284. Memory: 3 GB.
+                              observables, reweighted with weights. This gives the paper's band
+                              for the generators alone: <1-T> 0.00438, <n_ch> 0.677,
+                              <n_baryon> 0.284. Memory: 3 GB.
   --reference                 the 2000 reference events that ship in models/<stage>_selftest.npz,
                               drawn from that sample, so every statistical error is about
                               sqrt(1149840/2000) = 24 times larger for MIX17.

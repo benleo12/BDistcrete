@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """The NNLL+NLO thrust calculation at the paper's fixed point, binned in the ALEPH and DELPHI bins, with
-every variation of Sec. 4 (four scale variations and the change of scheme at the same point, and the
+every variation of Sec. 5 (four scale variations and the change of scheme at the same point, and the
 three variations of the dispersive model), for the appendix figure of the calculation against the data.
-Densities are normalized to the total rate, as the data and the fit to ALEPH. The same cumulants and
+Densities are normalized to the total rate, as the data. The same cumulants and
 shift as targets_nlo_point.py, which this script checks by recomputing the fourteen windowed moments of
 output/thrust_targets_nlo_point.npz. Writes output/calc_bins_nlo_point.json.
 

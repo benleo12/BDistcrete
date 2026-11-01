@@ -2,7 +2,7 @@
 """One figure from strategy_test.py: the combined band (generator + theory + learning) of the test histogram by the
 three strategies, relative to the central prediction (after the calculation is imposed):
   joint refit draws  S5, every source drawn at once and each draw re-solved (the exact band, MC_N draws)
-  refit + quadrature the r8 bands: re-solved generator (S0) + re-solved theory (S4) + learning, in quadrature
+  refit + quadrature the bands of the paper: re-solved generator (S0) + re-solved theory (S4) + learning, in quadrature
   linear joint       the linear joint covariance at the box centre (LJ), one solve
   log-linear         log w linear in the inputs at the box centre, the multipliers re-solved per draw (LL, when present)
 

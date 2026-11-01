@@ -23,8 +23,11 @@ From a checkout, which is what the rest of this file assumes:
 
 ```
 git clone https://github.com/benleo12/BDistcrete
-cd BDistcrete/analysis/release
+cd BDistcrete
+python3 -m venv .venv
+source .venv/bin/activate
 pip install numpy
+cd analysis/release
 ```
 
 Every command below runs from `analysis/release`, and the scripts in `examples/` import
@@ -39,10 +42,11 @@ pip install 'git+https://github.com/benleo12/BDistcrete#subdirectory=analysis/re
 
 This installs `gentune` and numpy and nothing else. The networks in `models/`, the example files
 in `examples/data/` and the scripts in `examples/` are not part of the package, so they still come
-from a checkout, and the installed package is pointed at them by path:
+from a checkout, and the installed package is pointed at them by path, here from the top of the
+checkout:
 
 ```
-python -m gentune.selftest path/to/analysis/release/models path/to/analysis/release/examples/data
+python -m gentune.selftest analysis/release/models analysis/release/examples/data
 ```
 
 Without the second argument the second stage of the self-test is skipped, because by default it
@@ -85,8 +89,8 @@ which are missing and is skipped, and the first stage's result stands.
 `E`, `F` and `MIX17` were trained on per-particle features stored as float16, and their trunk
 files say so (`feature_precision`). `Trunk` rounds your features the same way before the network
 sees them, which reproduces the training inputs. Read in float32 instead, the reweighted means of
-`MIX17` would move by up to 0.17 percent, about its accuracy floor, and those of `E` and `F` by
-0.02 percent (`analysis/precision_gap.py`).
+`MIX17` would move by up to 0.17 percent, about the floor of its error (Accuracy, below), and those
+of `E` and `F` by 0.02 percent (`analysis/precision_gap.py`).
 
 Then look at what a head does:
 
@@ -130,7 +134,7 @@ from gentune import Head, Trunk, features
 head  = Head('models/E_head.npz')
 trunk = Trunk('models/E_trunk.npz')
 
-F, M, _ = features.features_from_events(features.parse_hepmc('sample.hepmc.gz'))
+F, M, _ = features.features_from_events(features.parse_hepmc('examples/data/sherpa_default.hepmc.gz'))
 A = trunk.embed(features.trunk_features(F), M)
 
 w = head.ratio_weights(A, theta_to, theta_from)   # your sample, generated at theta_from
@@ -169,12 +173,18 @@ so its log ratio to the reference is `(1 - f) l_S + f l_H`, linear in the fracti
 and `l_H` are the log ratios of the two generators. The paper calls the fraction xi. The
 parameter vector is the two generators' parameters followed by the fraction,
 `theta = (*theta_S, *theta_H, f)`, with `f` in [0, 1] and `f = 0` meaning Sherpa alone. Use it
-exactly like a single-generator head:
+like a single-generator head, with the event vectors of its own trunk. A head can take the vectors
+of another stage's trunk with no error, and the weights are then wrong:
 
 ```python
-from gentune import load_head
-head = load_head('models/MIX17_head.npz')     # the right class for any export
+from gentune import Trunk, features, load_head
+
+head  = load_head('models/MIX17_head.npz')    # the right class for any export
+trunk = Trunk('models/MIX17_trunk.npz')       # the trunk of the same stage
 print(head.nS, head.nH)                       # how many parameters each side takes
+
+F, M, _ = features.features_from_events(features.parse_hepmc('examples/data/sherpa_default.hepmc.gz'))
+A = trunk.embed(features.trunk_features(F), M)
 w = head.ratio_weights(A, theta_to, theta_from)
 ```
 
@@ -185,9 +195,7 @@ of parameters.
 The edges are exact rather than approximate. At `f = 0` the log ratio is `l_S` itself and its
 derivative with respect to `theta_H` vanishes identically, and the same holds at `f = 1` for
 `theta_S`. So a fraction of zero is Sherpa alone, not a numerical approach to it, and a prior
-that puts weight at the endpoints is not fighting the parameterization. The reader also takes
-the additive mixture `(1 - f) q_S + f q_H` of earlier releases (`head_kind` `mixture`), whose
-log ratio is `log[(1 - f) exp(l_S) + f exp(l_H)]`.
+that puts weight at the endpoints is not fighting the parameterization.
 
 Two consequences worth knowing. A mixture head inherits the accuracy of both sides, so the
 weaker of the two sets the floor, and `STAGES.md` reports it measured rather than inferred. And
@@ -203,7 +211,7 @@ against the parameter vector of member `j`, plus a constant,
     log r(Phi, theta) = w_0 + sum_ij w_ij < a_i(Phi), b_j(theta) > ,
 
 with `b_j(theta) = (1 - f) b_S,j(theta_S) + f b_H,j(theta_H)` for the mixture.
-`models/MIX17_wifi.npz` holds the fitted weights `w` (`w_0` first, then `w_ij` row by row), their
+`models/MIX17_wifi.npz` holds the fitted coefficients `w` (`w_0` first, then `w_ij` row by row), their
 covariance `C`, and `w_published`, the mean of the members in the same basis (`w_ij` equal to one
 over M on the diagonal and zero elsewhere), which is what the prediction uses. The learning band
 of a reweighted mean `<O>` is `sqrt(g C g)`, where `g_k`, the derivative of `<O>` with respect
@@ -268,7 +276,7 @@ hypercube.
 central point. `--at` is one number per parameter, or a preset followed by `name=value` changes,
 as `--to` of `reweight_own_events.py`, for example `--at default H:pwtdiquark=0.40`. For each
 observable it prints the value at the point, the learning band and the statistical error, and with
-`--bootstrap N` the bootstrap standard deviation of the band. The WiFi weights ship for `MIX17`
+`--bootstrap N` the bootstrap standard deviation of the band. The WiFi coefficients ship for `MIX17`
 only, so this script runs on `MIX17` only.
 
 **Where the events come from.** `--reference-file FILE` takes the paper's reference sample and
@@ -288,11 +296,12 @@ costs effective sample size: on the Herwig example file the median `N_eff/N` ove
 0.21 with `MIX17` and 0.63 with `F`. For a Herwig sample at its default tune the two are
 
 ```
-python examples/generator_band.py --stage F     --hepmc my_herwig.hepmc.gz --from herwig-default
-python examples/generator_band.py --stage MIX17 --hepmc my_herwig.hepmc.gz --from herwig-default
+python examples/generator_band.py --stage F     --hepmc examples/data/herwig_default.hepmc.gz --from herwig-default
+python examples/generator_band.py --stage MIX17 --hepmc examples/data/herwig_default.hepmc.gz --from herwig-default
 ```
 
-and for a Sherpa sample `--stage E` and `--from sherpa-default`.
+and for a Sherpa sample `--stage E` and `--from sherpa-default`, with
+`examples/data/sherpa_default.hepmc.gz`. Your own file goes in place of the example file.
 
 **The observables.** With `--reference-file` they are the paper's own, read from the file:
 `1-T` on the exact thrust axis, `B_T`, `rho_H`, `n_ch` (among the 100 hardest particles, as in the
@@ -335,12 +344,13 @@ The paper's central point is both generators at their own defaults with a fracti
 | fraction | 0.5 |
 
 **Against the paper.** On the reference sample, the first two commands agree with the paper
-(`analysis/output/three_bands_MIXGEOV3S9.json` and `.npz`): the generator band to 1e-9 relative
-on the means and 1.2e-8 on the bins, as do the means at each of the 200 points; the learning
-band to 1e-5; the values and statistical errors at the central point to 1e-9. The generator band
-takes about a minute and the learning band a few seconds, both with 3 GB of memory. The paper's
-generator band of `<1-T>` is 0.00438, of `<n_ch>` 0.677 and of `<n_baryon>` 0.284, and its
-learning band 0.000286, 0.0594 and 0.00954.
+(`analysis/output/three_bands_MIXGEOV3S9.json` and `.npz`): the generator band to 4e-9 relative
+on the means and 1.2e-8 on the bins, and the means at each of the 200 points to 1e-8; the learning
+band to 1e-5; the values and statistical errors at the central point to 1e-9 on the means and
+7e-9 on the bins. The generator band takes about a minute and 3 GB of memory, and the learning band a
+few seconds and 4 GB. For the
+generators alone, the paper's generator band of `<1-T>` is 0.00438, of `<n_ch>` 0.677 and of
+`<n_baryon>` 0.284, and the learning band 0.000286, 0.0594 and 0.00954.
 
 On the 2000 reference events at the central point the two scripts give, against the paper,
 
@@ -383,7 +393,7 @@ files, and prints PASS or FAIL against the paper's numbers:
 python examples/reproduce_paper.py --reference reference_MIX17.npz --targets targets_thrust_nlo.npz
 ```
 
-It takes about six minutes on 8 cores and 2.5 GB of memory.
+It takes a few minutes and 3 GB of memory.
 
 ## Being inside the box is not the same as having been sampled
 
@@ -426,6 +436,11 @@ has to match on the following.
   mass, it raises a `ValueError` that says what was assumed. `parse_hepmc(path, units='MEV')`
   then reads it, and so does the file with the units line added. The example scripts take the
   same as `--units GEV` or `--units MEV`.
+- **The file format.** `features.parse_hepmc` reads HepMC2 and HepMC3 text files, plain or gzipped,
+  and takes the format from the file's own header, so it also reads the HepMC2 files that Herwig 7.3
+  writes through HepMC3. A header that does not tell raises a `ValueError`.
+  `parse_hepmc(path, fmt='hepmc2')` or `fmt='hepmc3'` then forces it, and the example scripts take
+  the same as `--fmt`.
 - **Unweighted events.** Every event counts once, as in the training samples, and the event
   weights in the file are ignored. A file whose weights are all equal is unweighted and needs
   nothing. With these cards Herwig writes a weight of 1 on every event and Sherpa one constant
@@ -550,13 +565,12 @@ are released as `E` and `F`.
 |---|---|---|---|---|
 | `E` | Sherpa 3 | 8 | the shower coupling and seven Ahadic hadronization parameters, among them the strange and the baryon fraction. Trained on 352 runs, closure measured at 24 held-out points | Stage D |
 | `F` | Herwig 7.3 | 8 | the shower coupling, the shower cutoff and six cluster hadronization parameters, among them the diquark weight that sets baryon production. Trained on 368 runs, closure measured at 24 held-out points | Stage E |
-| `MIX17` | both | 17 | the `E` box, the `F` box, and the fraction of the sample the Herwig side supplies. Reference sample of 1,149,840 events, closure measured at the 48 held-out points of both generators | the seventeen-parameter mixture of Sec. 4 |
-| `C_1M` | Sherpa 3 | 3 | the shower coupling, the strange fraction and the Ahadic cluster transverse momentum scale, trained on a cache of 1,080,000 events | an earlier version only |
+| `MIX17` | both | 17 | the `E` box, the `F` box, and the mixing fraction, 0 for Sherpa alone and 1 for Herwig alone. Reference sample of 1,149,840 events, closure measured at the 48 held-out points of both generators | the seventeen-parameter mixture of Sec. 3.3 |
+| `C_1M` | Sherpa 3 | 3 | the shower coupling, the strange fraction and the Ahadic cluster transverse momentum scale, trained on a cache of 1,080,000 events | an earlier draft only |
 
-`E`, `F` and `MIX17` are the networks of the current paper, released in version 2.0.0 of this
-release and unchanged since. The git history keeps the networks of version 1.0.0. `C_1M` is that
-of version 1.0.0. The networks of the paper's Stages A, B and C (one, two and three parameters)
-are not here.
+`E`, `F` and `MIX17` are the networks of the paper. The git history keeps the networks of an earlier
+draft, and `C_1M` is one of them. The networks of the paper's Stages A, B and C (one, two and three
+parameters) are not here.
 
 Parameter names, ranges, defaults, the settings they stand for and the traps just above are
 printed by
@@ -582,7 +596,7 @@ In this repository, a few megabytes per stage:
 | `models/<stage>_trunk.npz` | the event-side network, so you can embed your own events |
 | `models/<stage>_selftest.npz` | 2000 reference events, their place in the reference sample (`reference_index`), and the logits to reproduce |
 | `models/MANIFEST.json` | shapes, boxes, checksums, and the verification each stage passed |
-| `models/MIX17_wifi.npz` | the basis weights `w` of the learning band of `MIX17` and their covariance `C`, described above |
+| `models/MIX17_wifi.npz` | the coefficients `w` of the learning band of `MIX17` and their covariance `C`, described above |
 | `gentune/` | the reader, numpy only: `head`, `trunk`, `features`, `axes`, `bands` and `maxent`, and the self-test. `pyproject.toml` installs it |
 | `examples/` | `reweight_own_events.py`, `parameter_scan.py`, `generator_band.py`, `learning_band.py` and `reproduce_paper.py` |
 | `examples/data/` | the two example HepMC files, what gentune must give for them (`expected.npz`), and how they were made |
@@ -599,10 +613,12 @@ they were built and checked. In `analysis/release`, where the commands above loo
 
 ```
 for f in reference_MIX17.npz targets_thrust_nlo.npz REFERENCE.md SHA256SUMS; do
-  curl -LO https://github.com/benleo12/BDistcrete/releases/download/data-r8/$f
+  curl -fLO https://github.com/benleo12/BDistcrete/releases/download/data-r8/$f
 done
-shasum -a 256 -c SHA256SUMS          # sha256sum -c SHA256SUMS on Linux; every line must say OK
+shasum -a 256 -c SHA256SUMS
 ```
+
+Every line must say OK. On Linux, use `sha256sum -c SHA256SUMS`.
 
 The reference samples of the other stages are available on request. You do not need one to
 reweight your own events, which is what `embed` and `logit` are for.
@@ -617,8 +633,8 @@ checked to give byte-identical events to the one the released sample was generat
 `STAGES.md` carries the closure of every released head against the generator on parameter
 points held out of training, `closure_<stage>.csv` has it point by point, and
 `accuracy_law.json` has the fit described below in machine-readable form. For `E`, `F` and
-`MIX17` every held-out run has 400,000 events. The paper's closure widths of the same networks
-are in its Table 1.
+`MIX17` every held-out run has 400,000 events. The paper's closure widths of these models are in
+its Table 1, as the mean and standard deviation over three ensembles.
 
 A single worst-case percentage is a bad way to state this, because it is set by one point and
 says nothing about where in the box that point sat. What the data supports is a floor plus a
@@ -628,30 +644,30 @@ that mean.
 
     relative error  =  floor  +  slope x displacement
 
-| stage | floor | slope per 100 sigma | scatter | measurements | points above the law |
+| stage | floor | slope per 100 sigma | scatter | measurements | points above the fit |
 |---|---|---|---|---|---|
 | E, Sherpa, 8 parameters | 0.12% | -0.10% | 0.07% | 96 | 6 |
 | F, Herwig, 8 parameters | 0.11% | 0.08% | 0.11% | 96 | 7 |
 | MIX17, the two-generator mixture, 17 parameters | 0.16% | 0.03% | 0.13% | 192 | 12 |
 
 Fitted robustly over four observables at the held points of each stage, with soft
-down-weighting rather than rejection, so the points above the law, more than three scatter units
+down-weighting rather than rejection, so the points above the fit, more than three scatter units
 above it, are identified by the fit rather than by choosing them. The displacements run up to 123
 sigma for Sherpa, 389 for Herwig and 368 for the mixture. The 384 measurements behind the three
 fits ship as `accuracy_law_points.csv`, so the fit can be checked rather than taken on trust.
 
 **The four observables are one minus thrust, total multiplicity, total broadening and the heavy
-jet mass. The law does not cover the two flavour rates, the baryon rate and the strange
+jet mass. The fit does not cover the two flavour rates, the baryon rate and the strange
 fraction.** The baryon rate reaches 1.36 percent on `E`, 2.05 on `F` and 1.15 on `MIX17`, with a
 root mean square over the held points of 0.47, 0.70 and 0.48 percent, three to seven times the
 floor. The strange fraction stays within 0.6 percent on every stage. So a flavour rate has to be
 read off `STAGES.md` and `closure_<stage>.csv` directly rather than predicted from the floor and
 the slope.
 
-The points above the law are named in `accuracy_law.json`. All but one are event shapes, at three
+The points above the fit are named in `accuracy_law.json`. All but one are event shapes, at three
 held points of `E` and four of `F`, and on `MIX17` mostly at the same Herwig points. The largest
 is the Herwig held point 8215, at the low end of the cluster fission power: one minus thrust closes
-to 0.99 percent there on `F` and to 1.14 percent on `MIX17`, where the law predicts 0.16 and 0.18.
+to 0.99 percent there on `F` and to 1.14 percent on `MIX17`, where the fit predicts 0.16 and 0.18.
 **So an event shape of Herwig can be off by up to one percent at some points of its box, about
 five times the floor.**
 
@@ -693,7 +709,7 @@ multiplicity.
 What is left after those two is not a representation problem. A linear fit of the per-event
 baryon count on the 96 columns of the event vector reaches a held-out R-squared of 0.91, among
 the best of the six, and a rank-one tilt of 2 percent of the head's own logit spread zeroes the
-worst Stage C baryon error at a cost of 0.1 percent of the effective sample size. The
+worst `C_1M` baryon error at a cost of 0.1 percent of the effective sample size. The
 remainder sits in the parameter network, and it tracks curvature. Fitting a plane in the three
 parameters to the generator's response over the 27-point grid leaves the baryon rate with a
 non-planar part of 3.1 percent of its mean against 0.5 to 1.0 percent for the event shapes. The
@@ -705,7 +721,7 @@ Two mechanisms that sound right were measured and are wrong. Discreteness and th
 events carrying several baryons are not the cause: the count is strictly even, the mean of half
 the count has the same relative error, and capping the count at two removes only a quarter to
 four tenths of the error while leaving the rate still the worst of the observables. Nor is it the
-statistics: over 17 Stage C points the mean squared pull is 10.2 against 1 for noise, dropping
+statistics: over 17 `C_1M` points the mean squared pull is 10.2 against 1 for noise, dropping
 the three worst points leaves 0.95 percent against 0.44 for the shapes, and at the same parameter
 point two independent generator seeds agree to a mean squared pull of 0.97, so the rate is a
 reproducible function of the parameters.

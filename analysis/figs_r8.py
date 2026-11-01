@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Every data figure of the r8 paper at its printed size, in one style.
+"""The data figures of the paper at their printed size, in one style. plot_envelope.py draws Figs. 8 to 10
+in the same style.
 
 Figures are drawn at the width they have on the page (TW = 5.95 in, the JHEP text width, or a stated
 fraction of it), so the fonts are the printed fonts: 9 pt axis labels and panel titles, 8 pt tick
@@ -597,7 +598,7 @@ def toy():
     save(fig, 'toy')
 
 
-# the data figures of the paper, Figs. 3 to 12 in order: what runs without arguments
+# the data figures of the paper, Figs. 3 to 7 and 11 to 14 in order: what runs without arguments
 PAPER = ['closure_mix', 'map', 'coverage', 'kscan', 'cost', 'bands', 'obs', 'toy', 'aleph']
 
 

@@ -5,7 +5,7 @@ parameters. `gentune.maxent` then imposes a calculation of thrust moments on tho
 as the paper does: the weights change as little as possible in relative entropy, within the
 calculation's covariance, until the window means of the moments agree with it. It needs only numpy.
 On the full sample it reproduces the paper's torch code (`analysis/directlib.py`) to about
-1e-13 in log w, and the paper's central predictions to 1e-9.
+1e-13 in log w, and the paper's central means to 1e-9.
 
 ## What you need
 
@@ -24,10 +24,12 @@ The two files are public at https://github.com/benleo12/BDistcrete/releases/tag/
 
 ```bash
 for f in reference_MIX17.npz targets_thrust_nlo.npz REFERENCE.md SHA256SUMS; do
-  curl -LO https://github.com/benleo12/BDistcrete/releases/download/data-r8/$f
+  curl -fLO https://github.com/benleo12/BDistcrete/releases/download/data-r8/$f
 done
-shasum -a 256 -c SHA256SUMS          # sha256sum -c SHA256SUMS on Linux; every line must say OK
+shasum -a 256 -c SHA256SUMS
 ```
+
+Every line must say OK. On Linux, use `sha256sum -c SHA256SUMS`.
 
 About 2 GB of memory is enough. On 8 cores one parameter point takes about 4 s for the head and
 under 1 s for the imposition.
@@ -66,8 +68,8 @@ whether the solve converged. For a scan over many points, pass the previous `lam
 start the solve there.
 
 The variations of the calculation are in `calc.variations`, by name. Imposing each in turn gives
-the theory band. With the paper's combination (the two scale pairs at half weight, the change
-of scheme once) this reproduces its band on `<1-T>`, 0.001524:
+the theory band. With the combination of `analysis/three_bands.py` (the two scale pairs at half
+weight, the change of scheme once) this gives the symmetric band on `<1-T>`, 0.001527:
 
 ```python
 def mean(which):
@@ -114,7 +116,7 @@ from gentune.maxent import impose
 
 shifted = 1.01*calc.c
 logw1, lam1, info1 = impose(logw0, inwin, F, shifted, calc.sigma, floor_rel=calc.floor_rel)
-print(info1['pwin_before'], info1['pwin_after'])   # 0.4332 and 0.0059: the window has emptied
+print(info1['pwin_before'], info1['pwin_after'])   # 0.4332 and 0.0060: the window has emptied
 print(np.exp(logw1) @ tau)                         # 0.0298, which is not a prediction
 ```
 
@@ -175,8 +177,8 @@ logw, lam, info = mine.impose(logw0, inwin, F)
 - Every `c` has to be the moments of one distribution of tau. Moments changed one by one, or all
   by the same factor, are not, and the solve then empties the window (the section on the 1
   percent shift above). `impose` warns when the window fraction changes by more than 10 percent
-  (the paper's calculation and its variations change it by less than 0.1 percent); small pulls do
-  not mean agreement when that warning fires.
+  (the paper's calculation changes it by 0.05 percent and its variations by at most 0.15 percent);
+  small pulls do not mean agreement when that warning fires.
 
 The file is an `.npz` or `.json` with the fields `moment_names`, `window`, `central`, `sigma`,
 and optionally `moment_powers`, `floor_rel` and `variations` (in `.npz`, `variation_names` and
@@ -219,12 +221,12 @@ Latin hypercube (seed 11) it gives the generator band, before and after. It comp
 everything with the paper's numbers, which it carries, and agrees to a few 1e-8 relative or
 better: the means to 1e-9, the distribution to 7e-9 and the bands to 1.2e-8. What remains
 comes from the head, which the paper's code evaluated in float32 and gentune evaluates in
-float64. It takes about six minutes on 8 cores and 2.5 GB of memory.
+float64. It takes a few minutes and 3 GB of memory.
 
 The bands of the generator alone, before a calculation is imposed, come from the same file with
 the two band scripts of the README, and agree with the paper as closely: the generator band to
-1e-9 on the means and 1.2e-8 on the bins, the learning band to 1e-5, and the statistical errors
-to 1e-9.
+4e-9 relative on the means and 1.2e-8 on the bins, the learning band to 1e-5, and the statistical
+errors to 1e-9 on the means and 6e-9 on the bins.
 
 ```bash
 python examples/generator_band.py --stage MIX17 --reference-file reference_MIX17.npz --bins paper

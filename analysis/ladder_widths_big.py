@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Binned closure widths (the statistic of Sec. 4, the paper's tab:ladder convention) for the
+"""Binned closure widths (the statistic of Sec. 3.2, the convention of Table 1) for the
 eight-parameter Sherpa and Herwig stages and the seventeen-parameter mixture, on the corrected
 shapes. Same estimator as ladder_widths_v2.py: bins from reference plus the report half of each
 held run, per-bin pulls with both sides' multinomial errors, width = sqrt(chi2/ndf) about zero,

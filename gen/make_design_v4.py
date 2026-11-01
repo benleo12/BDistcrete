@@ -1,12 +1,11 @@
 """Design v4: 1024 further training runs per generator between all existing points (released + v3).
 
-Per generator, 256 new training points from a scrambled Sobol sequence (uniform over the same
-box as the existing runs), the scramble chosen out of 400 to keep the new points farthest from
-the existing training and held-out points, and 16 new held-out points from an independent
-scrambled Sobol sequence (a typical point a user would ask for, not a worst case).
+Per generator, 1024 new training points from a scrambled Sobol sequence (uniform over the same
+box as the existing runs), the scramble chosen out of 100 to keep the new points farthest from
+the existing training and held-out points, with no new held-out points.
 The run id is also the generator seed.
 
-    python make_design_v3.py  ->  designs/stageE_design_v3.csv, designs/stageF_design_v3.csv
+    python make_design_v4.py  ->  designs/stageE_design_v4.csv, designs/stageF_design_v4.csv
 """
 import json, os, csv
 import numpy as np

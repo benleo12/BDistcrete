@@ -245,9 +245,9 @@ def impose(logw0, inwin, F, c, Sigma, floor_rel=FLOOR_REL, lam0=None, tol=1e-10,
     if abs(pw/P - 1) > 0.1:
         # The penalty of the problem is weighted by the square of the window fraction, so when no
         # tilt of the window events comes near c, moving weight out of the window is the cheaper
-        # answer, and the pulls then look small. The paper's calculation and its variations move
-        # the fraction by less than 1e-3, so a change of more than 10 percent flags a calculation
-        # that these events cannot reach.
+        # answer, and the pulls then look small. The paper's calculation moves the fraction by 0.05
+        # percent and its variations by at most 0.15 percent, so a change of more than 10 percent
+        # flags a calculation that these events cannot reach.
         warnings.warn(f'impose: the window held {P:.3g} of the weight before and holds {pw:.3g} '
                       f'after. No reweighting of these events comes near the calculated means '
                       f'within Sigma, and the solution moves weight across the window edge instead, '

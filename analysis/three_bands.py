@@ -16,9 +16,9 @@ of one point (targets_nlo_point.py):
                    its two displacements, the scheme once, the dispersive-model variations as their root
                    mean square
   statistical      at the central point, the statistical error of every prediction from the finite
-                   reference sample (paper r8), which no band contains
+                   reference sample, which no band contains
   combined         the three bands and the statistical error added in quadrature; theory_up/down and
-                   combined_up/down keep the sign of each theory variation (paper r8), with the
+                   combined_up/down keep the sign of each theory variation, with the
                    dispersive-model variations in the theory band as their root mean square
 Observables: the mean of tau inside the window and the window fraction, the full means of 1-T,
 B_tot, rho_H, the mean charged multiplicity and the mean baryon count, and the thrust distribution
@@ -216,7 +216,7 @@ gen = {'before': {k: dict(mean=float(rows0[:, j].mean()), sd=float(rows0[:, j].s
                           p16=float(np.percentile(rows1[:, j], 16)), p84=float(np.percentile(rows1[:, j], 84))) for j, k in enumerate(OBK)}}
 g0_hist = H0.std(0, ddof=1); g1_hist = H1.std(0, ddof=1)
 # the combination: generator, theory and learning in quadrature (generator only: generator and learning)
-# every combination includes the statistical error of the prediction at the central point (paper r8)
+# every combination includes the statistical error of the prediction at the central point
 comb = {k: quad(gen['after'][k]['sd'], th_band[k], learn_band[k] if np.isfinite(learn_band[k]) else 0, stat[k]) for k in OBK}
 comb0 = {k: quad(gen['before'][k]['sd'], learn_band0[k] if np.isfinite(learn_band0[k]) else 0, stat0[k]) for k in OBK}
 comb_hist = np.sqrt(g1_hist**2 + th_hist**2 + np.nan_to_num(learn_hist)**2 + stat_hist**2)

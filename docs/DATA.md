@@ -2,11 +2,11 @@
 
 The git repository holds the scripts, the result files in `analysis/output/` and the released
 networks in `analysis/release/`. The network exports and the event samples are too large for git.
-This file lists those that draft r9 of the paper needs, and what reads each one. Paths are relative
+This file lists those that the paper needs, and what reads each one. Paths are relative
 to `analysis/`, except those that start with `gen/`, which are relative to the repository root.
 The scripts open them at exactly these paths.
 
-## Draft r8
+## The paper
 
 ### Public: the reference sample of the mixture and the thrust calculation
 
@@ -93,7 +93,7 @@ the two files above by `extract_particles_full_flavor.py` and `compute_shapes_on
 
 The samples and exports of the earlier draft, which fitted α_s(M_Z) and α_0 to the LEP data, are
 the assets of the GitHub release `data-v1`. They hold its Stages A to C, its seven-parameter
-mixture, its networks `E`, `Fauglong`, `MIX17aug` and `C_1M`, and the EERAD3 logs. Draft r8 reads
+mixture, its networks `E`, `Fauglong`, `MIX17aug` and `C_1M`, and the EERAD3 logs. The paper reads
 none of these archives. Some of its runs have the run number and parameter point of an archived
 run, for example the Stage D and E training runs of the archives `C7` and `C8` and the blind runs
 6950 to 6961 of `B3_held_C_valid`. `tools/get_data.sh --list` lists the archives, and `tools/get_data.sh <archive or

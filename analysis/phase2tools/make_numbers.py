@@ -603,7 +603,7 @@ if all((48, s) in toys for s in range(3)):
 # of one prediction (Fig. cost), on one CPU process with four threads and on one H200. The rest of a step
 # (the maximum-entropy weight and its derivatives, with a chi^2 that adds a few percent, the same for every
 # network) on the CPU, quoted to one figure. The profile fit of COST_STEPS steps (\CostFit*) belongs to
-# draft r8 and is not used by r9.
+# an earlier draft and is not used by the paper.
 COST_STEPS = 6000
 fc, fg = f'{D}/bench_final_cpu_4.json', f'{D}/bench_final_cuda_12.json'
 if os.path.exists(fc) and os.path.exists(fg):

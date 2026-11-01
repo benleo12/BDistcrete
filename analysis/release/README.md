@@ -34,7 +34,7 @@ anywhere, `pip install analysis/release` from the top of the checkout installs i
 The package alone also installs with pip, without a checkout:
 
 ```
-pip install 'git+https://github.com/benleo12/BDistcrete@v2.0.1#subdirectory=analysis/release'
+pip install 'git+https://github.com/benleo12/BDistcrete#subdirectory=analysis/release'
 ```
 
 This installs `gentune` and numpy and nothing else. The networks in `models/`, the example files

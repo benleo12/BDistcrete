@@ -6,14 +6,14 @@ fraction of it), so the fonts are the printed fonts: 9 pt axis labels and panel 
 labels, 7.5 pt legends and annotations. Each color keeps one meaning across the paper, as set out
 in the block of constants below.
 
-    python figs_r8.py               # the ten data figures of the paper, output/r8_<name>.pdf
+    python figs_r8.py               # the nine data figures of the paper, output/r8_<name>.pdf
     python figs_r8.py bands obs     # only the figures named
 
-The ten, in the order of the paper: closure_mix (Fig. 3), toy (Fig. 4), map (Fig. 5), widebox
-(Fig. 6), coverage (Fig. 7), kscan (Fig. 8), cost (Fig. 9), bands (Fig. 10), obs (Fig. 11) and
-aleph (Fig. 12). closure (Stage C reweighted to a held-out point) is not in the paper and is drawn
-only when named. R8_OUT sets the output folder (default output). XP_NULL sets the dotted tick of
-Fig. 5 (default the mean of output/xp_null.json).
+The nine, in the order of the paper: closure_mix (Fig. 3), map (Fig. 4), coverage (Fig. 5), kscan
+(Fig. 6), cost (Fig. 7), bands (Fig. 11), obs (Fig. 12), toy (Fig. 13) and aleph (Fig. 14). widebox
+(the wide coupling scan, whose numbers the paper quotes without a figure) and closure (Stage C
+reweighted to a held-out point) are not in the paper and are drawn only when named. R8_OUT sets the output folder (default output). XP_NULL sets the dotted tick of
+Fig. 4 (default the mean of output/xp_null.json).
 """
 import os, sys, json
 import numpy as np
@@ -598,7 +598,7 @@ def toy():
 
 
 # the data figures of the paper, Figs. 3 to 12 in order: what runs without arguments
-PAPER = ['closure_mix', 'toy', 'map', 'widebox', 'coverage', 'kscan', 'cost', 'bands', 'obs', 'aleph']
+PAPER = ['closure_mix', 'map', 'coverage', 'kscan', 'cost', 'bands', 'obs', 'toy', 'aleph']
 
 
 if __name__ == '__main__':

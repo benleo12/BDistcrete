@@ -52,7 +52,7 @@ theta = [0.118, 0.68, 3.9, 0.48, 0.46, 0.17, 0.97, 0.18,                        
 logw0 = head.logit(A, theta)/head.T        # the generators alone
 logw, lam, info = calc.impose(logw0, inwin, F)
 w = np.exp(logw)                           # normalized, sums to one
-print(w @ tau, w @ ref['nch'])             # 0.065110 and 17.8311
+print(w @ tau, w @ ref['nch'])             # 0.065035 and 17.8283
 ```
 
 This `theta` is the paper's central point: the default tunes of both generators and a fraction
@@ -80,7 +80,7 @@ pairs = [("(2.0, 1.0, 'logR', 1.0)", "(0.5, 1.0, 'logR', 1.0)"),
 band = np.sqrt(sum(0.5*d[a]**2 + 0.5*d[b]**2 for a, b in pairs) + d["(1.0, 1.0, 'modR', 1.0)"]**2)
 ```
 
-The dispersive-model variations `milan_up`, `milan_dn` and `sub3` are not in that sum. The
+The dispersive-model variations `milan_up`, `milan_dn` and `sub2` are not in that sum. The
 paper's signed bands, which do include them, are built in `analysis/three_bands.py`.
 
 ## What a loaded calculation holds
@@ -91,13 +91,13 @@ paper's signed bands, which do include them, are built in `analysis/three_bands.
 print(calc)                     # Targets(14 moments, window [0.05, 0.3333), floor 0.002, 12 variations)
 print(calc.names)               # ['logt', 'tau', 'tlogt', 'log2t', ...]: f_k(tau) = tau^a ln^b tau
 print(calc.powers)              # [(0, 1), (1, 0), (1, 1), (0, 2), ...]: the (a, b) of each
-print(calc.c)                   # the 14 calculated window means, calc.c[1] = <tau> = 0.112045
+print(calc.c)                   # the 14 calculated window means, calc.c[1] = <tau> = 0.111864
 print(calc.sigma.shape)         # (14, 14): their covariance, here sigma_pert, before the floor
 print(np.sqrt(np.diag(calc.sigma)))     # the error of each mean, <tau>: 0.00348
 print(calc.window, calc.floor_rel)      # (0.05, 0.3333333333333333) 0.002
-print(list(calc.variations))    # the 12 variations by name, "(2.0, 1.0, 'logR', 1.0)" ... 'sub3'
+print(list(calc.variations))    # the 12 variations by name, "(2.0, 1.0, 'logR', 1.0)" ... 'sub2'
 print(calc['milan_up'])         # the c of one variation; calc['central'] is calc.c
-print(calc.meta)                # alpha_s 0.1135, alpha_0 0.4312 and the calculated window fraction
+print(calc.meta)                # alpha_s 0.1137, alpha_0 0.524 and the calculated window fraction
 ```
 
 `c` and every variation are window-conditional means: the means of the functions over the
@@ -123,9 +123,9 @@ moments of one distribution are tied to each other, and the same factor on all o
 what any distribution of tau gives within the 0.2 percent floor, so no reweighting of the
 reference events comes near it (`info1['pulls']` still reaches 5). The penalty of the problem is
 weighted by the square of the window fraction, so the cheapest answer is then to move the
-weight out of the window, from 0.433 to 0.006, and `<1-T>` over all events falls from 0.0651 to
+weight out of the window, from 0.433 to 0.006, and `<1-T>` over all events falls from 0.0650 to
 0.0298. A shift by 0.1 percent still takes the window fraction to 0.16. A calculation that is a
-distribution, the paper's or any of its twelve variations, leaves it at 0.4330. So change the
+distribution, the paper's or any of its twelve variations, leaves it near 0.433. So change the
 calculated distribution and take the moments of the changed one, as the variations do, rather
 than the moments themselves, and check `info['pwin_after']` against `info['pwin_before']` on
 anything you impose. Imposed by name, a changed `c` reads
@@ -133,7 +133,7 @@ anything you impose. Imposed by name, a changed `c` reads
 ```python
 calc.variations['mine'] = calc.variations["(2.0, 1.0, 'logR', 1.0)"]   # any 14 window means
 logw2, _, info2 = calc.impose(logw0, inwin, F, which='mine')
-print(info2['pwin_after'], np.exp(logw2) @ tau)    # 0.4330 and 0.065349
+print(info2['pwin_after'], np.exp(logw2) @ tau)    # 0.4330 and 0.065263
 ```
 
 ## Your own calculation

@@ -356,7 +356,7 @@ tgt_arrays = dict(
     scale_variations=G['scale'][0, 0], scale_labels=G['scale_labels'], scale_pwin=G['pwin_scale'][0, 0],
     np_variations=G['np_vars'][0, 0], np_labels=G['np_labels'],
     milan=G['milan'], sub_order_central=G['sub_order_central'], order=G['order'],
-    chain_summary=G['chain_summary'])
+    calc_point=G['calc_point'])
 same = {'central': G['central'][0, 0], 'sigma_pert': G['sigma_pert'][0, 0], 'window': G['window'],
         'scale_variations': G['scale'][0, 0], 'np_variations': G['np_vars'][0, 0]}
 need(all(np.array_equal(tgt_arrays[k], v) for k, v in same.items()), 'a number of the calculation changed')
@@ -411,8 +411,8 @@ ref_meta = dict(
 tgt_doc = dict(
     name='targets_thrust_nlo', version=a.version, built=stamp, build_script_sha256=build_sha,
     source={os.path.relpath(TARGETS, SRC): src_sha[TARGETS]},
-    calculation=('NNLL+NLO thrust with a dispersive power correction, at the pair (alpha_s, alpha_0) of its own '
-                 'fit to ALEPH in 0.05 < tau < 0.33 (output/thrust_chain.py, targets_nlo_point.py)'),
+    calculation=('NNLL+NLO thrust with a dispersive power correction, at the published pair (alpha_s, alpha_0) of Gehrmann, Luisoni '
+                 'and Monni, Eur. Phys. J. C 73 (2013) 2265, log-R, with their subtraction to O(alpha_s^3) (output/calc_point.json, targets_nlo_point.py)'),
     keys=dict(
         moment_names='the 14 moments, in order',
         moment_powers='(a, b) of each moment: f(tau) = tau^a (ln tau)^b, tau clipped at 1e-6',
@@ -429,10 +429,10 @@ tgt_doc = dict(
         scale_labels='(x_muR, x_V, matching scheme, x_NNLO) of each row',
         scale_pwin='the window fraction of each scale variation',
         np_variations='the moments for each variation of the dispersive model, rows np_labels',
-        np_labels='Milan factor +20 percent, -20 percent, third-order renormalon subtraction',
+        np_labels='Milan factor +20 percent, -20 percent, the renormalon subtraction at the other order',
         milan='the central Milan factor', sub_order_central='order of the central renormalon subtraction',
         order='perturbative order of the fixed-order part (2: NLO)',
-        chain_summary='the fit of the chain that fixed the point, JSON'),
+        calc_point='the point and its source, JSON'),
     arrays={k: dict(dtype=str(np.asarray(v).dtype), shape=list(np.shape(v)), sha256=sha_array(v))
             for k, v in tgt_arrays.items()})
 ref_arrays['meta'] = np.array(json.dumps(ref_meta, indent=1))

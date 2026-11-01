@@ -2,7 +2,7 @@
 
 The git repository holds the scripts, the result files in `analysis/output/` and the released
 networks in `analysis/release/`. The network exports and the event samples are too large for git.
-This file lists those that draft r8 of the paper needs, and what reads each one. Paths are relative
+This file lists those that draft r9 of the paper needs, and what reads each one. Paths are relative
 to `analysis/`, except those that start with `gen/`, which are relative to the repository root.
 The scripts open them at exactly these paths.
 
@@ -18,7 +18,7 @@ Zenodo.
 | file | bytes | what | read by |
 |---|---|---|---|
 | `reference_MIX17.npz` | 865,353,418 | the 1,149,840 reference events of the mixture, released as `MIX17`, as the event vectors a(Φ) of `MIXGEOV3S9_cond.npz` and the per-event observables of `MIXGEOV3S9_ref_v2_slim.npz`, with the run and the generator of every event | `analysis/release/examples/reproduce_paper.py`, `generator_band.py` and `learning_band.py` with `--reference-file`, `gentune.maxent` (`analysis/release/IMPOSE.md`) |
-| `targets_thrust_nlo.npz` | 33,524 | the NNLL+NLO thrust calculation imposed in the paper, its 14 moments in the window, their covariance and its variations, copied from `output/thrust_targets_nlo_point.npz` | `gentune.maxent.load_targets` |
+| `targets_thrust_nlo.npz` | 30,034 | the NNLL+NLO thrust calculation imposed in the paper, its 14 moments in the window, their covariance and its variations, copied from `output/thrust_targets_nlo_point.npz` | `gentune.maxent.load_targets` |
 
 With them, numpy alone reproduces the central predictions of Sec. 4, the generator band and the
 learning band, without the exports below. To download and check them into `analysis/release`,

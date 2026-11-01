@@ -7,7 +7,7 @@ calculation the paper imposes on them. This file describes the deposit that hold
 | file | bytes | sha256 |
 |---|---|---|
 | `reference_MIX17.npz` | 865,353,418 | `a22b834d357f5fb954d07346436ce7fd85c6cd6450d918f27961cd17fdf73bfe` |
-| `targets_thrust_nlo.npz` | 33,524 | `765f6d755c1a56fe039f173571371b6be63e30c15061f76f46444e49405beb3b` |
+| `targets_thrust_nlo.npz` | 30,034 | `89a65043ae9b04698678bfd261bbe21dfbac5cf4d05e7fb6cb2703b431ecdf20` |
 
 Both are public, with this file and `SHA256SUMS`, as the assets of the GitHub release
 https://github.com/benleo12/BDistcrete/releases/tag/data-r8, and will also be archived at Zenodo.
@@ -95,7 +95,7 @@ inwin, F = t.functions(tau)                      # the window and the moment fun
 f = head.logit(AE, theta)/head.T                 # log w0, any normalization
 lw, lam, info = t.impose(f, inwin, F)            # the paper's c, sigma_pert and floor
 w = np.exp(lw)
-print(w @ tau)                                   # the paper's imposed <1 - T>: 0.0651102
+print(w @ tau)                                   # the paper's imposed <1 - T>: 0.0650351
 lw_up, _, _ = t.impose(f, inwin, F, which="(2.0, 1.0, 'logR', 1.0)")   # one variation
 ```
 
@@ -173,7 +173,8 @@ To check a download, compare its sha256 with the table above. To check one array
 ## targets_thrust_nlo.npz
 
 This is the paper's NNLL+NLO thrust calculation, with a dispersive power correction. It is
-evaluated at the pair (alpha_s, alpha_0) of its own fit to ALEPH in 0.05 < tau < 0.33. Every
+evaluated at the published pair (alpha_s, alpha_0) of Gehrmann, Luisoni and Monni (Eur. Phys. J. C 73
+(2013) 2265, log-R), with their renormalon subtraction to order alpha_s^3. Every
 number is copied unchanged from `output/thrust_targets_nlo_point.npz`, and the build checks this
 bitwise.
 
@@ -185,15 +186,15 @@ bitwise.
 | `sigma_pert` | (14, 14) float64 | Sigma_c, the sum of d d^T with d a scale variation minus `central` (see below) |
 | `window` | (2,) float64 | [0.05, 1/3), in tau |
 | `floor_rel` | () float64 | 0.002, the paper's diagonal floor: Sigma = sigma_pert + diag((floor_rel \|c\|)^2) |
-| `alpha_s`, `alpha_0` | () float64 | 0.113502 and 0.431222, the point |
-| `pwin` | () float64 | the calculated window fraction, 0.4392, which the paper does not impose |
+| `alpha_s`, `alpha_0` | () float64 | 0.1137 and 0.524, the point |
+| `pwin` | () float64 | the calculated window fraction, 0.4486, which the paper does not impose |
 | `scale_variations` | (9, 14) float64 | the moments for each scale and scheme variation, at the same point |
 | `scale_labels` | (9,) str | (x_muR, x_V, matching scheme, x_NNLO) of each row |
 | `scale_pwin` | (9,) float64 | the window fraction of each row |
-| `np_variations` | (3, 14) float64 | the moments with the Milan factor up and down by 20 percent, and with the third-order renormalon subtraction |
-| `np_labels` | (3,) str | `milan_up milan_dn sub3` |
-| `milan`, `sub_order_central`, `order` | () | 1.49, 2 and 2: the central Milan factor, the subtraction order and the fixed-order order |
-| `chain_summary` | () str | JSON of the fit that fixed the point |
+| `np_variations` | (3, 14) float64 | the moments with the Milan factor up and down by 20 percent, and with the renormalon subtraction at second order (the central one is at third order) |
+| `np_labels` | (3,) str | `milan_up milan_dn sub2` |
+| `milan`, `sub_order_central`, `order` | () | 1.49, 3 and 2: the central Milan factor, the subtraction order and the fixed-order order |
+| `calc_point` | () str | JSON of the point and its source |
 | `meta` | () str | JSON: the source and its sha256, the sha256 of every array, a line on every key |
 
 `sigma_pert` sums d d^T over three groups of scale variations:

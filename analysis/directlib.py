@@ -23,6 +23,7 @@ import numpy as np, torch
 from scipy.optimize import minimize
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from fit_alpha0 import lepdata
+import bundle_rule
 
 torch.set_default_dtype(torch.float64)
 
@@ -34,6 +35,8 @@ class Model:
         self.tag = tag
         self.export = export or f'output/models/{tag}_cond.npz'
         self.refpath = ref or f'output/models/{tag}_ref_v2.npz'
+        # the rerun (BEAM_PHOTONS=remove, D4): the bundle must be one refreshed under the beam-photon rule in use
+        bundle_rule.check(self.refpath)
         self.exps, self.NCH, self.first_bin, self.floor_rel = list(exps), tuple(nch_data), float(first_bin), float(floor_rel)
         # a fit variant may keep only bins below last_bin (the window) and drop the multiplicity
         self.last_bin = None if last_bin is None else float(last_bin); self.use_nch = bool(use_nch)
@@ -51,6 +54,9 @@ class Model:
         # network, w_ij = delta_ij/(ENS T)
         self.wifi = None
         self.ENS, self.K, self.L, self.T = int(c['ens']), int(c['K']), int(c['nlayers']), float(c['temperature'])
+        if os.environ.get('T_DIR'):         # the rerun (D11, E2): the export must carry the refitted temperature of T_DIR
+            from score_obs import check_export_T
+            self.T = check_export_T(self.export, self.T)
         self.NORM = c['norm'].astype(np.float64); self.NT = int(c['ntheta']); self.ACT = str(c['act'])
         assert int(c['additive']) == 0, 'additive heads are not handled here'
         net = lambda p: [[(torch.tensor(c[f'{p}{m}_W{l}'], dtype=torch.float64),
@@ -284,6 +290,32 @@ class Model:
                         kl=float((w*(lw - lw0)).sum()), neff=float(1/(w**2).sum()/self.N),
                         maxpull=float(np.max(np.abs(mom - cvec)/sd)), newton_iters=int(its), **o, **o0)
 
+    # -- the linear mixture of the two generators (D1, D2), for the cost benchmark ------------------
+    def weights_lin(self, theta, ia, jj, lam0=None, which='central', anchored=True):
+        """The linear mixture at physical theta = (theta_S, theta_H, xi): each generator's weights from the head at
+        xi = 0 and at xi = 1 (at_fraction), normalized over all events and tilted alone, and the mixed event weights
+        (1 - xi) w_S + xi w_H, whose means are (1 - xi) <O>_S + xi <O>_H. lam0 = (lam_S, lam_H) or None.
+        Returns (w, [lam_S, lam_H])."""
+        xi = theta[-1]; w, lams = 0, []
+        for g, xg in enumerate((0.0, 1.0)):
+            lw, _, lam, _, _ = self.weights(at_fraction(theta, xg), ia, jj, None if lam0 is None else lam0[g], which, anchored)
+            w = w + ((1 - xi) if g == 0 else xi)*torch.exp(lw); lams.append(lam)
+        return w, lams
+
+    def chi2_lin_at(self, u, ia, jj, lam0=None, which='central', grad=True, with_nch=True):
+        """chi2_at for the linear mixture: the chi^2 of the mixed weights of weights_lin at standardized u, and its
+        gradient in u (both generators' parameters and the fraction)."""
+        if grad:
+            uu = torch.tensor(np.asarray(u, float), requires_grad=True)
+            w, lams = self.weights_lin(self.theta(uu), ia, jj, lam0, which)
+            c2, _ = self.chi2(w, with_nch)
+            c2.backward()
+            return float(c2), uu.grad.numpy().copy(), lams
+        with torch.no_grad():
+            w, lams = self.weights_lin(self.theta(torch.tensor(np.asarray(u, float))), ia, jj, lam0, which)
+            c2, _ = self.chi2(w, with_nch)
+        return float(c2), None, lams
+
     def scan(self, ia, jj, n, rng, which='central'):
         """chi^2 without gradients on a Latin hypercube of n points in the standardized box,
         returned sorted, for choosing starting points cheaply."""
@@ -387,6 +419,161 @@ def logw_continuous(M, TI, u, a, a0, which_TI=None, lam0=None):
     lg = M.logit(M.theta(u)); lw0 = lg - torch.logsumexp(lg, 0)
     lw, lam, Pw, its = tilt_on_t(M, lw0, cT, Sig, torch.zeros(M.MW.shape[1]) if lam0 is None else lam0)
     return lw, lw0, lam, Pw
+
+
+# -- the linear mixture of the two generators ------------------------------------------------------
+# The prediction of the linear mixture is (1 - xi) <O>_S(theta_S) + xi <O>_H(theta_H). Each generator's
+# prediction comes from its own weights, the mixture head at xi = 0 (Sherpa's log ratio at theta_S) or at
+# xi = 1 (Herwig's at theta_H), normalized over all events and, with a calculation, tilted on its own; the two
+# predictions are then mixed with (1 - xi, xi). Distributions normalized to the total rate and means over the
+# full sample make every prediction linear in xi. The geometric head is only evaluated at xi = 0 and 1.
+def at_fraction(theta, xi):
+    """theta with the mixing fraction set to xi: 0 for Sherpa at theta_S, 1 for Herwig at theta_H. A tensor keeps
+    its graph, so derivatives in the generator's own parameters go through."""
+    if torch.is_tensor(theta):
+        return torch.cat([theta[:-1], torch.full((1,), float(xi), dtype=theta.dtype)])
+    t = np.array(theta, np.float64)
+    t[-1] = xi
+    return t
+
+
+def xi_moments(lo, hi):
+    """(E, var) for xi flat on [lo, hi]: E[xi_g xi_h] of (xi_S, xi_H) = (1 - xi, xi) and Var(xi). On [0, 1],
+    E = [[1/3, 1/6], [1/6, 1/3]] and Var = 1/12; for a fixed xi, E = outer((1 - xi, xi)) and Var = 0."""
+    m, v = 0.5*(lo + hi), (hi - lo)**2/12
+    e2 = v + m*m
+    return np.array([[1 - 2*m + e2, m - e2], [m - e2, e2]]), float(v)
+
+
+def mix_cov(E, var, delta=None, own=(), shared=()):
+    """The covariance of y = (1 - xi) y_S + xi y_H with each y_g linear in its inputs and xi flat and independent
+    of them:
+        Var(xi) delta delta^T + sum_g E_gg J_g V_g J_g^T + sum_gh E_gh J_g C J_h^T ,
+    which on [0, 1] is delta delta^T/12 + (V_SS + V_HH)/3 + (V_SH + V_HS)/6. delta = y_H - y_S at the central
+    point; own holds (J_g, V_g) for g = S, H, the slopes in the generator's own parameters and their variances
+    (a vector) or covariance; shared holds triples (J_S, J_H, C), the slopes of both generators in one shared
+    input (the learning weights, the calculation) and its covariance. A generator whose E is zero, or whose J is
+    None, does not enter."""
+    out = 0.0
+    if delta is not None and var > 0:
+        out = out + var*np.outer(delta, delta)
+    for g, (J, V) in enumerate(own):
+        if J is not None and E[g, g] != 0:
+            V = np.asarray(V, np.float64)
+            out = out + E[g, g]*((J*V) @ J.T if V.ndim == 1 else J @ V @ J.T)
+    for JS, JH, C in shared:
+        Js = (JS, JH)
+        for g in range(2):
+            for h in range(2):
+                if E[g, h] != 0 and Js[g] is not None and Js[h] is not None:
+                    out = out + E[g, h]*(Js[g] @ C @ Js[h].T)
+    return out
+
+
+def lin_box(cen, hw, central, box, scale=1/3, ns=None):
+    """(lo, hi) of the flat prior of the linear mixture. box is tune or full, alone or with _sherpa or _herwig:
+    full     each generator's parameters over the trained box, centred on the box
+    tune     each range scale of its width, centred on the default tunes in central and cut symmetrically
+             where the box edge is nearer, so that the default stays the centre and the slopes at the central
+             prediction are taken at the centre of the prior (D6)
+    The fraction is flat on [0, 1]; with _sherpa it is 0 and with _herwig 1, and the other generator's
+    parameters stay where they are (they do not enter). ns is the number of Sherpa parameters."""
+    kind, _, gen = box.partition('_')
+    assert kind in ('tune', 'full') and gen in ('', 'sherpa', 'herwig'), box
+    cen, hw = np.asarray(cen, np.float64), np.asarray(hw, np.float64)
+    P = (np.asarray(central, np.float64) if kind == 'tune' else cen).copy()
+    h = hw*(scale if kind == 'tune' else 1.0)
+    h = np.maximum(np.minimum(h, np.minimum(P - (cen - hw), (cen + hw) - P)), 0.0)
+    xi = len(cen) - 1
+    P[xi], h[xi] = 0.5, 0.5
+    if gen:
+        own = np.zeros(len(cen), bool)
+        own[:ns] = gen == 'sherpa'
+        own[ns:xi] = gen == 'herwig'
+        h = np.where(own, h, 0.0)
+        P[xi] = 0.0 if gen == 'sherpa' else 1.0
+    return P - h, P + h
+
+
+def w_published(M):
+    """The wifi weights of the published network for the export's temperature: w_0 = 0, w_ij = delta_ij/(N T), as
+    wifi_fit.py writes them (w_published), the point at which the learning band is taken."""
+    w = np.zeros(M.ENS*M.ENS + 1); w[1:] = np.eye(M.ENS).ravel()/(M.ENS*M.T)
+    return w
+
+
+def wifi_point(W, M, log=print):
+    """(w_at, note): w_published(M), the published network with the export's temperature. A wifi fit file written
+    with another temperature (a refitted calibration constant, D11) keeps its covariance C, which does not depend
+    on the temperature, but its w_published is stale, so the export's is used and the note says so."""
+    w = w_published(M); wf = np.asarray(W['w_published'], np.float64)
+    if wf.shape == w.shape and np.array_equal(wf, w):
+        return w, 'the wifi fit file (same temperature as the export)'
+    note = (f'the export temperature T = {M.T!r}: the wifi fit file holds w_published of another temperature '
+            f'(T = {1/(M.ENS*wf[1]) if wf.shape == w.shape and wf[1] else float("nan")!r})')
+    log(f'NOTE learning band taken at {note}')
+    return w, note
+
+
+def thband(d, pairs, scheme, npl, up):
+    """Eq. (thband) of the paper for one prediction (one generator alone): sigma_+ (up) or sigma_- (down) from the
+    signed displacements d = {label: array} of the variations, each scale pair once with the larger of its two
+    one-sided displacements, the scheme once, the dispersive-model variations npl as their mean square."""
+    f = (lambda v: np.maximum(v, 0.0)) if up else (lambda v: np.maximum(-v, 0.0))
+    tot = sum(np.maximum(f(np.asarray(d[a], float)), f(np.asarray(d[b], float)))**2 for a, b in pairs) + f(np.asarray(d[scheme], float))**2
+    return np.sqrt(tot + sum(f(np.asarray(d[l], float))**2 for l in npl)/len(npl))
+
+
+def thband_mix(dS, dH, pairs, scheme, npl, up, lo=0.0, hi=1.0):
+    """The theory band of the linear mixture (D9): Eq. (thband) applied at each xi to the displacement
+    (1 - xi) d_S + xi d_H of the mixed prediction, and sigma_+^2 (up) or sigma_-^2 averaged over xi flat on [lo, hi].
+    The integrand is a sum of squares of piecewise-linear functions of xi, with kinks where a displacement changes
+    sign or the two of a scale pair cross, so Simpson's rule between consecutive kinks gives the average exactly.
+    dS, dH = {label: array of the same shape} for Sherpa and Herwig; returns sigma_+ or sigma_-, of that shape."""
+    labs = list(dict.fromkeys([l for p in pairs for l in p] + [scheme] + list(npl)))
+    shape = np.shape(np.asarray(dS[scheme], float))
+    S = {l: np.asarray(dS[l], float).ravel() for l in labs}; H = {l: np.asarray(dH[l], float).ravel() for l in labs}
+    f = (lambda v: max(v, 0.0)) if up else (lambda v: max(-v, 0.0))
+    out = np.empty(len(S[scheme]))
+    for i in range(len(out)):
+        s, h = {l: S[l][i] for l in labs}, {l: H[l][i] for l in labs}
+
+        def sig2(x):
+            dl = {l: (1 - x)*s[l] + x*h[l] for l in labs}
+            t = sum(max(f(dl[a]), f(dl[b]))**2 for a, b in pairs) + f(dl[scheme])**2
+            return t + sum(f(dl[l])**2 for l in npl)/len(npl)
+        if hi <= lo:
+            out[i] = sig2(lo); continue
+        kinks = {lo, hi}
+        for a0, a1 in [(s[l], h[l]) for l in labs] + [(s[a] - s[b], h[a] - h[b]) for a, b in pairs]:
+            if a0 != a1:                                   # (1 - x) a0 + x a1 = 0
+                x = a0/(a0 - a1)
+                if lo < x < hi:
+                    kinks.add(x)
+        xs = sorted(kinks)
+        out[i] = sum((x1 - x0)/6*(sig2(x0) + 4*sig2(0.5*(x0 + x1)) + sig2(x1)) for x0, x1 in zip(xs[:-1], xs[1:]))/(hi - lo)
+    return np.sqrt(np.maximum(out, 0.0)).reshape(shape)
+
+
+def stat_parts(M, theta, anchored=True):
+    """One generator at physical theta (the head at its xi): its weights normalized to one, and u(O) = w r, the
+    per-event term of the statistical error of the weighted mean of a centred per-event function O. With the
+    calculation imposed the multipliers are solved again on every resampled sample, so r = O minus its projection
+    on the constraint functions, r = O - (F - <F>) J^-1 Cov(F, O), J = Cov(F, F) + P_win^2 Sigma; without it r = O.
+    The error of a mean over several generators on the same events is sqrt(sum_i (sum_g a_g u_g,i)^2)."""
+    th = torch.as_tensor(theta, dtype=torch.float64)
+    with torch.no_grad():
+        lw, lw0, lam, Pw, _ = M.weights(th, 0, 0, anchored=anchored)
+        w = torch.exp(lw).numpy()
+    w = w/w.sum()
+    if not anchored:
+        return w, lambda O: w*O
+    inwin = np.zeros(M.N, bool); inwin[M.IW.numpy()] = True
+    cvec = np.asarray(M.target(0, 0, 'central'), np.float64)
+    F = np.zeros((M.N, len(cvec))); F[inwin] = M.MW.numpy() - cvec[None, :]
+    Fc = F - w @ F
+    Jinv = np.linalg.inv((Fc*w[:, None]).T @ Fc + float(Pw)**2*np.asarray(M.sigma(0, 0, cvec), np.float64))
+    return w, lambda O: w*(O - Fc @ (Jinv @ (Fc.T @ (w*O))))
 
 
 def fitted_point(src):

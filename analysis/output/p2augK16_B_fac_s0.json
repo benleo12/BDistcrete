@@ -1,7 +1,7 @@
 {
  "B": {
-  "master": 1.0393825011384374,
-  "master_raw": 1.0393679828751465,
+  "master": 1.049003875084956,
+  "master_raw": 1.0490137026767088,
   "temperature": 1.0,
   "rank_K": 16,
   "best_step": 252000,
@@ -228,46 +228,46 @@
    ]
   ],
   "per_obs": {
-   "1_minus_thrust": 1.0386979758201556,
-   "mult_total": 1.0081039696972862,
-   "B_total": 0.9523692641852858,
-   "rho_heavy": 1.03308449857779,
-   "nbaryon": 1.1646567974116686
+   "1_minus_thrust": 1.0534998471504358,
+   "mult_total": 1.0105203186114213,
+   "B_total": 0.9628532994000901,
+   "rho_heavy": 1.0534889213760175,
+   "nbaryon": 1.1646569888868161
   },
   "width_uniform": {
-   "1_minus_thrust": 2.596456752570196,
-   "mult_total": 1.6228437503619038,
-   "B_total": 2.6649554448790367,
-   "rho_heavy": 2.931816391865074,
+   "1_minus_thrust": 2.6222218104633432,
+   "mult_total": 1.6320667393018347,
+   "B_total": 2.6656508827280465,
+   "rho_heavy": 2.960748987094271,
    "nbaryon": 21.43197368268151
   },
   "gain_over_uniform": {
-   "1_minus_thrust": 2.5,
-   "mult_total": 1.61,
-   "B_total": 2.8,
-   "rho_heavy": 2.84,
+   "1_minus_thrust": 2.49,
+   "mult_total": 1.62,
+   "B_total": 2.77,
+   "rho_heavy": 2.81,
    "nbaryon": 18.4
   },
   "calibration_check": {
-   "1_minus_thrust": 0.9588979522075158,
-   "mult_total": 0.9661337875114366,
-   "B_total": 1.0390658084216906,
-   "rho_heavy": 0.9292091577333293,
+   "1_minus_thrust": 0.9775400320477208,
+   "mult_total": 0.9753680680611515,
+   "B_total": 0.9951666078757029,
+   "rho_heavy": 0.9411187632606118,
    "nbaryon": 1.1308156907937346
   },
   "calibration_spread": {
-   "1_minus_thrust": 0.1085733985319756,
-   "mult_total": 0.08731227234772786,
-   "B_total": 0.10914880259552223,
-   "rho_heavy": 0.19173658119625472,
+   "1_minus_thrust": 0.11041254746662137,
+   "mult_total": 0.08628575280179228,
+   "B_total": 0.11954236765998172,
+   "rho_heavy": 0.15439649220850235,
    "nbaryon": 0.2623266030789386
   },
   "N_eff": {
-   "(0.1175, 0.1)": 1652169.7338951759,
-   "(0.1225, 0.3)": 1713464.8890839554,
-   "(0.115, 0.2)": 1776285.62079949,
-   "(0.128, 0.3)": 1670444.6960752031,
-   "(0.12, 0.15)": 1795951.915825869
+   "(0.1175, 0.1)": 1652169.7311046035,
+   "(0.1225, 0.3)": 1713464.887444371,
+   "(0.115, 0.2)": 1776285.6128445084,
+   "(0.128, 0.3)": 1670444.6907855775,
+   "(0.12, 0.15)": 1795951.914634186
   },
   "N_ref": 1872000,
   "min_count": 5,
@@ -279,48 +279,76 @@
    "nbaryon": 6
   },
   "pull_mean": {
-   "1_minus_thrust": 0.03297417523356949,
-   "mult_total": -0.05812950139353701,
-   "B_total": 0.025036506054920183,
-   "rho_heavy": 0.027051201427816474,
-   "nbaryon": -0.11398726015993203
+   "1_minus_thrust": 0.026038758680814688,
+   "mult_total": -0.05666528691194517,
+   "B_total": 0.020380106541683995,
+   "rho_heavy": 0.03483289710871981,
+   "nbaryon": -0.1139872659899001
   },
   "per_point": {
    "(0.1175, 0.1)": {
-    "1_minus_thrust": 1.0362468244414011,
-    "mult_total": 1.1631281409515104,
-    "B_total": 0.739242740392976,
-    "rho_heavy": 1.1739840197788993,
-    "nbaryon": 0.44879252356829663
+    "1_minus_thrust": 0.9659617631082021,
+    "mult_total": 1.1631281424232895,
+    "B_total": 0.7727741349132367,
+    "rho_heavy": 1.21797843578758,
+    "nbaryon": 0.4487924686855716
    },
    "(0.1225, 0.3)": {
-    "1_minus_thrust": 0.9562338216116606,
-    "mult_total": 1.0268906740869408,
-    "B_total": 0.6006218742839471,
-    "rho_heavy": 0.971859860600295,
-    "nbaryon": 2.130522466996595
+    "1_minus_thrust": 1.0419942022200506,
+    "mult_total": 1.0133074404146991,
+    "B_total": 0.631104498168777,
+    "rho_heavy": 0.971978370201067,
+    "nbaryon": 2.130522516746
    },
    "(0.115, 0.2)": {
-    "1_minus_thrust": 1.1117719105444035,
-    "mult_total": 0.7557536363148759,
-    "B_total": 1.115866773782928,
-    "rho_heavy": 1.0182023580141073,
-    "nbaryon": 0.8225609945824998
+    "1_minus_thrust": 1.0668592296212247,
+    "mult_total": 0.7966487951606627,
+    "B_total": 1.1255179561422504,
+    "rho_heavy": 1.0130303552228956,
+    "nbaryon": 0.8225615219598315
    },
    "(0.128, 0.3)": {
-    "1_minus_thrust": 1.0887889560545903,
-    "mult_total": 1.0975091537097932,
-    "B_total": 1.0658107891278992,
-    "rho_heavy": 0.9692791375968851,
-    "nbaryon": 1.2606787353339794
+    "1_minus_thrust": 1.1709692513438308,
+    "mult_total": 1.0912204443076143,
+    "B_total": 1.0272454431577194,
+    "rho_heavy": 1.075813107502916,
+    "nbaryon": 1.260679090653876
    },
    "(0.12, 0.15)": {
-    "1_minus_thrust": 1.0004483664487225,
-    "mult_total": 0.9972382434233116,
-    "B_total": 1.2403041433386786,
-    "rho_heavy": 1.0320971168987643,
-    "nbaryon": 1.160729266576973
+    "1_minus_thrust": 1.02171478945887,
+    "mult_total": 0.9882967707508409,
+    "B_total": 1.257624464618467,
+    "rho_heavy": 0.9886443381656285,
+    "nbaryon": 1.1607293463888013
    }
+  },
+  "scored_from": "output/models/B_P2augK16fac0_trunk.pt",
+  "data": "/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_abc",
+  "n_held_events": {
+   "6700": 80000,
+   "6701": 80000,
+   "6702": 80000,
+   "6703": 80000,
+   "6704": 80000
+  },
+  "training_record": "output/published/p2augK16_B_fac_s0.json",
+  "temperature_trained": 1.0,
+  "temperature_source": "refit",
+  "stop_width": 0.9993119562335229,
+  "stop_width_at_trained_T": 0.9993379996568198,
+  "master_at_trained_T": 1.0490137026767088,
+  "beam_photons": "remove",
+  "data_realpath": "/mnt/beegfs/bassi/reweighting/gen/data_abc_nb",
+  "model_realpath": "/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code/output/models/B_P2augK16fac0_trunk.pt",
+  "lmx_fingerprint": {
+   "md5": "6944b5a66dad20c6074278f40563da9a",
+   "code_md5": "57b5bf3833c268b08d62763cf3acd9f0",
+   "spec": "OUT=output/p2augK16_B_fac_s0.json STAGE=B NET=fac SEED=0 K=16 MODEL=output/models/B_P2augK16fac0_trunk.pt DATA=/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_abc TMODE=refit TRAINED=output/published/p2augK16_B_fac_s0.json ABC=1",
+   "run_id": "20261107-013026-2306821",
+   "outputs": {
+    "output/temperature/B_P2augK16fac0.json": "a0be3828150099a9702162a8367fb7df"
+   },
+   "inputs": {}
   }
  }
 }

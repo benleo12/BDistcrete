@@ -1,0 +1,17 @@
+{
+ "step": "recal",
+ "run_id": "20261107-013026-2306821",
+ "code_md5": "b0ca0841b27e6e5427846e2db0716b6c",
+ "written": "Sat Nov  7 04:18:08 2026",
+ "files": {
+  "output/recal_T_MIXGEOV3E160S9.json": "a5e9e9a8e2065d671d8595ca54f5e098",
+  "output/temperature/MIXGEOV3E160S9.json": "d2f3a4ef100790c64fc103df537baef3",
+  "output/recal_T_MIXGEOV3E320S9.json": "9e79013589dadfb924bda245cada712b",
+  "output/temperature/MIXGEOV3E320S9.json": "5330501c07fbda737f1652ecba6a6252",
+  "output/recal_T_MIXGEOV4S9.json": "5157af7d34a7ab8053418a1b0d9ae3af",
+  "output/temperature/MIXGEOV4S9.json": "f525a9c2a11e42bf861a42d55f861070",
+  "output/recal_T_MIXGEOV4L.json": "6ad61798a0337c2a55d7361642a7f47d",
+  "output/temperature/MIXGEOV4L.json": "18181451b22c04c5295ea8e4ba8df38a",
+  "output/recal_T_MIXGEOV3S9_check.json": "f4039a020df3b1401b2aba6b27ea8441"
+ }
+}

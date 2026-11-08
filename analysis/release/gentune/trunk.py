@@ -18,8 +18,8 @@ So does the precision of the inputs. Stages trained through the memmap cache saw
 per-particle features stored as float16, and their trunk file says feature_precision = float16.
 normalize() then rounds your features the same way before anything else, so the network reads
 exactly what it was trained on. Reading them in float32 instead moves a reweighted mean of MIX17
-by up to 0.17 percent, the size of its accuracy floor (analysis/precision_gap.py). A file without
-the field is a float32 stage and is read as before.
+by an amount analysis/precision_gap.py measures and README.md quotes. A file without the field
+is a float32 stage and is read as before.
 """
 import numpy as np
 

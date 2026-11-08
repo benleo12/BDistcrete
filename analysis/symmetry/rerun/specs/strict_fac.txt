@@ -1,0 +1,67 @@
+# 66 scorings, written by make_specs.py
+OUT=output/p2augfullstrict_A_fac_s0.json STAGE=A NET=fac SEED=0 K=48 MODEL=output/models/A_P2augfullfac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augfullstrict_A_fac_s1.json STAGE=A NET=fac SEED=1 K=48 MODEL=output/models/A_P2augfullfac1_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augfullstrict_A_fac_s2.json STAGE=A NET=fac SEED=2 K=48 MODEL=output/models/A_P2augfullfac2_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augstrict_B_fac_s0.json STAGE=B NET=fac SEED=0 K=48 MODEL=output/models/B_P2augfac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augstrict_B_fac_s1.json STAGE=B NET=fac SEED=1 K=48 MODEL=output/models/B_P2augfac1_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augstrict_B_fac_s2.json STAGE=B NET=fac SEED=2 K=48 MODEL=output/models/B_P2augfac2_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augfullstrict_C_fac_s0.json STAGE=C NET=fac SEED=0 K=48 MODEL=output/models/C_P2augfullfac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augfullstrict_C_fac_s1.json STAGE=C NET=fac SEED=1 K=48 MODEL=output/models/C_P2augfullfac1_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augstrict_C_fac_s2.json STAGE=C NET=fac SEED=2 K=48 MODEL=output/models/C_P2augfac2_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2v3fullstrict_E_fac_s0.json STAGE=E NET=fac SEED=0 K=48 MODEL=output/models/E_P2v3fullfac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv F_CSV=stageF_design_v3all.csv
+OUT=output/p2v3fullstrict_E_fac_s1.json STAGE=E NET=fac SEED=1 K=48 MODEL=output/models/E_P2v3fullfac1_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv F_CSV=stageF_design_v3all.csv
+OUT=output/p2v3fullstrict_E_fac_s2.json STAGE=E NET=fac SEED=2 K=48 MODEL=output/models/E_P2v3fullfac2_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv F_CSV=stageF_design_v3all.csv
+OUT=output/p2v3fullstrict_F_fac_s0.json STAGE=F NET=fac SEED=0 K=48 MODEL=output/models/F_P2v3fullfac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv F_CSV=stageF_design_v3all.csv
+OUT=output/p2v3fullstrict_F_fac_s1.json STAGE=F NET=fac SEED=1 K=48 MODEL=output/models/F_P2v3fullfac1_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv F_CSV=stageF_design_v3all.csv
+OUT=output/p2v3fullstrict_F_fac_s2.json STAGE=F NET=fac SEED=2 K=48 MODEL=output/models/F_P2v3fullfac2_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv F_CSV=stageF_design_v3all.csv
+OUT=output/p2v3fullstrict_MIX_fac_s0.json STAGE=MIX NET=fac SEED=0 K=48 MODEL=output/models/MIXP2v3fullfac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table
+OUT=output/p2v3fullstrict_MIX_fac_s1.json STAGE=MIX NET=fac SEED=1 K=48 MODEL=output/models/MIXP2v3fullfac1_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table
+OUT=output/p2v3fullstrict_MIX_fac_s2.json STAGE=MIX NET=fac SEED=2 K=48 MODEL=output/models/MIXP2v3fullfac2_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table
+OUT=output/p2origfullstrict_E_fac_s0.json STAGE=E NET=fac SEED=0 K=48 MODEL=output/models/E_P2origfullfac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design.csv F_CSV=stageF_design_aug.csv
+OUT=output/p2origfullstrict_E_fac_s1.json STAGE=E NET=fac SEED=1 K=48 MODEL=output/models/E_P2origfullfac1_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design.csv F_CSV=stageF_design_aug.csv
+OUT=output/p2origfullstrict_E_fac_s2.json STAGE=E NET=fac SEED=2 K=48 MODEL=output/models/E_P2origfullfac2_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design.csv F_CSV=stageF_design_aug.csv
+OUT=output/p2origfullstrict_F_fac_s0.json STAGE=F NET=fac SEED=0 K=48 MODEL=output/models/F_P2origfullfac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design.csv F_CSV=stageF_design_aug.csv
+OUT=output/p2origfullstrict_F_fac_s1.json STAGE=F NET=fac SEED=1 K=48 MODEL=output/models/F_P2origfullfac1_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design.csv F_CSV=stageF_design_aug.csv
+OUT=output/p2origfullstrict_F_fac_s2.json STAGE=F NET=fac SEED=2 K=48 MODEL=output/models/F_P2origfullfac2_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design.csv F_CSV=stageF_design_aug.csv
+OUT=output/p2origfullstrict_MIX_fac_s0.json STAGE=MIX NET=fac SEED=0 K=48 MODEL=output/models/MIXP2origfullfac0_trunk.pt DATA=data_stagePURE17_orig_h400 TMODE=table
+OUT=output/p2origfull48_MIX_fac_s0.json STAGE=MIX NET=fac SEED=0 K=48 MODEL=output/models/MIXP2origfullfac0_trunk.pt DATA=data_stagePURE17_orig48 TMODE=table
+OUT=output/p2origfull48strict_MIX_fac_s0.json STAGE=MIX NET=fac SEED=0 K=48 MODEL=output/models/MIXP2origfullfac0_trunk.pt DATA=data_stagePURE17_orig48_h400 TMODE=table
+OUT=output/p2origfullstrict_MIX_fac_s1.json STAGE=MIX NET=fac SEED=1 K=48 MODEL=output/models/MIXP2origfullfac1_trunk.pt DATA=data_stagePURE17_orig_h400 TMODE=table
+OUT=output/p2origfull48_MIX_fac_s1.json STAGE=MIX NET=fac SEED=1 K=48 MODEL=output/models/MIXP2origfullfac1_trunk.pt DATA=data_stagePURE17_orig48 TMODE=table
+OUT=output/p2origfull48strict_MIX_fac_s1.json STAGE=MIX NET=fac SEED=1 K=48 MODEL=output/models/MIXP2origfullfac1_trunk.pt DATA=data_stagePURE17_orig48_h400 TMODE=table
+OUT=output/p2origfullstrict_MIX_fac_s2.json STAGE=MIX NET=fac SEED=2 K=48 MODEL=output/models/MIXP2origfullfac2_trunk.pt DATA=data_stagePURE17_orig_h400 TMODE=table
+OUT=output/p2origfull48_MIX_fac_s2.json STAGE=MIX NET=fac SEED=2 K=48 MODEL=output/models/MIXP2origfullfac2_trunk.pt DATA=data_stagePURE17_orig48 TMODE=table
+OUT=output/p2origfull48strict_MIX_fac_s2.json STAGE=MIX NET=fac SEED=2 K=48 MODEL=output/models/MIXP2origfullfac2_trunk.pt DATA=data_stagePURE17_orig48_h400 TMODE=table
+OUT=output/p2augK1strict_A_fac_s0.json STAGE=A NET=fac SEED=0 K=1 MODEL=output/models/A_P2augK1fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK2strict_A_fac_s0.json STAGE=A NET=fac SEED=0 K=2 MODEL=output/models/A_P2augK2fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK3strict_A_fac_s0.json STAGE=A NET=fac SEED=0 K=3 MODEL=output/models/A_P2augK3fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK4strict_A_fac_s0.json STAGE=A NET=fac SEED=0 K=4 MODEL=output/models/A_P2augK4fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK6strict_A_fac_s0.json STAGE=A NET=fac SEED=0 K=6 MODEL=output/models/A_P2augK6fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK8strict_A_fac_s0.json STAGE=A NET=fac SEED=0 K=8 MODEL=output/models/A_P2augK8fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK16strict_A_fac_s0.json STAGE=A NET=fac SEED=0 K=16 MODEL=output/models/A_P2augK16fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK1strict_B_fac_s0.json STAGE=B NET=fac SEED=0 K=1 MODEL=output/models/B_P2augK1fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK2strict_B_fac_s0.json STAGE=B NET=fac SEED=0 K=2 MODEL=output/models/B_P2augK2fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK3strict_B_fac_s0.json STAGE=B NET=fac SEED=0 K=3 MODEL=output/models/B_P2augK3fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK4strict_B_fac_s0.json STAGE=B NET=fac SEED=0 K=4 MODEL=output/models/B_P2augK4fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK6strict_B_fac_s0.json STAGE=B NET=fac SEED=0 K=6 MODEL=output/models/B_P2augK6fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK8strict_B_fac_s0.json STAGE=B NET=fac SEED=0 K=8 MODEL=output/models/B_P2augK8fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK16strict_B_fac_s0.json STAGE=B NET=fac SEED=0 K=16 MODEL=output/models/B_P2augK16fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK1strict_C_fac_s0.json STAGE=C NET=fac SEED=0 K=1 MODEL=output/models/C_P2augK1fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK2strict_C_fac_s0.json STAGE=C NET=fac SEED=0 K=2 MODEL=output/models/C_P2augK2fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK3strict_C_fac_s0.json STAGE=C NET=fac SEED=0 K=3 MODEL=output/models/C_P2augK3fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK4strict_C_fac_s0.json STAGE=C NET=fac SEED=0 K=4 MODEL=output/models/C_P2augK4fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK6strict_C_fac_s0.json STAGE=C NET=fac SEED=0 K=6 MODEL=output/models/C_P2augK6fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK8strict_C_fac_s0.json STAGE=C NET=fac SEED=0 K=8 MODEL=output/models/C_P2augK8fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2augK16strict_C_fac_s0.json STAGE=C NET=fac SEED=0 K=16 MODEL=output/models/C_P2augK16fac0_trunk.pt DATA=data_abc_h400 ABC=1 TMODE=table
+OUT=output/p2v3K1strict_E_fac_s0.json STAGE=E NET=fac SEED=0 K=1 MODEL=output/models/E_P2v3K1fac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv
+OUT=output/p2v3K2strict_E_fac_s0.json STAGE=E NET=fac SEED=0 K=2 MODEL=output/models/E_P2v3K2fac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv
+OUT=output/p2v3K4strict_E_fac_s0.json STAGE=E NET=fac SEED=0 K=4 MODEL=output/models/E_P2v3K4fac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv
+OUT=output/p2v3K6strict_E_fac_s0.json STAGE=E NET=fac SEED=0 K=6 MODEL=output/models/E_P2v3K6fac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv
+OUT=output/p2v3K8strict_E_fac_s0.json STAGE=E NET=fac SEED=0 K=8 MODEL=output/models/E_P2v3K8fac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv
+OUT=output/p2v3K9strict_E_fac_s0.json STAGE=E NET=fac SEED=0 K=9 MODEL=output/models/E_P2v3K9fac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv
+OUT=output/p2v3K10strict_E_fac_s0.json STAGE=E NET=fac SEED=0 K=10 MODEL=output/models/E_P2v3K10fac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv
+OUT=output/p2v3K12strict_E_fac_s0.json STAGE=E NET=fac SEED=0 K=12 MODEL=output/models/E_P2v3K12fac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv
+OUT=output/p2v3K16strict_E_fac_s0.json STAGE=E NET=fac SEED=0 K=16 MODEL=output/models/E_P2v3K16fac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv
+OUT=output/p2v3K24strict_E_fac_s0.json STAGE=E NET=fac SEED=0 K=24 MODEL=output/models/E_P2v3K24fac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv
+OUT=output/p2v3K32strict_E_fac_s0.json STAGE=E NET=fac SEED=0 K=32 MODEL=output/models/E_P2v3K32fac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv
+OUT=output/p2v3K45strict_E_fac_s0.json STAGE=E NET=fac SEED=0 K=45 MODEL=output/models/E_P2v3K45fac0_trunk.pt DATA=data_stagePURE17_v3_h400 TMODE=table E_CSV=stageE_design_v3all.csv

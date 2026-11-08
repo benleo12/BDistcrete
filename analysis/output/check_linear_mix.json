@@ -1,0 +1,1362 @@
+{
+ "results": [
+  {
+   "check": "tune: the file holds the linear mixture",
+   "value": 0.0,
+   "tol": 0.5,
+   "ok": true
+  },
+  {
+   "check": "tune: box ranges (D6, centred on the defaults)",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "tune: slopes at the centre of the prior",
+   "value": 3.624425857992317e-16,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "tune: expansion point recorded (D10)",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "tune: E[xi_g xi_h] and Var(xi) as stored",
+   "value": 5.551115123125783e-17,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "tune: central prediction of S (in SD of the draws)",
+   "value": 1.6569628021821905e-13,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "tune: central prediction of H (in SD of the draws)",
+   "value": 3.729761256097928e-13,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "tune: C_lin_flat from the stored slopes",
+   "value": 6.42199431731889e-16,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune: C_learn from the stored slopes",
+   "value": 1.8481429294983625e-15,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune: C_theory from the stored slopes",
+   "value": 1.7799416880692728e-10,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune: C_learn_mid from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune: C_theory_mid from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune: C_lin_z from the stored slopes",
+   "value": 6.769530782250979e-16,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune: slopes of S in theta (finite differences, in units of the band)",
+   "value": 5.99817888491346e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: slopes of S in omega (finite differences, in units of the band)",
+   "value": 9.74072207002328e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: slopes of S in c (finite differences, in units of the band)",
+   "value": 1.7007431864043187e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: slopes of H in theta (finite differences, in units of the band)",
+   "value": 7.210672204557217e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: slopes of H in omega (finite differences, in units of the band)",
+   "value": 3.8831129171491995e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: slopes of H in c (finite differences, in units of the band)",
+   "value": 2.529719335083672e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: whole covariance from finite differences (relative to its diagonal)",
+   "value": 3.651587011426921e-08,
+   "tol": 0.002,
+   "ok": true
+  },
+  {
+   "check": "tune: joint draw 0 (in SD of the draws)",
+   "value": 5.316295884246758e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: joint draw 0, S alone",
+   "value": 5.217257851562633e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: joint draw 0, H alone",
+   "value": 4.745935837837291e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: joint draw 1 (in SD of the draws)",
+   "value": 9.174781420736139e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: joint draw 1, S alone",
+   "value": 4.005481452920955e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: joint draw 1, H alone",
+   "value": 3.1120881931548703e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: joint draw 2 (in SD of the draws)",
+   "value": 6.988870470801132e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: joint draw 2, S alone",
+   "value": 5.1076307067205305e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: joint draw 2, H alone",
+   "value": 3.5546580884932472e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: theta draw 0",
+   "value": 8.331994545585186e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: omega draw 0",
+   "value": 5.4208510882531266e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: c draw 0",
+   "value": 8.091497968958056e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune: draws inside the prior",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "full: the file holds the linear mixture",
+   "value": 0.0,
+   "tol": 0.5,
+   "ok": true
+  },
+  {
+   "check": "full: box ranges (D6, centred on the defaults)",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "full: slopes at the centre of the prior",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "full: expansion point recorded (D10)",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "full: E[xi_g xi_h] and Var(xi) as stored",
+   "value": 5.551115123125783e-17,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "full: central prediction of S (in SD of the draws)",
+   "value": 3.081912067974104e-14,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "full: central prediction of H (in SD of the draws)",
+   "value": 9.675082606968905e-14,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "full: C_lin_flat from the stored slopes",
+   "value": 6.676144946165811e-16,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full: C_learn from the stored slopes",
+   "value": 1.0346142058586174e-15,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full: C_theory from the stored slopes",
+   "value": 2.044138243575076e-10,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full: C_learn_mid from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full: C_theory_mid from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full: C_lin_z from the stored slopes",
+   "value": 6.914501265640038e-16,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full: slopes of S in theta (finite differences, in units of the band)",
+   "value": 8.773702475333192e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: slopes of S in omega (finite differences, in units of the band)",
+   "value": 5.063864078231447e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: slopes of S in c (finite differences, in units of the band)",
+   "value": 1.1837881749848354e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: slopes of H in theta (finite differences, in units of the band)",
+   "value": 9.923184520377038e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: slopes of H in omega (finite differences, in units of the band)",
+   "value": 1.1320499589463048e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: slopes of H in c (finite differences, in units of the band)",
+   "value": 1.2826735751899357e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: whole covariance from finite differences (relative to its diagonal)",
+   "value": 1.0310550499986966e-08,
+   "tol": 0.002,
+   "ok": true
+  },
+  {
+   "check": "full: joint draw 0 (in SD of the draws)",
+   "value": 6.118509710531961e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: joint draw 0, S alone",
+   "value": 1.1645239478610704e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: joint draw 0, H alone",
+   "value": 1.5266766569819072e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: joint draw 1 (in SD of the draws)",
+   "value": 2.8588904225924077e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: joint draw 1, S alone",
+   "value": 1.0976328790321407e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: joint draw 1, H alone",
+   "value": 8.502074166599979e-07,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: joint draw 2 (in SD of the draws)",
+   "value": 3.2010630845164825e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: joint draw 2, S alone",
+   "value": 1.132779517339202e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: joint draw 2, H alone",
+   "value": 1.106291645795624e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: theta draw 0",
+   "value": 3.591414314673969e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: omega draw 0",
+   "value": 1.7820919871723562e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: c draw 0",
+   "value": 1.0848358018158488e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full: draws inside the prior",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: the file holds the linear mixture",
+   "value": 0.0,
+   "tol": 0.5,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: box ranges (D6, centred on the defaults)",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: slopes at the centre of the prior",
+   "value": 3.624425857992317e-16,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: expansion point recorded (D10)",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: E[xi_g xi_h] and Var(xi) as stored",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: central prediction of S (in SD of the draws)",
+   "value": 2.1794814005617334e-13,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: C_lin_flat from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: C_learn from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: C_theory from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: C_learn_mid from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: C_theory_mid from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: C_lin_z from the stored slopes",
+   "value": 8.399370399522222e-16,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: slopes of S in theta (finite differences, in units of the band)",
+   "value": 7.421835793082662e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: slopes of S in omega (finite differences, in units of the band)",
+   "value": 3.002117840129922e-07,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: slopes of S in c (finite differences, in units of the band)",
+   "value": 1.903092688331865e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: whole covariance from finite differences (relative to its diagonal)",
+   "value": 3.1909968002530923e-07,
+   "tol": 0.002,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: joint draw 0 (in SD of the draws)",
+   "value": 6.56437995746412e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: joint draw 0, S alone",
+   "value": 5.67065956383105e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: joint draw 1 (in SD of the draws)",
+   "value": 1.9013949478032214e-07,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: joint draw 1, S alone",
+   "value": 5.119484077548857e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: joint draw 2 (in SD of the draws)",
+   "value": 1.198751228194494e-07,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: joint draw 2, S alone",
+   "value": 6.451887737649733e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: theta draw 0",
+   "value": 8.585502721626244e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: omega draw 0",
+   "value": 1.0099713820493147e-07,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: c draw 0",
+   "value": 7.872382720450032e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_sherpa: draws inside the prior",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: the file holds the linear mixture",
+   "value": 0.0,
+   "tol": 0.5,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: box ranges (D6, centred on the defaults)",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: slopes at the centre of the prior",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: expansion point recorded (D10)",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: E[xi_g xi_h] and Var(xi) as stored",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: central prediction of H (in SD of the draws)",
+   "value": 7.342570665812023e-13,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: C_lin_flat from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: C_learn from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: C_theory from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: C_learn_mid from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: C_theory_mid from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: C_lin_z from the stored slopes",
+   "value": 8.559864179080351e-16,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: slopes of H in theta (finite differences, in units of the band)",
+   "value": 9.171235953646553e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: slopes of H in omega (finite differences, in units of the band)",
+   "value": 4.7176664206906106e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: slopes of H in c (finite differences, in units of the band)",
+   "value": 4.042169884665625e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: whole covariance from finite differences (relative to its diagonal)",
+   "value": 1.5646786145143882e-08,
+   "tol": 0.002,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: joint draw 0 (in SD of the draws)",
+   "value": 8.279193881202116e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: joint draw 0, H alone",
+   "value": 5.854598450452547e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: joint draw 1 (in SD of the draws)",
+   "value": 2.550730223718216e-07,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: joint draw 1, H alone",
+   "value": 5.884953384326023e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: joint draw 2 (in SD of the draws)",
+   "value": 1.7770939451990506e-07,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: joint draw 2, H alone",
+   "value": 6.424032343336339e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: theta draw 0",
+   "value": 1.3332828521334488e-07,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: omega draw 0",
+   "value": 1.6870648044904027e-07,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: c draw 0",
+   "value": 1.883986569033771e-07,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "tune_herwig: draws inside the prior",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: the file holds the linear mixture",
+   "value": 0.0,
+   "tol": 0.5,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: box ranges (D6, centred on the defaults)",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: slopes at the centre of the prior",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: expansion point recorded (D10)",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: E[xi_g xi_h] and Var(xi) as stored",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: central prediction of S (in SD of the draws)",
+   "value": 5.351907302346408e-14,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: C_lin_flat from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: C_learn from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: C_theory from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: C_learn_mid from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: C_theory_mid from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: C_lin_z from the stored slopes",
+   "value": 8.7589615313515165e-16,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: slopes of S in theta (finite differences, in units of the band)",
+   "value": 9.252823789103727e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: slopes of S in omega (finite differences, in units of the band)",
+   "value": 1.1342237855844391e-07,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: slopes of S in c (finite differences, in units of the band)",
+   "value": 1.2149105860144319e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: whole covariance from finite differences (relative to its diagonal)",
+   "value": 7.356310790066592e-08,
+   "tol": 0.002,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: joint draw 0 (in SD of the draws)",
+   "value": 6.185261470017884e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: joint draw 0, S alone",
+   "value": 2.3153935899964947e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: joint draw 1 (in SD of the draws)",
+   "value": 4.742258391899389e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: joint draw 1, S alone",
+   "value": 2.1816835258585865e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: joint draw 2 (in SD of the draws)",
+   "value": 6.430185070552903e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: joint draw 2, S alone",
+   "value": 2.252276939554548e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: theta draw 0",
+   "value": 8.522187541394522e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: omega draw 0",
+   "value": 4.8475307730881123e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: c draw 0",
+   "value": 6.140489285061393e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_sherpa: draws inside the prior",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: the file holds the linear mixture",
+   "value": 0.0,
+   "tol": 0.5,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: box ranges (D6, centred on the defaults)",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: slopes at the centre of the prior",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: expansion point recorded (D10)",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: E[xi_g xi_h] and Var(xi) as stored",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: central prediction of H (in SD of the draws)",
+   "value": 8.408226137887747e-14,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: C_lin_flat from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: C_learn from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: C_theory from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: C_learn_mid from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: C_theory_mid from the stored slopes",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: C_lin_z from the stored slopes",
+   "value": 7.993882972460315e-16,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: slopes of H in theta (finite differences, in units of the band)",
+   "value": 8.140224367362653e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: slopes of H in omega (finite differences, in units of the band)",
+   "value": 6.938191949209727e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: slopes of H in c (finite differences, in units of the band)",
+   "value": 1.1968974256009673e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: whole covariance from finite differences (relative to its diagonal)",
+   "value": 1.0017762310344823e-08,
+   "tol": 0.002,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: joint draw 0 (in SD of the draws)",
+   "value": 4.7996390882575396e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: joint draw 0, H alone",
+   "value": 1.3489655283270848e-06,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: joint draw 1 (in SD of the draws)",
+   "value": 6.295728814372938e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: joint draw 1, H alone",
+   "value": 6.748689950089351e-07,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: joint draw 2 (in SD of the draws)",
+   "value": 2.3777305314060517e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: joint draw 2, H alone",
+   "value": 9.72966652955733e-07,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: theta draw 0",
+   "value": 2.6049511150740185e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: omega draw 0",
+   "value": 1.5277297643596912e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: c draw 0",
+   "value": 1.8246945175739134e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "full_herwig: draws inside the prior",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "three_bands: the file holds the linear mixture",
+   "value": 0.0,
+   "tol": 0.5,
+   "ok": true
+  },
+  {
+   "check": "three_bands: central point at the defaults, xi = 1/2",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "three_bands: central prediction before (in units of the combined band)",
+   "value": 3.2397184397964733e-08,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: central prediction after (in units of the combined band)",
+   "value": 3.251927227379723e-08,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: sherpa alone, imposed means",
+   "value": 8.896806235511335e-09,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: herwig alone, imposed means",
+   "value": 2.910324940816413e-08,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: formula expanded at the centre of the prior (full box, D10)",
+   "value": 0.0,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "three_bands: learning band before (relative)",
+   "value": 4.498487101572983e-08,
+   "tol": 0.002,
+   "ok": true
+  },
+  {
+   "check": "three_bands: generator band of the formula before (relative)",
+   "value": 3.0846063683298673e-09,
+   "tol": 0.002,
+   "ok": true
+  },
+  {
+   "check": "three_bands: learning band after (relative)",
+   "value": 4.434129424419371e-08,
+   "tol": 0.002,
+   "ok": true
+  },
+  {
+   "check": "three_bands: generator band of the formula after (relative)",
+   "value": 5.9179846033252095e-09,
+   "tol": 0.002,
+   "ok": true
+  },
+  {
+   "check": "three_bands: theory_up, D9 (in units of the combined band)",
+   "value": 4.2614689114814414e-10,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: sherpa alone, theory_up, Eq. (thband) (in units of the combined band)",
+   "value": 1.2251949626980615e-10,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: herwig alone, theory_up, Eq. (thband) (in units of the combined band)",
+   "value": 9.936757156765488e-10,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: theory_down, D9 (in units of the combined band)",
+   "value": 9.895919680511773e-10,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: sherpa alone, theory_down, Eq. (thband) (in units of the combined band)",
+   "value": 4.113970621974407e-10,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: herwig alone, theory_down, Eq. (thband) (in units of the combined band)",
+   "value": 2.2880240868413343e-09,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: symmetric theory band (in units of the combined band)",
+   "value": 9.4543454207792e-10,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: theory variations at xi = 1/2 (means)",
+   "value": 5.646520792515633e-10,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: dispersive-model variations at xi = 1/2 (means)",
+   "value": 7.01405465329078e-11,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: sherpa displacements of the scale variations, stored (in units of the combined band)",
+   "value": 5.035870450469216e-10,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: herwig displacements of the scale variations, stored (in units of the combined band)",
+   "value": 2.522958641954273e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: statistical (relative)",
+   "value": 9.630171877614456e-08,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: statistical_generator_only (relative)",
+   "value": 7.955451677460381e-09,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: point 0 of the draws (in units of the combined band)",
+   "value": 2.5638375066055396e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: point 0 of the draws at the hadron level of D8",
+   "value": 2.3317982054543322e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: point 1 of the draws (in units of the combined band)",
+   "value": 1.677331923051185e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: point 1 of the draws at the hadron level of D8",
+   "value": 1.2508573434999343e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: point 2 of the draws (in units of the combined band)",
+   "value": 1.7259466222601594e-08,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: point 2 of the draws at the hadron level of D8",
+   "value": 8.742903261843584e-09,
+   "tol": 0.001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: central prediction before at the hadron level of D8 (in units of the combined band)",
+   "value": 2.8689843149705768e-08,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: central prediction after at the hadron level of D8 (in units of the combined band)",
+   "value": 2.8798027396488294e-08,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: theory_up at the hadron level of D8, D9 (in units of the combined band)",
+   "value": 4.318438184252065e-10,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: theory_down at the hadron level of D8, D9 (in units of the combined band)",
+   "value": 9.93597214227217e-10,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: statistical error at the hadron level of D8 (relative)",
+   "value": 9.630171877614456e-08,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "three_bands: data are DELPHI d11-x01-y02 as published (relative)",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "three_bands: integral of the data as published (1 - 0.9897)",
+   "value": 1.1102230246251565e-16,
+   "tol": 1e-05,
+   "ok": true
+  },
+  {
+   "check": "three_bands: window-normalized prediction and data (relative)",
+   "value": 5.039663467002371e-16,
+   "tol": 1e-12,
+   "ok": true
+  },
+  {
+   "check": "three_bands: window-normalized band from the draws (relative)",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "band_checks: the file holds the linear mixture",
+   "value": 0.0,
+   "tol": 0.5,
+   "ok": true
+  },
+  {
+   "check": "band_checks: generators_alone means (relative)",
+   "value": 1.117356454984892e-09,
+   "tol": 1e-05,
+   "ok": true
+  },
+  {
+   "check": "band_checks: generators_alone statistical errors (relative)",
+   "value": 3.382910379538849e-09,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "band_checks: generators_alone largest weight of the mixture (relative)",
+   "value": 5.080192133632977e-08,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "band_checks: imposed means (relative)",
+   "value": 1.1177206752710532e-09,
+   "tol": 1e-05,
+   "ok": true
+  },
+  {
+   "check": "band_checks: imposed statistical errors (relative)",
+   "value": 9.630171877614456e-08,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "band_checks: imposed largest weight of the mixture (relative)",
+   "value": 5.0828964481830496e-08,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "band_checks: xi alone, after (relative)",
+   "value": 2.1341864456283433e-08,
+   "tol": 0.0001,
+   "ok": true
+  },
+  {
+   "check": "theory_variations: the file holds the linear mixture",
+   "value": 0.0,
+   "tol": 0.5,
+   "ok": true
+  },
+  {
+   "check": "theory_variations: imposed distribution at xi = 1/2 (relative)",
+   "value": 7.402078585132132e-09,
+   "tol": 1e-05,
+   "ok": true
+  },
+  {
+   "check": "theory_variations: sherpa alone, imposed (relative)",
+   "value": 1.7972591148386834e-09,
+   "tol": 1e-05,
+   "ok": true
+  },
+  {
+   "check": "theory_variations: herwig alone, imposed (relative)",
+   "value": 1.3496944863231976e-08,
+   "tol": 1e-05,
+   "ok": true
+  },
+  {
+   "check": "theory_variations: every variation of each generator (relative to the prediction)",
+   "value": 4.695827544207176e-10,
+   "tol": 1e-05,
+   "ok": true
+  },
+  {
+   "check": "theory_variations: data are DELPHI d11-x01-y02 as published (relative)",
+   "value": 0.0,
+   "tol": 1e-09,
+   "ok": true
+  },
+  {
+   "check": "theory_variations: imposed distribution at the hadron level of D8 (relative)",
+   "value": 6.555041161783907e-09,
+   "tol": 1e-05,
+   "ok": true
+  },
+  {
+   "check": "theory_variations: S alone at the hadron level of D8 (relative)",
+   "value": 1.8264037667026985e-09,
+   "tol": 1e-05,
+   "ok": true
+  },
+  {
+   "check": "theory_variations: H alone at the hadron level of D8 (relative)",
+   "value": 1.1981957824644755e-08,
+   "tol": 1e-05,
+   "ok": true
+  }
+ ],
+ "passed": 226,
+ "total": 226
+}

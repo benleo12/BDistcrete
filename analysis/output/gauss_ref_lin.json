@@ -1,0 +1,38 @@
+{
+ "what": "the Gaussian reference of the caption of Table 1: the closure width of two Gaussian samples",
+ "estimator": "r2_ladder.make_bins, pulls (uniform weights 1/N on the first sample), width_of",
+ "r2_ladder_md5": "e1d340ae87a340ad1b2ae782ca2b8049",
+ "n_events": 40000,
+ "nbins": 25,
+ "min_count": 5,
+ "repetitions": 20000,
+ "seed": 20261031,
+ "rng": "numpy default_rng, SeedSequence(seed).spawn(2): null, shift",
+ "cases": {
+  "null": {
+   "shift_in_sd": 0.0,
+   "mean": 1.0070718431573804,
+   "sd": 0.14632489179408362,
+   "se_mean": 0.0010346732324398433,
+   "median": 1.0035945177531045,
+   "bins": [
+    25
+   ],
+   "bins_used_min": 25,
+   "bins_used_mean": 25.0
+  },
+  "shift": {
+   "shift_in_sd": 0.05,
+   "mean": 1.720223772842817,
+   "sd": 0.18957364561615275,
+   "se_mean": 0.0013404881034943703,
+   "median": 1.7185504095792086,
+   "bins": [
+    25
+   ],
+   "bins_used_min": 25,
+   "bins_used_mean": 25.0
+  }
+ },
+ "seconds": 211.2
+}

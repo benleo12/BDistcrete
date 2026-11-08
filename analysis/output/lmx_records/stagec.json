@@ -1,0 +1,11 @@
+{
+ "step": "stagec",
+ "run_id": "20261107-013026-2306821",
+ "code_md5": "b0ca0841b27e6e5427846e2db0716b6c",
+ "written": "Sat Nov  7 10:21:31 2026",
+ "files": {
+  "output/valid_map_C_P2augfullfac0_report.json": "4cee033395b95734a17d25d1e3c6e08a",
+  "output/single_members_C_P2augfullfac0.json": "c6e7c524d021e2b7bf3fabac31b428c7",
+  "output/xp_null.json": "2383fb565b6e1a265e354563654409e4"
+ }
+}

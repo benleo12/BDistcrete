@@ -1,10 +1,12 @@
 # The shipped library imports numpy and nothing else outside the standard library. Verified by
 # tracing every import in gentune/, examples/ and head_direction_response.py: the only others are
-# os, sys, json, glob, gzip, argparse, csv, hashlib, re, time and warnings.
+# argparse, csv, glob, gzip, hashlib, importlib, json, os, re, sys, time, warnings and zipfile.
 #
-# The floor is 1.20 because the loader uses np.load with allow_pickle left off and the
-# broadcasting and linear algebra here are long-stable. It is a floor, not a pin.
-numpy>=1.20
+# The floor is numpy 2.0, the oldest version tested: with Python 3.9.6 and numpy 2.0.0, the
+# self-test, tests/test_mixture.py, tests/test_maxent.py and every command of README.md that needs
+# no deposit ran clean. Older numpy is not supported: with numpy 1.21.6 on Apple silicon,
+# examples/data/make_expected.py crashed now and then inside np.cov. It is a floor, not a pin.
+numpy>=2.0
 
-# Tested on Python 3.13.2 with numpy 2.2.4. examples/parameter_scan.py and
+# Tested on Python 3.14.3 with numpy 2.5.4. examples/parameter_scan.py and
 # examples/reweight_own_events.py need nothing further.

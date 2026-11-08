@@ -55,19 +55,29 @@ def thrust_axis(p3):
 
 
 def _hepmc_flavour(filepath, opener):
-    """'hepmc2' or 'hepmc3', read off the file's own header, or None if it does not say."""
+    """'hepmc2' or 'hepmc3', read off the file's own header, or None if it does not say.
+
+    The listing line names the format and the HepMC::Version line names the library that wrote
+    it, which is not the same thing: Herwig 7.3 writes HepMC2 through HepMC3, so its files open
+    with 'HepMC::Version 3.03.01' followed by 'HepMC::IO_GenEvent-START_EVENT_LISTING'. The
+    version line decides only when there is no listing line, as in gentune/features.py."""
+    version = None
     with opener(filepath, 'rt') as fh:
         for _ in range(40):
             line = fh.readline()
             if not line:
                 break
-            if 'Asciiv3' in line or 'HepMC::Version 3' in line:
+            if 'Asciiv3' in line:
                 return 'hepmc3'
-            if 'IO_GenEvent' in line or 'HepMC::Version 2' in line:
+            if 'IO_GenEvent' in line:
                 return 'hepmc2'
+            if 'HepMC::Version 3' in line:
+                version = 'hepmc3'
+            elif 'HepMC::Version 2' in line:
+                version = 'hepmc2'
             if line.startswith('E '):
                 break
-    return None
+    return version
 
 
 def parse_hepmc(filepath, max_events=None, fmt='auto'):

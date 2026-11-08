@@ -20,27 +20,39 @@ followed by any parameters you want to change, by name. The command above is the
 
 sherpa-default and herwig-default are the generator's own defaults, the values a card that sets
 nothing gets, and default is the paper's central point, which is the same thing for a single
-generator. For MIX17 a sample made by one generator sits at an edge of the fraction, 0 for
-Sherpa and 1 for Herwig, where the other generator's block drops out of the weights exactly.
-The presets put that block at the centre of its box, where the training runs had it, so a
-Herwig sample at its defaults is reweighted to a larger diquark weight with
+generator. For MIX17 a sample made by one generator sits at an edge of the fraction xi, 0 for
+Sherpa and 1 for Herwig, and --from must be such a point. The presets put the other generator's
+parameters at the centre of their box, where the training runs had them; they do not enter the
+weights of the sample. At --to = (theta_S, theta_H, xi) the prediction is the paper's mixture,
+(1 - xi) <O>_S + xi <O>_H: Sherpa at theta_S and Herwig at theta_H each get their own weights
+on your events, from the head at xi = 0 and xi = 1 against the point of the sample
+(gentune.mixture.weights). So a Herwig sample at its defaults is reweighted to a larger diquark
+weight with
 
     python examples/reweight_own_events.py --stage MIX17 --hepmc examples/data/herwig_default.hepmc.gz \
         --from herwig-default --to herwig-default H:pwtdiquark=0.40
 
-and --to default takes the same sample to the paper's central point.
+and --to default takes the same sample to the paper's central point, where half of the
+prediction is Sherpa's, made from Herwig's events.
 
 --out writes an npz with the weights, weights[i] for the i-th event of the file, summing to one,
 the event number each of those events carries in the file (event_number), both points, the
 parameter names, and the per-event observables of gentune.bands.observables (per_event, one
-column per name in observables). Nothing here is specific to an observable: the weights are per
-event, so any distribution, moment or histogram made from the sample can be remade with them.
+column per name in observables), with the photons radiated by the beams left out of 1 - T and
+the total multiplicity, as in the paper. Nothing here is specific to an observable: the weights
+are per event, so any distribution, moment or histogram made from the sample can be remade with
+them. For MIX17, weights is (1 - xi) w_S + xi w_H, whose weighted mean of any observable over all
+events is the paper's mixed mean, and weights_sherpa and weights_herwig hold each generator's own,
+each summing to one (a generator whose coefficient is zero is left out). A mean over part of the
+events, such as that of 1 - T inside the window of a calculation, is each generator's own mean
+there, mixed with (1 - xi, xi): take it from weights_sherpa and weights_herwig.
 """
 import argparse, os, sys
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from gentune import load_head, Trunk, features, axes, bands
+from gentune import load_head, Trunk, features, axes, bands, mixture
+from gentune.head import MIXTURE_KINDS
 
 
 def outside(t, head, nm, tol=1e-9):
@@ -72,8 +84,8 @@ class Formatter(argparse.RawDescriptionHelpFormatter):
 def main():
     head_line, rest = __doc__.split('\n', 1)
     ap = argparse.ArgumentParser(description=head_line, epilog=rest, formatter_class=Formatter)
-    ap.add_argument('--stage', default='E', help='the released stage: C_1M, E (Sherpa), F (Herwig) '
-                                                 'or MIX17 (both and the fraction)')
+    ap.add_argument('--stage', default='E', help='the released stage: E (Sherpa), F (Herwig) or '
+                                                 'MIX17 (both generators and the fraction)')
     ap.add_argument('--models', default=os.path.relpath(
         os.path.join(os.path.dirname(__file__), '..', 'models')),
         help='the folder with <stage>_head.npz and <stage>_trunk.npz')
@@ -100,7 +112,9 @@ def main():
     hp = f'{a.models}/{a.stage}_head.npz'
     kind = str(np.load(hp).get('head_kind', 'cond'))
     head = load_head(hp)
-    print(f'{a.stage}: {kind} head, {head.nt} parameters, {head.ENS} ensemble members, T={head.T}')
+    mix = kind in MIXTURE_KINDS
+    print(f'{a.stage}: ' + ('the mixture of Sherpa and Herwig, ' if mix else f'{kind} head, ') +
+          f'{head.nt} parameters, {head.ENS} ensemble members, T={head.T}')
     nm = axes.names(a.stage, head.nt)
     axes.verify(a.stage, head, os.path.join(os.path.dirname(__file__), '..', 'generators'))
     if a.list or a.hepmc is None:
@@ -129,10 +143,12 @@ def main():
                   f'training design). The weights are an extrapolation and the closure numbers '
                   f'quoted for this stage do not cover it.')
         pts[name] = t
-    if 'from' in pts and nm[-1] == 'fraction' and 0.0 < pts['from'][-1] < 1.0:
-        print(f'WARNING --from puts the fraction at {pts["from"][-1]:g}. A sample made by one '
-              f'generator is at 0 (Sherpa) or 1 (Herwig), so unless yours was drawn from the '
-              f'mixture itself, use sherpa-default or herwig-default.')
+    if 'from' in pts and mix and pts['from'][-1] not in (0.0, 1.0):
+        print(f'ERROR: --from puts the fraction at {pts["from"][-1]:g}. A sample made by one '
+              f'generator sits at 0 (Sherpa) or 1 (Herwig): use sherpa-default or herwig-default. '
+              f'The head at an interior fraction is its own interpolation between the generators, '
+              f'which no generator makes.')
+        return 2
     if len(pts) == 2:
         shown = {k: [shown_value(t, i, nm) for i in range(head.nt)] for k, t in pts.items()}
         moved = [i for i in range(head.nt) if shown['from'][i] != shown['to'][i]]
@@ -162,9 +178,20 @@ def main():
     # returns plausible weights that are wrong. This refuses instead.
     head.check_trunk(trunk)
     A = trunk.embed(features.trunk_features(F), M)
-    w = head.ratio_weights(A, dst, src)
-    neff = head.n_eff(w)
-    print(f'\nweights: N_eff = {neff:.0f} of {len(w)} events, N_eff/N = {neff/len(w):.3f}')
+    parts = {}
+    if mix:
+        parts = mixture.weights(head, A, dst, theta_from=src)
+        w = mixture.event_weights(parts, dst)
+        coef = mixture.coefficients(dst)
+        for g, v in parts.items():
+            ng = head.n_eff(v)
+            print(f'\n{g} at the --to point, coefficient {coef[g]:g}: N_eff = {ng:.0f} of {len(v)} '
+                  f'events, N_eff/N = {ng/len(v):.3f}, max/mean weight ratio = {v.max()*len(v):.2f}')
+    else:
+        w = head.ratio_weights(A, dst, src)
+    neff = min([head.n_eff(w)] + [head.n_eff(v) for v in parts.values()])
+    print(f'\nweights' + (', (1 - xi) w_S + xi w_H' if mix else '') +
+          f': N_eff = {head.n_eff(w):.0f} of {len(w)} events, N_eff/N = {head.n_eff(w)/len(w):.3f}')
     print(f'         max/mean weight ratio = {w.max()*len(w):.2f}')
     if neff/len(w) < 0.2:
         print('NOTE the effective sample size has dropped below a fifth of the events, so this '
@@ -175,9 +202,11 @@ def main():
         obs = bands.observables(F, M)
         np.savez_compressed(a.out, weights=w, event_number=events.numbers, theta_from=src,
                             theta_to=dst, names=np.array(nm), observables=np.array(list(obs)),
-                            per_event=np.column_stack(list(obs.values())))
+                            per_event=np.column_stack(list(obs.values())),
+                            **{f'weights_{g}': v for g, v in parts.items()})
         print(f'wrote {a.out}: weights[i], summing to one, is the weight of the i-th event of '
-              f'the file, numbered event_number[i] there')
+              f'the file, numbered event_number[i] there' +
+              (', and weights_<generator> each generator\'s own' if mix else ''))
     return 0
 
 

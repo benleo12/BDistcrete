@@ -15,6 +15,24 @@ The nine, in the order of the paper: closure_mix (Fig. 3), map (Fig. 4), coverag
 (the wide coupling scan, whose numbers the paper quotes without a figure) and closure (Stage C
 reweighted to a held-out point) are not in the paper and are drawn only when named. R8_OUT sets the output folder (default output). XP_NULL sets the dotted tick of
 Fig. 4 (default the mean of output/xp_null.json).
+
+The linear mixture: a figure drawn from result files of the linear mixture (names ending in _lin: BANDS_NPZ,
+BANDS_JSON, VARS_JSON; COST_SUFFIX=_lin for the cost benchmark, read from BENCH_DIR, default output) checks that each of them holds mix = linear and is
+written as r8_<name>_lin.pdf; each benchmark file must hold the device and threads of its name. Fig. 11 compares
+with DELPHI at its hadron level (D8, the *_conv predictions of
+three_bands.py and theory_variations.py) when the files hold it (FIG_CONV=0 draws the uncorrected predictions), and
+takes its vertical range from what it draws.
+
+Ranges (rounds B10, B11 and B21): every axis keeps the published range when what it draws fits in it, and otherwise
+widens only as far as needed (widen()), so that no value of the rerun is hidden: Figs. 3 (the reweighted ratio and its
+band, and since B21 the dashed unweighted reference, each side alone), 5, 6 (points and error bars; since B21 none
+ends on the axis), 7, 11, 12 (every bar but the two bands of <tau>_win that the calculation removes, its learning band,
+which the caption puts below the axis, and its generator band with the calculation imposed, which the text says
+disappears; neither lowers the axis, and the job log says where both lie) and 14 (the data points with their error bars
+and the calculation inside the window, with ticks for any span of the ratio panel; since B21 also every data point below
+tau = 0.5 in the upper panel and the theory band in the ratio panel; a data point outside the window and beyond the
+range of a panel is drawn as an arrow at its edge). Fig. 13 shows the central 99.4 percent of the events, as published,
+with the axes half a hexagon wider (B21), so that the hexagons on its edge are whole.
 """
 import os, sys, json
 import numpy as np
@@ -22,7 +40,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
-from matplotlib.ticker import FixedLocator, NullLocator, FixedFormatter, LogLocator, NullFormatter
+from matplotlib.ticker import FixedLocator, NullLocator, FixedFormatter, LogLocator, NullFormatter, MultipleLocator, FormatStrFormatter
 # One visual language for every figure of the paper. Each color has one job everywhere (Okabe-Ito
 # hues, checked with the dataviz validator for color-vision deficiency):
 #   METHOD  the classifier-weighted prediction: reweighted sample, factorized network, learned functions,
@@ -90,6 +108,61 @@ def unit_line(ax, y=1.0, **kw):
 
 def save(fig, name):
     path = os.path.join(OUT, f'r8_{name}.pdf'); fig.savefig(path); plt.close(fig); print('wrote', path)
+
+
+def linear_inputs(*pairs):
+    """pairs of (path, loaded json or npz). True when any path names a result of the linear mixture (ends in _lin),
+    in which case every one of them must hold mix = linear."""
+    lin = any(os.path.splitext(p)[0].endswith('_lin') for p, _ in pairs)
+    if lin:
+        for p, d in pairs:
+            m = str(d['mix']) if (hasattr(d, 'files') and 'mix' in d.files) or (isinstance(d, dict) and 'mix' in d) else None
+            assert m == 'linear', f'{p} does not hold the linear mixture (mix = {m!r})'
+    return lin
+
+
+def nice_range(vals, pad=0.06):
+    """A vertical range that holds every finite value of vals, rounded out to steps of 0.05, and ticks for it."""
+    v = np.concatenate([np.ravel(np.asarray(a, float)) for a in vals]); v = v[np.isfinite(v)]
+    lo, hi = float(v.min()), float(v.max()); sp = max(hi - lo, 0.1)
+    lo, hi = np.floor((lo - pad*sp)*20)/20, np.ceil((hi + pad*sp)*20)/20
+    st = next(t for t in (0.05, 0.1, 0.2, 0.25, 0.5, 1.0, 2.0) if (hi - lo)/t <= 7)
+    return (lo, hi), [t for t in np.arange(np.ceil(lo/st)*st, hi + 1e-9, st)]
+
+
+def half_ticks(ax):
+    """Round B21: a ratio panel that was widened keeps the ticks of its neighbours, steps of 0.5 with one decimal, where
+    matplotlib would switch to whole numbers; only the ticks change, and a span above 4 keeps matplotlib's choice."""
+    lo, hi = ax.get_ylim()
+    if hi - lo <= 4:
+        ax.yaxis.set_major_locator(MultipleLocator(0.5)); ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+
+
+def widen(lo, hi, vals, pad=0.05, log=False, clear=0.0):
+    """The published range (lo, hi), widened only as far as needed to hold every finite value of vals (positive ones
+    on a log axis), with a margin of pad of the new height (in decades on a log axis). Unchanged when all fit. Round
+    B21: with clear, a value closer to an edge than clear of the height counts as beyond it (an error bar that would end
+    on the axis)."""
+    v = np.concatenate([np.ravel(np.asarray(a, float)) for a in vals]) if len(vals) else np.array([])
+    v = v[np.isfinite(v) & (v > 0)] if log else v[np.isfinite(v)]
+    f, g = (np.log10, lambda x: 10**x) if log else (lambda x: x, lambda x: x)
+    lo_c, hi_c = (g(f(lo) + clear*(f(hi) - f(lo))), g(f(hi) - clear*(f(hi) - f(lo)))) if clear else (lo, hi)
+    if not len(v) or (v.min() >= lo_c and v.max() <= hi_c):
+        return lo, hi
+    a, b = f(min(lo, v.min())), f(max(hi, v.max())); m = pad*(b - a)
+    return g(a - m) if v.min() < lo_c else lo, g(b + m) if v.max() > hi_c else hi
+
+
+def edge_arrows(ax, x, y, lo, hi, log=False, **kw):
+    """Points of (x, y) beyond the vertical range (lo, hi), drawn as arrows just inside its edge, so that none is
+    hidden. Returns how many."""
+    x, y = np.asarray(x, float), np.asarray(y, float)
+    ins = (lambda e, s: e*(hi/lo)**(0.035*s)) if log else (lambda e, s: e + 0.035*s*(hi - lo))
+    n = 0
+    for sel, yy, mk in ((np.isfinite(y) & (y > hi), ins(hi, -1), '^'), (np.isfinite(y) & (y < lo), ins(lo, 1), 'v')):
+        if sel.any():
+            ax.plot(x[sel], np.full(sel.sum(), yy), mk, ms=3.4, zorder=7, **kw); n += int(sel.sum())
+    return n
 
 
 def window(ax, lo, hi):
@@ -169,10 +242,19 @@ def closure_mix():
             axd.stairs(dw + ew, bins, baseline=dw - ew, fill=True, color=METHOD, alpha=BAND_ALPHA, lw=0)
             axd.stairs(dw, bins, baseline=None, color=METHOD, lw=1.2, label='reweighted reference')
             axd.errorbar(ctr, dt, yerr=et, fmt='o', color=DATA, ms=1.8, lw=0.7, zorder=5, label='fresh run')
+            # the ranges follow the data (round B10): the published ones whenever everything fits in them
             if logy:
-                axd.set_yscale('log'); axd.set_ylim(max(dt[dt > 0].min()*0.3, 1e-6), None)
+                low = dt[dt > 0].min()*0.3; other = np.r_[du[du > 0], dw[dw > 0]]
+                if len(other) and other.min() < low:                    # the reference or the reweighted sample lower
+                    low = 0.9*other.min()
+                axd.set_yscale('log'); axd.set_ylim(max(low, 1e-6), None)
+            xhi = 80.0
             if obs == 'mult_total':
-                axd.set_xlim(0, 80); axd.set_ylim(0, 1.3*np.nanmax(dt))
+                # 0 to 80, unless a bin from 80 up holds 5 percent of the peak (the published bins there hold 2 or less)
+                hh = np.maximum.reduce([dt, du, dw]); big = (bins[:-1] >= 80) & (hh >= 0.05*hh.max())
+                xhi = float(max(80.0, bins[1:][big].max())) if big.any() else 80.0
+                top = max(1.3*np.nanmax(dt), 1.05*np.nanmax(np.r_[du, dw + ew, dt + et]))
+                axd.set_xlim(0, xhi); axd.set_ylim(0, top)
             axd.set_ylabel(ylab, fontsize=9.5)
             plt.setp(axd.get_xticklabels(), visible=False)
             axd.text(0.97, 0.93, rf'width ${float(g("width")):.2f}$', transform=axd.transAxes, ha='right', va='top',
@@ -195,9 +277,22 @@ def closure_mix():
             axr.stairs(rw, bins, baseline=None, color=METHOD, lw=1.1)
             span = np.nanmax(np.abs(np.r_[ru[ok], rw[ok]] - 1))
             lim = 0.14 if span < 0.12 else min(1.15*span, 0.8)
-            axr.set_ylim(1 - lim, 1 + lim)
+            # the reweighted ratio and its band always fit
+            need = np.nanmax(np.abs(np.r_[(rw + rwe)[ok], (rw - rwe)[ok]] - 1))
+            if need > lim:
+                lim = 1.15*need
+            # and so does the dashed unweighted reference (round B21; before, it could leave the panel in sparse tails
+            # beyond a ratio of 1.8, as in (b) below n = 14): each side widened alone, with the same margin
+            ylo, yhi = 1 - lim, 1 + lim
+            if np.nanmax(ru[ok]) > yhi:
+                yhi = 1 + 1.15*(np.nanmax(ru[ok]) - 1)
+            if np.nanmin(ru[ok]) < ylo:
+                ylo = 1 - 1.15*(1 - np.nanmin(ru[ok]))
+            axr.set_ylim(ylo, yhi)
+            if (ylo, yhi) != (1 - lim, 1 + lim):
+                half_ticks(axr)
             if obs == 'mult_total':
-                axr.set_xlim(0, 80)
+                axr.set_xlim(0, xhi)
             axr.set_xlabel(xlab)
             if c == 0:
                 axr.set_ylabel('ratio to\nfresh run', fontsize=8, linespacing=0.95)
@@ -295,15 +390,21 @@ def kscan():
     gs = GridSpec(1, 2, figure=fig, wspace=0.2, left=0.08, right=0.99, top=0.9, bottom=0.17)
     for i, (key, ttl, ticks, top) in enumerate((('scan', '(a) standard test', [1, 1.5, 2, 3, 4], 5.0),
                                                 ('scan_strict', '(b) strict test', [1, 1.5, 2, 3, 5, 8], 9.0))):
-        ax = fig.add_subplot(gs[0, i])
+        ax = fig.add_subplot(gs[0, i]); ends = []
         for st, col, mk, dd, lab in SERIES:
             sc = rs[st][key]; KK = sorted(int(k) for k in sc)
             yy = [sc[str(k)]['width'] for k in KK]; ee = [sc[str(k)].get('spread', 0) for k in KK]
             ax.errorbar(KK, yy, yerr=ee, marker=mk, ms=3.0, color=col, lw=1.0, elinewidth=0.6, label=lab)
+            ends += [np.add(yy, ee), np.subtract(yy, ee), yy]
             K2 = 1 + dd + dd*(dd + 1)//2
             ax.axvline(K2, color=col, ls=(0, (4, 3)), lw=0.7, alpha=0.55, ymax=0.5, zorder=1)
         unit_line(ax)
-        ax.set_xscale('log', base=2); ax.set_yscale('log'); ax.set_ylim(0.85, top)
+        # the published range (0.85, 5 or 9), widened only as far as every point and error bar needs (round B10), and
+        # so that no error bar ends on the axis (round B21: one within 3 percent of the height of an edge widens it)
+        y0, y1 = widen(0.85, top, ends, log=True, clear=0.03)
+        ticks = sorted(set(ticks + [t for t in (0.5, 0.6, 0.7) if y0 <= t <= 0.85/1.15]
+                           + [t for t in (12, 20, 30, 50, 80, 120, 200) if 1.5*max(ticks) <= t <= y1]))
+        ax.set_xscale('log', base=2); ax.set_yscale('log'); ax.set_ylim(y0, y1)
         ax.yaxis.set_major_locator(FixedLocator(ticks)); ax.yaxis.set_minor_locator(NullLocator())
         ax.yaxis.set_major_formatter(FixedFormatter([f'{v:g}' for v in ticks]))
         tk = [1, 2, 3, 4, 8, 16, 32, 48]
@@ -318,10 +419,13 @@ def kscan():
 
 # ---- Fig. cost: the network part of a fit step ------------------------------------------------------
 def cost():
-    def load(dev):
-        f = {'cpu': 'output/bench_final_cpu_4.json', 'gpu': 'output/bench_final_cuda_12.json'}[dev]
-        return json.load(open(f))
-    c, g = load('cpu'), load('gpu')
+    sfx = os.environ.get('COST_SUFFIX', '')                          # _lin: the benchmark of the linear mixture
+    bd = os.environ.get('BENCH_DIR', 'output')
+    fc, fg = f'{bd}/bench_final_cpu_4{sfx}.json', f'{bd}/bench_final_cuda_12{sfx}.json'
+    c, g = json.load(open(fc)), json.load(open(fg))
+    lin = linear_inputs((fc, c), (fg, g))
+    for f, d, dev, thr in ((fc, c, 'cpu', 4), (fg, g, 'cuda', 12)):      # never one device's run under the other's name
+        assert (d.get('device'), d.get('threads')) == (dev, thr), f'{f} records device {d.get("device")!r} with {d.get("threads")!r} threads'
     nc, ng, rest = c['n_network_step_seconds'], g['n_network_step_seconds'], c['b_tilt_and_chi2_seconds']
     gpu = g.get('gpu', 'GPU').replace('NVIDIA ', '')
     ROWS = [('factorized', 'factorized network', METHOD), ('late', r'$\theta$ after the sum', BASE),
@@ -335,7 +439,8 @@ def cost():
     fig, ax = plt.subplots(figsize=(TW, 1.8))
     y = np.arange(len(ROWS))[::-1].astype(float)
     ax.axvline(rest, color=REF, lw=0.8, ls=(0, (4, 3)), zorder=0)
-    ax.text(rest*1.15, y.max() + 0.42, 'maximum-entropy weight on the CPU,\nthe same for every network',
+    ax.text(rest*1.15, y.max() + 0.42, ('maximum-entropy weights of both generators\non the CPU, the same for every network' if lin
+                                        else 'maximum-entropy weight on the CPU,\nthe same for every network'),
             fontsize=7.5, color=REF, va='top', ha='left', linespacing=1.0)
     for yi, (k, lab, col) in zip(y, ROWS):
         ax.plot([ng[k], nc[k]], [yi, yi], color=col, lw=1.0, alpha=0.55, zorder=1)
@@ -343,7 +448,9 @@ def cost():
         ax.plot(nc[k], yi, 'o', ms=5, color=col, zorder=3)
         for xv in (ng[k], nc[k]):
             ax.text(xv, yi - 0.2, human(xv), ha='center', va='top', fontsize=7.5)
-    ax.set_xscale('log'); ax.set_xlim(2e-3, 8e3)
+    tt = [v for k, _, _ in ROWS for v in (ng[k], nc[k])] + [rest]
+    # the published range 2 ms to 8000 s, widened by a factor two beyond any time outside it (round B10)
+    ax.set_xscale('log'); ax.set_xlim(min(2e-3, min(tt)/2), max(8e3, 2*max(tt)))
     ax.set_yticks(y); ax.set_yticklabels([lab for _, lab, _ in ROWS]); ax.set_ylim(y.min() - 0.6, y.max() + 0.5)
     ax.tick_params(axis='y', length=0)
     for s in ('top', 'right', 'left'):
@@ -351,10 +458,11 @@ def cost():
     ax.tick_params(which='both', top=False)
     ax.set_xlabel('time of the network at one parameter point [s]')
     from matplotlib.lines import Line2D
+    # above the axes in one row, as in Fig. 5 (round B21: at the lower left the dashed line crossed "threads")
     ax.legend(handles=[Line2D([0], [0], marker='o', lw=0, ms=5, color=REF, label='one CPU process, 4 threads'),
                        Line2D([0], [0], marker='o', lw=0, ms=5, mfc='white', mec=REF, mew=1.2, label=f'one {gpu}')],
-              loc='lower left', fontsize=7.5)
-    save(fig, 'cost')
+              loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=2, fontsize=7.5)
+    save(fig, 'cost' + ('_lin' if lin else ''))
 
 
 # ---- Fig. three bands: the thrust distribution ------------------------------------------------------
@@ -364,9 +472,13 @@ def bands():
     dashed, Herwig dotted, theory_variations.py). The band of (b) is signed: the combined band above the
     prediction collects the upward theory variations and the one below the downward ones. (c)-(e) each band
     per bin in percent of the prediction, the theory band split into its two sides."""
-    D = np.load(os.environ.get('BANDS_NPZ', 'output/three_bands_MIXGEOV3S9.npz'))
-    J = json.load(open(os.environ.get('BANDS_JSON', 'output/three_bands_MIXGEOV3S9.json')))
-    V = json.load(open(os.environ.get('VARS_JSON', 'output/theory_variations_MIX.json')))
+    fn, fj, fv = (os.environ.get(k, d) for k, d in (('BANDS_NPZ', 'output/three_bands_MIXGEOV3S9.npz'),
+                                                    ('BANDS_JSON', 'output/three_bands_MIXGEOV3S9.json'),
+                                                    ('VARS_JSON', 'output/theory_variations_MIX.json')))
+    D, J, V = np.load(fn), json.load(open(fj)), json.load(open(fv))
+    lin = linear_inputs((fn, D), (fj, J), (fv, V))
+    # D8: against DELPHI at its hadron level, when both files hold the corrected predictions
+    CV = '_conv' if (os.environ.get('FIG_CONV', '1') == '1' and 'h_central_conv' in D.files and 'h_imposed_conv' in V['xi0']) else ''
     # the bins below the window come first when the files have them (keys ending in _low), with the
     # normalization over the bins above tau = 0.05 unchanged
     low = 'lo_low' in D.files and len(D['lo_low']) > 0 and 'lo_low' in V
@@ -375,19 +487,21 @@ def bands():
     lo, hi, y, e = cat('lo'), cat('hi'), cat('data'), cat('err'); edges = np.r_[lo, hi[-1]]
     assert np.allclose(vcat(V, 'lo'), lo) and np.allclose(vcat(V, 'data'), y)
     WLO, WHI = J['calc']['window']; TEST = J['test'].upper()
-    h0, h1 = cat('h_central_before'), cat('h_central')
-    g0, g1, le, le0 = cat('gen_hist_before'), cat('gen_hist'), cat('learn_hist'), cat('learn_hist_before')
-    thu, thd = cat('theory_hist_up'), cat('theory_hist_down')
-    c0, cu, cd = cat('comb_hist_before'), cat('comb_hist_up'), cat('comb_hist_down')
-    st = cat('stat_hist')
-    single = {xi: (vcat(V[f'xi{xi}'], 'h_gen_only'), vcat(V[f'xi{xi}'], 'h_imposed')) for xi in (0, 1)}
+    h0, h1 = cat('h_central_before' + CV), cat('h_central' + CV)
+    g0, g1, le, le0 = cat('gen_hist_before' + CV), cat('gen_hist' + CV), cat('learn_hist' + CV), cat('learn_hist_before' + CV)
+    thu, thd = cat('theory_hist_up' + CV), cat('theory_hist_down' + CV)
+    c0, cu, cd = cat('comb_hist_before' + CV), cat('comb_hist_up' + CV), cat('comb_hist_down' + CV)
+    st = cat('stat_hist' + CV)
+    single = {xi: (vcat(V[f'xi{xi}'], 'h_gen_only' + CV), vcat(V[f'xi{xi}'], 'h_imposed' + CV)) for xi in (0, 1)}
     fig = plt.figure(figsize=(TW, 5.7))
     gs = GridSpec(3, 3, figure=fig, height_ratios=[1, 1, 1.05], hspace=0.62, wspace=0.12, left=0.085, right=0.99,
                   top=0.955, bottom=0.065)
     from matplotlib.patches import Patch
     from matplotlib.lines import Line2D
-    # the bins below the window reach 0.46 to 1.29 of DELPHI, so the range takes them in
-    YL = (0.42, 1.42) if low else (0.68, 1.42)
+    # the vertical range holds every curve, band and data point drawn (below the window the ratio to DELPHI
+    # reaches far from one: about 2 in the first bin with the all-particle table)
+    YL, YT = nice_range([(h0 + c0)/y, (h0 - c0)/y, (h1 + cu)/y, (h1 - cd)/y, 1 + e/y, 1 - e/y]
+                        + [single[xi][k]/y for xi in (0, 1) for k in (0, 1)])
     for row, (ttl, h, up, dn, col, k) in enumerate((
             ('(a) generators alone', h0, c0, c0, BASE, 0),
             ('(b) calculation imposed', h1, cu, cd, METHOD, 1))):
@@ -400,10 +514,12 @@ def bands():
         ax.stairs(single[1][k]/y, edges, baseline=None, color=lc, lw=1.2, ls=(0, (1, 1)))
         eb = ax.errorbar(0.5*(lo + hi), y/y, yerr=e/y, fmt='o', ms=2.6, lw=0.8, color=DATA, zorder=5)
         ax.set_xlim(0, edges[-1]); ax.set_ylim(*YL)
-        ax.set_yticks([0.6, 0.8, 1.0, 1.2] if low else [0.8, 0.9, 1.0, 1.1, 1.2])
+        ax.set_yticks(YT)
         ax.set_ylabel(f'ratio to {TEST}')
         if row == 0:
-            ax.text(0.5*(WLO + WHI), YL[0] + 0.012, 'window of the calculation', ha='center', va='bottom', fontsize=7, color=REF)
+            # 4.5 points above the axis, clear of the inward ticks of 3 points (round B21: the tick at 0.2 cut into it)
+            ax.annotate('window of the calculation', xy=(0.5*(WLO + WHI), 0), xycoords=('data', 'axes fraction'), xytext=(0, 4.5),
+                        textcoords='offset points', ha='center', va='bottom', fontsize=7, color=REF)
         hs = [(Patch(color=col, alpha=al, lw=0), Line2D([], [], color=lc, lw=1.2)),
               Line2D([], [], color=lc, lw=1.0, ls=(0, (4, 2))), Line2D([], [], color=lc, lw=1.2, ls=(0, (1, 1))), eb]
         ls_ = [r'mixture at $\xi=\frac12$ with its band',
@@ -420,27 +536,31 @@ def bands():
         ('(d) theory band', [(rel(thu, h1), THEORY, '-', 'above the prediction'), (rel(thd, h1), THEORY, (0, (3, 1.5)), 'below the prediction')]),
         ('(e) learning band', [(rel(le0, h0), BASE, '-', 'generators alone'), (rel(le, h1), LEARN, '-', 'calculation imposed'),
                                (rel(st, h1), METHOD, (0, (1, 1.2)), 'statistical error')])]
+    # the published range 0.003 to 1000 percent for all three panels, widened only if a band leaves it (round B10)
+    PL = widen(3e-3, 1e3, [v for _, cs in curves for v, _, _, _ in cs], log=True)
+    DEC = [10.0**k for k in range(-12, 13) if 2*PL[0] <= 10.0**k <= PL[1]/5]      # 0.01 to 100 in the published range
     for j, (a, (ttl, cs)) in enumerate(zip(axes, curves)):
         window(a, WLO, WHI)
         for v, col, ls, lab in cs:
             a.stairs(v, edges, baseline=None, color=col, lw=1.2, ls=ls, label=lab)
-        a.set_xlim(0, edges[-1]); a.set_yscale('log'); a.set_ylim(3e-3, 1e3)
-        a.yaxis.set_major_locator(FixedLocator([0.01, 0.1, 1, 10, 100]))
+        a.set_xlim(0, edges[-1]); a.set_yscale('log'); a.set_ylim(*PL)
+        a.yaxis.set_major_locator(FixedLocator(DEC))
         a.yaxis.set_minor_locator(NullLocator())
-        a.yaxis.set_major_formatter(FixedFormatter(['0.01', '0.1', '1', '10', '100']))
+        a.yaxis.set_major_formatter(FixedFormatter([f'{t:g}' for t in DEC]))
         if j:
             plt.setp(a.get_yticklabels(), visible=False)
         a.set_xlabel(r'$\tau$', labelpad=1.5); title(a, ttl); trim(a)
         a.legend(loc='upper right' if j == 1 else 'upper left', fontsize=7, ncol=1, handlelength=1.4)
     axes[0].set_ylabel('percent of prediction', fontsize=8.5)
-    save(fig, 'bands')
+    save(fig, 'bands' + ('_lin' if lin else ''))
 
 
 # ---- Fig. three bands of the means -------------------------------------------------------------------
 def obs():
     """The bands of seven means in percent of the prediction with the calculation imposed. The theory band
     is signed, so it has two bars, its side above the prediction (light) and below it (dark)."""
-    J = json.load(open(os.environ.get('BANDS_JSON', 'output/three_bands_MIXGEOV3S9.json')))
+    fj = os.environ.get('BANDS_JSON', 'output/three_bands_MIXGEOV3S9.json'); J = json.load(open(fj))
+    lin = linear_inputs((fj, J))
     c = J['central']; g = J['generator_band']
     OBS = [('tau_win', r'$\langle\tau\rangle_{\rm win}$'), ('pwin', r'$P_{\rm win}$'), ('thrust', r'$\langle 1-T\rangle$'),
            ('B_total', r'$\langle B_{\rm tot}\rangle$'), ('rho_heavy', r'$\langle\rho_H\rangle$'),
@@ -450,7 +570,25 @@ def obs():
     gen_before = 100*np.array([g['before'][k]['sd'] for k in keys])/np.abs(np.array([c['generator_only'][k] for k in keys]))
     gen = 100*np.array([g['after'][k]['sd'] for k in keys])/np.abs(pred)
     thu, thd, learn = pct(c['theory_up']), pct(c['theory_down']), pct(c['learning_band'])
-    FLOOR = 1e-3; x = np.arange(len(keys)); wdt = 0.19
+    # the published axis from 0.001 to 300 percent. Below it may lie only the two bands of tau_win that the calculation
+    # removes: its learning band (the caption of Fig. 12, main.tex 1758) and its generator band with the calculation
+    # imposed (main.tex 1706: "its generator band disappears"). Rounds B10 and B11: any other bar or tick below 0.001, or
+    # above 300, widens the axis; these two never lower its floor, and the log says where both lie
+    FLOOR, TOP = 1e-3, 300.0
+    bars = dict(generator=gen, generators_alone=gen_before, theory_above=thu, theory_below=thd, learning=np.nan_to_num(learn))
+    TAU = (('learning', 'tau_win'), ('generator', 'tau_win'))
+    others = [v for n, a in bars.items() for k, v in zip(keys, a) if v > 0 and ((n, k) not in TAU or v >= FLOOR)]
+    lo_, TOP = widen(FLOOR, TOP, others, log=True)
+    if lo_ < FLOOR:
+        FLOOR = 10.0**np.floor(np.log10(lo_))
+    tw = float(np.nan_to_num(learn[keys.index('tau_win')]))
+    print(f'obs: the learning band of tau_win is {tw:.2g} percent of the prediction: ' +
+          ('below the axis, as the caption of Fig. 12 says' if tw < FLOOR else f'inside the axis (from {FLOOR:g}): the caption sentence must go'))
+    tg = float(np.nan_to_num(gen[keys.index('tau_win')]))
+    print(f'obs: the generator band of tau_win with the calculation imposed is {tg:.2g} percent of the prediction: ' +
+          (f'below the axis (from {FLOOR:g})' if tg < FLOOR else f'a bar inside the axis (from {FLOOR:g}); main.tex 1706 '
+           'says it disappears (published: 0.0027 percent, a short bar)'))
+    x = np.arange(len(keys)); wdt = 0.19
     fig, ax = plt.subplots(figsize=(TW, 2.3))
     ax.bar(x - 1.5*wdt, np.maximum(gen, FLOOR), wdt, color=GEN, lw=0, label='generator', zorder=3)
     ax.bar(x - 0.5*wdt, np.maximum(thu, FLOOR), wdt, color=THEORY, alpha=0.45, lw=0, label='theory, above', zorder=3)
@@ -459,27 +597,42 @@ def obs():
     for xi, v in zip(x, gen_before):
         ax.hlines(v, xi - 2*wdt, xi - wdt, color=BASE_DARK, lw=1.6, zorder=4)
     ax.hlines([], [], [], color=BASE_DARK, lw=1.6, label='generator, generators alone')
-    ax.set_yscale('log'); ax.set_ylim(FLOOR, 300)
-    ax.yaxis.set_major_locator(FixedLocator([0.01, 0.1, 1, 10, 100])); ax.yaxis.set_minor_locator(NullLocator())
-    ax.yaxis.set_major_formatter(FixedFormatter(['0.01', '0.1', '1', '10', '100']))
+    ax.set_yscale('log'); ax.set_ylim(FLOOR, TOP)
+    DEC = [10.0**k for k in range(-12, 13) if 5*FLOOR <= 10.0**k <= TOP/2]          # 0.01 to 100 in the published axis
+    ax.yaxis.set_major_locator(FixedLocator(DEC)); ax.yaxis.set_minor_locator(NullLocator())
+    ax.yaxis.set_major_formatter(FixedFormatter([f'{t:g}' for t in DEC]))
     ax.set_xticks(x); ax.set_xticklabels([l for _, l in OBS], fontsize=8.5)
     ax.tick_params(axis='x', length=0)
     ax.set_ylabel('percent of prediction', fontsize=8.5)
     ax.legend(ncol=5, loc='upper center', bbox_to_anchor=(0.5, 1.16), fontsize=7.5, handlelength=1.3, columnspacing=1.0)
     trim(ax)
-    save(fig, 'obs')
+    save(fig, 'obs' + ('_lin' if lin else ''))
 
 
 # ---- Fig. coverage: does the learning band cover the error of the prediction? ----------------------
 def coverage():
     """Pulls of the reweighted means against the fresh runs at the 48 held-out points of the strict test,
     for the three sets of members together (144 points per observable), without and with the learning
-    band; the numbers are the root mean square over all of them."""
+    band; the numbers are the root mean square over all of them. The vertical range comes from the data, as in
+    bands(): the published range (-10.9, 8.6) when every point fits in it, else wider, so that no point is hidden;
+    the row of rms values stays at the bottom, below the lowest point."""
     files = os.environ.get('COV_IN', 'output/wifi_coverage_MIXGEOV3S9.json output/wifi_coverage_MIXGEOV3S9s1.json '
                                      'output/wifi_coverage_MIXGEOV3S9s2.json').split()
     d = dict(points=[q for f in files for q in json.load(open(f))['points']])
     OBS = [('thrust', r'$\langle 1-T\rangle$'), ('B_total', r'$\langle B_{\rm tot}\rangle$'), ('rho_heavy', r'$\langle\rho_H\rangle$'),
            ('nch', r'$\langle n_{\rm ch}\rangle$'), ('nbaryon', r'$\langle n_{\rm b}\rangle$')]
+    za = np.array([q[o][k] for q in d['points'] for o, _ in OBS for k in ('z_without', 'z_with')], float)
+    za = za[np.isfinite(za)]
+    # the published range, the rms row 0.3 above its bottom, and its lowest point at -9.3 at most, kept as fractions
+    # of the height (the row's height in points is fixed): the top clears the highest point by 0.4, and the bottom
+    # goes down until the lowest point lies that fraction up, above the row
+    BOT, TOP = -10.9, 8.6; ROW, CLEAR = 0.3/(TOP - BOT), (-9.3 - BOT)/(TOP - BOT)
+    hi = max(TOP, float(za.max()) + 0.4) if len(za) else TOP
+    lo = min(BOT, (float(za.min()) - CLEAR*hi)/(1 - CLEAR)) if len(za) else BOT
+    yrow = lo + ROW*(hi - lo)
+    st = next(s for s in (2, 5, 10, 20, 50, 100, 200) if (hi - lo)/s <= 12)
+    t_lo = -st*np.floor(6/st) if lo >= BOT else st*np.ceil((lo + 1.2*CLEAR*(hi - lo))/st)
+    t_hi = st*np.floor(6/st) if hi <= TOP else st*np.floor((hi - 0.3)/st)
     fig, ax = plt.subplots(figsize=(TW, 2.3))
     rng = np.random.default_rng(5)
     ax.axhspan(-1, 1, color=BASE, alpha=0.12, lw=0, zorder=0)
@@ -493,12 +646,13 @@ def coverage():
         ax.scatter(i + 0.17 + rng.uniform(-0.1, 0.1, len(zb)), zb, s=5, color=LEARN, lw=0, alpha=0.9, zorder=3,
                    label='with the learning band' if i == 0 else None)
         for x0, z, col in ((i - 0.17, zw, BASE_DARK), (i + 0.17, zb, LEARN_TEXT)):
-            ax.text(x0, -10.6, rf'${np.sqrt(np.mean(z**2)):.2f}$', ha='center', va='bottom', fontsize=7.5, color=col)
-    ax.text(-0.6, -10.6, 'rms', ha='right', va='bottom', fontsize=7.5, color=REF)
-    lo_pt = min(min(q[o]['z_without'] for q in d['points']) for o, _ in OBS); assert lo_pt > -9.3, lo_pt
+            ax.text(x0, yrow, rf'${np.sqrt(np.mean(z**2)):.2f}$', ha='center', va='bottom', fontsize=7.5, color=col)
+    # inside the axes, 3 points from its left edge (round B21: it overlapped the axis line)
+    ax.annotate('rms', xy=(0, yrow), xycoords=('axes fraction', 'data'), xytext=(3, 0), textcoords='offset points',
+                ha='left', va='bottom', fontsize=7.5, color=REF)
     ax.set_xticks(range(len(OBS))); ax.set_xticklabels([l for _, l in OBS], fontsize=8.5)
-    ax.tick_params(axis='x', length=0); ax.set_xlim(-0.8, len(OBS) - 0.45); ax.set_ylim(-10.9, 8.6)
-    ax.yaxis.set_major_locator(FixedLocator([-6, -4, -2, 0, 2, 4, 6]))
+    ax.tick_params(axis='x', length=0); ax.set_xlim(-0.8, len(OBS) - 0.45); ax.set_ylim(lo, hi)
+    ax.yaxis.set_major_locator(FixedLocator(np.arange(t_lo, t_hi + 1e-9, st)))
     ax.set_ylabel('pull')
     ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), fontsize=7.5, ncol=2, markerscale=1.6)
     trim(ax)
@@ -545,7 +699,17 @@ def aleph():
     ax.stairs(np.where(out, cen, np.nan), edges, baseline=None, color=THEORY, lw=1.0, ls=(0, (3, 2)))
     ha = ax.errorbar(ctr, ya, yerr=ea, fmt='o', ms=2.8, lw=0.8, mfc='white', mec=DATA, ecolor=DATA, mew=0.8, zorder=5)
     hd_ = ax.errorbar(0.5*(ld + hd), yd, yerr=ed, fmt='o', ms=2.6, lw=0.8, color=DATA, zorder=6)
-    ax.set_yscale('log'); ax.set_xlim(0, 0.5); ax.set_ylim(2e-3, 40)
+    # rounds B10 and B11: the published ranges, widened for a data point with its error bar (the positive ends on the
+    # log axis) or the calculation inside the window; round B21: the upper panel for every data point below tau = 0.5
+    # with its error bar too (the ALEPH point at 0.405 and the bar at 0.395 were cut at the edge), and the ratio panel
+    # for the theory band. A data point outside the window and beyond the range of a panel (the tail above tau = 1/3 in
+    # the ratio panel) is drawn as an arrow at its edge, so none is hidden
+    cdc = 0.5*(ld + hd); inwd = (cdc >= WLO) & (cdc < WHI); ina, ind = ctr < 0.5, cdc < 0.5
+    UL = widen(2e-3, 40, [ya[ina], (ya + ea)[ina], (ya - ea)[ina], yd[ind], (yd + ed)[ind], (yd - ed)[ind], cen[inw]],
+               log=True)
+    ax.set_yscale('log'); ax.set_xlim(0, 0.5); ax.set_ylim(*UL)
+    edge_arrows(ax, ctr[~inw & (ctr < 0.5)], ya[~inw & (ctr < 0.5)], *UL, log=True, mfc='white', mec=DATA, mew=0.8)
+    edge_arrows(ax, cdc[~inwd & (cdc < 0.5)], yd[~inwd & (cdc < 0.5)], *UL, log=True, color=DATA)
     ax.set_ylabel(r'$\frac{1}{\sigma}\frac{d\sigma}{d\tau}$')
     plt.setp(ax.get_xticklabels(), visible=False)
     ax.text(0.5*(WLO + WHI), 22, 'window of the calculation', ha='center', fontsize=7.5, color=REF)
@@ -557,9 +721,27 @@ def aleph():
     # ratio panel: data over the calculation, inside the window and up to tau = 0.4
     ar.stairs(np.where(inw, 1 + up/cen, np.nan), edges, baseline=np.where(inw, 1 - dn/cen, np.nan), fill=True, color=THEORY, alpha=BAND_ALPHA, lw=0)
     unit_line(ar)
-    ar.errorbar(ctr - 0.002, ya/cen, yerr=ea/cen, fmt='o', ms=2.8, lw=0.8, mfc='white', mec=DATA, ecolor=DATA, mew=0.8, zorder=5)
-    ar.errorbar(0.5*(ld + hd) + 0.002, yd/cd, yerr=ed/cd, fmt='o', ms=2.6, lw=0.8, color=DATA, zorder=6)
-    ar.set_xlim(0, 0.5); ar.set_ylim(0.7, 1.3); ar.set_yticks([0.8, 0.9, 1.0, 1.1, 1.2])
+    rea = ar.errorbar(ctr - 0.002, ya/cen, yerr=ea/cen, fmt='o', ms=2.8, lw=0.8, mfc='white', mec=DATA, ecolor=DATA, mew=0.8, zorder=5)
+    red = ar.errorbar(0.5*(ld + hd) + 0.002, yd/cd, yerr=ed/cd, fmt='o', ms=2.6, lw=0.8, color=DATA, zorder=6)
+    with np.errstate(divide='ignore', invalid='ignore'):          # the shift empties the calculation's first bin
+        ra, rd = ya/cen, yd/cd
+        RL = widen(0.7, 1.3, [ra[inw], ((ya + ea)/cen)[inw], ((ya - ea)/cen)[inw], rd[inwd], ((yd + ed)/cd)[inwd],
+                              ((yd - ed)/cd)[inwd], (1 + up/cen)[inw], (1 - dn/cen)[inw]])
+    ar.set_xlim(0, 0.5); ar.set_ylim(*RL)
+    # the marker of a point beyond the range, which edge_arrows draws as an arrow, is left out and its error bar kept
+    # (round B21: the ALEPH point at 0.375 lies just below the widened range and showed half at the edge)
+    for eb, r in ((rea, ra), (red, rd)):
+        eb[0].set_ydata(np.where((r >= RL[0]) & (r <= RL[1]), r, np.nan))
+    # at most seven steps over any span (round B11: steps up to 20, and beyond them 1, 2 or 5 times a power of ten);
+    # the ticks are the multiples of the step inside the range
+    span = RL[1] - RL[0]
+    st = next((s for s in (0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0) if span/s <= 7), None)
+    if st is None:
+        e = 10.0**np.floor(np.log10(span/7)); st = next(m*e for m in (1.0, 2.0, 5.0, 10.0) if span/(m*e) <= 7)
+    ar.set_yticks([0.8, 0.9, 1.0, 1.1, 1.2] if RL == (0.7, 1.3) else
+                  [t for t in np.round(np.arange(np.ceil(RL[0]/st)*st, RL[1], st), 1) if RL[0] + 0.3*st <= t <= RL[1] - 0.3*st])
+    edge_arrows(ar, (ctr - 0.002)[~inw & (ctr < 0.5)], ra[~inw & (ctr < 0.5)], *RL, mfc='white', mec=DATA, mew=0.8)
+    edge_arrows(ar, (cdc + 0.002)[~inwd & (cdc < 0.5)], rd[~inwd & (cdc < 0.5)], *RL, color=DATA)
     ar.set_xlabel(r'$\tau=1-T$'); ar.set_ylabel('data / calculation'); trim(ar)
     save(fig, 'aleph')
 
@@ -573,7 +755,10 @@ def toy():
 
     def density(ax, xe, xl, xlab, ylab, slope, corr, ttl):
         lo, hi = np.percentile(np.r_[xe, xl], [0.3, 99.7])
-        ax.hexbin(xe, xl, gridsize=45, extent=(lo, hi, lo, hi), bins='log', cmap='Blues', mincnt=1, lw=0, zorder=2)
+        hb = ax.hexbin(xe, xl, gridsize=45, extent=(lo, hi, lo, hi), bins='log', cmap='Blues', mincnt=1, lw=0, zorder=2)
+        # the hexagons on the edge of this range are centred on it, so the axes reach the larger half-size of a hexagon
+        # beyond it, in x and y alike, and the diagonal with them (round B21: the corner hexagons were cut)
+        p = float(np.abs(hb.get_paths()[0].vertices).max()); lo, hi = lo - p, hi + p
         ax.plot([lo, hi], [lo, hi], color=REF, lw=0.7, ls=(0, (4, 3)), zorder=3)
         ax.set_xlim(lo, hi); ax.set_ylim(lo, hi)
         ax.set_xlabel(xlab); ax.set_ylabel(ylab)

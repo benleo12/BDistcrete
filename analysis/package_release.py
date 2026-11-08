@@ -12,6 +12,10 @@ reproduce the a(Phi) vectors the training run exported, and it replays the logit
 recorded at export time. If either disagrees beyond float32 rounding the packaging fails.
 
 Usage: python package_release.py C_1M E F ...    (env RELEASE_DIR, default release)
+
+The heads and MANIFEST.json copy the temperature of each export. With T_DIR set (the rerun, D11),
+every export must carry the refitted temperature of its model (score_obs.check_export_T) before
+anything is written; with T_DIR unset nothing is checked, as published.
 """
 import hashlib, json, os, shutil, sys
 import numpy as np
@@ -35,6 +39,7 @@ from gentune.head import Head, MixtureHead
 from mixture_cfg import register as _register_mixture
 from gentune.trunk import Trunk
 from gentune.features import trunk_features
+import score_obs as SO
 
 
 def sha256(path, blocks=1 << 20):
@@ -109,6 +114,13 @@ def main(tags):
         else:
             clean.append(t)
     tags = clean
+    # every export at its refit (D11) before anything is written: the heads and MANIFEST.json copy its temperature
+    for tag in tags:
+        cp = f'{MODELS}/{tag}_cond.npz'
+        assert os.path.exists(cp), f'no export for {tag}'
+        T = SO.check_export_T(cp, float(np.load(cp)['temperature']))
+        if SO.T_DIR:
+            print(f'{tag}: the export carries T = {T}, the refit in {SO.T_DIR}')
     os.makedirs(f'{REL}/models', exist_ok=True)
     manifest = {}
     for tag in tags:
@@ -255,10 +267,10 @@ def main(tags):
             # trunk is arithmetically the same network as the torch one, which is the thing
             # that must hold exactly, and the float32 number reports the size of the
             # quantization gap, which is a fact about the stored reference rather than a bug.
-            # Measured on Stage E: that gap moves individual weights by at most 6e-3 relative
-            # and the mean of one minus thrust by 3e-5, against a statistical error of 9e-4
-            # on the full reference, so it is immaterial and the shipped vectors are left as
-            # the training run produced them, which keeps the published closure reproducible.
+            # precision_gap.py measures how far that gap moves the reweighted means of each
+            # stage, as a fraction of the mean and of its statistical error
+            # (output/precision_gap_r8.json). The shipped vectors are left as the training
+            # run produced them, which keeps the published closure reproducible.
             Fr = trunk_features(r['particles'][:n])
             Mr = r['mask'][:n]
             ref = np.asarray(cond['AE'][:, :n, :], np.float64)
@@ -282,8 +294,8 @@ def main(tags):
                                f'exported one at either precision ({d32:.2e}, {d16:.2e})')
             # The trunk file records the precision the network was trained at, and the numpy
             # reader rounds a user's features to it. Read in float32, the float16-trained
-            # features of MIX17 move a reweighted mean by up to 0.17 percent, the size of its
-            # accuracy floor (precision_gap.py), so the gap is closed rather than documented.
+            # features of MIX17 would move a reweighted mean by what precision_gap.py measures
+            # (output/precision_gap_r8.json), so the gap is closed rather than documented.
             prec = 'float32' if d32 <= d16 else 'float16'
             tz = dict(np.load(f'{REL}/models/{out_tag}_trunk.npz'))
             tz['feature_precision'] = np.str_(prec)

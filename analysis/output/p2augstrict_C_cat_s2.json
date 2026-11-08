@@ -1,50 +1,50 @@
 {
  "C": {
-  "master": 1.0483846322115506,
-  "master_raw": 1.0483846322115506,
+  "master": 1.0597298077012671,
+  "master_raw": 1.0597298077012671,
   "temperature": 1.0,
   "rank_K": 48,
   "best_step": "loaded",
   "stop_trajectory": [],
   "per_obs": {
-   "1_minus_thrust": 0.9580442104449564,
-   "mult_total": 0.9431952628972562,
-   "B_total": 0.9236664696239547,
-   "rho_heavy": 1.0422411453313125,
+   "1_minus_thrust": 0.983603416567458,
+   "mult_total": 0.9507984201482825,
+   "B_total": 0.9098310562194343,
+   "rho_heavy": 1.0471943167130757,
    "nbaryon": 1.3807925422147354,
-   "strange": 1.0423681627570902
+   "strange": 1.086159094344617
   },
   "width_uniform": {
-   "1_minus_thrust": 6.943377526393119,
-   "mult_total": 4.8366333521826315,
-   "B_total": 7.1566743776991775,
-   "rho_heavy": 5.483821619125377,
+   "1_minus_thrust": 6.998828627629914,
+   "mult_total": 4.836908978729932,
+   "B_total": 7.182321096671783,
+   "rho_heavy": 5.507126613770515,
    "nbaryon": 15.230531299636407,
-   "strange": 5.053714118072192
+   "strange": 5.105933783720517
   },
   "gain_over_uniform": {
-   "1_minus_thrust": 7.25,
-   "mult_total": 5.13,
-   "B_total": 7.75,
+   "1_minus_thrust": 7.12,
+   "mult_total": 5.09,
+   "B_total": 7.89,
    "rho_heavy": 5.26,
    "nbaryon": 11.03,
-   "strange": 4.85
+   "strange": 4.7
   },
   "calibration_check": {
-   "1_minus_thrust": 1.0723835636392987,
-   "mult_total": 1.0107271069655221,
-   "B_total": 0.9930666188164397,
-   "rho_heavy": 0.9459065699664081,
+   "1_minus_thrust": 1.0768095207751553,
+   "mult_total": 1.010727106965522,
+   "B_total": 0.9458812365980046,
+   "rho_heavy": 0.953813153627337,
    "nbaryon": 1.0812037274310988,
-   "strange": 0.9987498894803281
+   "strange": 1.022747433850873
   },
   "calibration_spread": {
-   "1_minus_thrust": 0.13213551945355992,
-   "mult_total": 0.08053153471760438,
-   "B_total": 0.12617377823365647,
-   "rho_heavy": 0.10956629762491062,
+   "1_minus_thrust": 0.13913447467777562,
+   "mult_total": 0.07918807178067164,
+   "B_total": 0.11970449659838264,
+   "rho_heavy": 0.13178364792896444,
    "nbaryon": 0.3507101065144338,
-   "strange": 0.053119113091217626
+   "strange": 0.03652527761880028
   },
   "N_eff": {
    "(0.116, 0.38, 1.0)": 3206686.25,
@@ -61,56 +61,56 @@
    "B_total": 25,
    "rho_heavy": 25,
    "nbaryon": 5,
-   "strange": 170
+   "strange": 167
   },
   "pull_mean": {
-   "1_minus_thrust": -0.018239352342463766,
-   "mult_total": -0.018757172787237597,
-   "B_total": -0.010015395935916153,
-   "rho_heavy": -0.01170861768831343,
+   "1_minus_thrust": -0.01999979908775167,
+   "mult_total": -0.021135988064796125,
+   "B_total": -0.011343840522744198,
+   "rho_heavy": -0.01610024428515643,
    "nbaryon": 0.22533674932698858,
-   "strange": -0.044379959489092034
+   "strange": -0.03136970718743379
   },
   "per_point": {
    "(0.116, 0.38, 1.0)": {
-    "1_minus_thrust": 0.8724898492780869,
-    "mult_total": 0.9453102598654051,
-    "B_total": 0.761325694270191,
-    "rho_heavy": 0.9457986398077057,
+    "1_minus_thrust": 0.9526067276351523,
+    "mult_total": 0.9489657081172809,
+    "B_total": 0.7803749103459677,
+    "rho_heavy": 0.9341439491395748,
     "nbaryon": 0.9747686021090339,
-    "strange": 1.0394072329938262
+    "strange": 1.1076924501577703
    },
    "(0.124, 0.55, 1.5)": {
-    "1_minus_thrust": 0.8278665083453813,
-    "mult_total": 1.0462340475044092,
-    "B_total": 1.0289144925614708,
-    "rho_heavy": 0.9565689697487796,
+    "1_minus_thrust": 0.8750047922259181,
+    "mult_total": 1.0462340475044094,
+    "B_total": 0.9309183476980049,
+    "rho_heavy": 0.8423254146307245,
     "nbaryon": 1.0582021855235675,
-    "strange": 0.9648240655153931
+    "strange": 1.0858188446466412
    },
    "(0.12, 0.46, 1.21)": {
-    "1_minus_thrust": 0.9461544648279715,
-    "mult_total": 0.8951529569869678,
-    "B_total": 1.105211635590566,
-    "rho_heavy": 1.2858976425076145,
+    "1_minus_thrust": 0.9696805285210304,
+    "mult_total": 0.8951529569869677,
+    "B_total": 1.1022000087973314,
+    "rho_heavy": 1.293067973981493,
     "nbaryon": 1.0629252203159536,
-    "strange": 0.9725521309752369
+    "strange": 0.9624291136415545
    },
    "(0.114, 0.6, 0.95)": {
-    "1_minus_thrust": 1.0357901754895944,
-    "mult_total": 1.0451207877695616,
-    "B_total": 0.7922090082503932,
-    "rho_heavy": 1.0378399645915104,
+    "1_minus_thrust": 1.0012628486030586,
+    "mult_total": 1.0794811257728179,
+    "B_total": 0.7958561045496225,
+    "rho_heavy": 1.065448813605599,
     "nbaryon": 2.1346165243573574,
-    "strange": 1.151203732941072
+    "strange": 1.1169711647993845
    },
    "(0.126, 0.35, 1.6)": {
-    "1_minus_thrust": 1.107920054283747,
+    "1_minus_thrust": 1.1194621858521303,
     "mult_total": 0.7841582623599374,
-    "B_total": 0.9306715174471527,
-    "rho_heavy": 0.9851005100009526,
+    "B_total": 0.9398059097062446,
+    "rho_heavy": 1.1009854322079873,
     "nbaryon": 1.673450178767764,
-    "strange": 1.0838536513599226
+    "strange": 1.1578838984777344
    }
   },
   "scored_from": "output/models/C_P2augcat2_concat.pt",
@@ -121,6 +121,24 @@
    "6902": 400000,
    "6903": 400000,
    "6904": 400000
+  },
+  "temperature_trained": 1.0,
+  "temperature_source": "table",
+  "stop_width": 1.011486765173375,
+  "stop_width_at_trained_T": 1.011486765173375,
+  "master_at_trained_T": 1.0597298077012671,
+  "beam_photons": "remove",
+  "data_realpath": "/mnt/beegfs/bassi/reweighting/maxent_code/data_abc_h400_nb",
+  "model_realpath": "/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code/output/models/C_P2augcat2_concat.pt",
+  "lmx_fingerprint": {
+   "md5": "2dadffbbe2d2d469eacb3615cdd839bc",
+   "code_md5": "57b5bf3833c268b08d62763cf3acd9f0",
+   "spec": "OUT=output/p2augstrict_C_cat_s2.json STAGE=C NET=cat SEED=2 K=48 MODEL=output/models/C_P2augcat2_concat.pt DATA=data_abc_h400 TMODE=table ABC=1 LOGIT_CACHE=output/logitcache",
+   "run_id": "20261107-013026-2306821",
+   "outputs": {},
+   "inputs": {
+    "output/temperature/C_P2augcat2.json": "707c9f0d53b46f5111c7ac6c474b0b9c"
+   }
   }
  }
 }

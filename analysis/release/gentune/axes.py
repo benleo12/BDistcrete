@@ -7,8 +7,8 @@ head's rows are in.
 
 That order is not asserted, it is checked. `verify(tag, head, design_dir)` recomputes each
 column's centre and half-range from the design CSV that trained the stage and compares with the
-head's own `norm`. All three multi-parameter stages agree exactly, to 0.0 in every entry, so the
-mapping below is a measurement rather than a convention someone remembered.
+head's own `norm`. E and F agree to float64 rounding, and the two blocks of MIX17 have exactly the
+boxes of E and F, so the mapping below is a measurement rather than a convention someone remembered.
 
 The names are short labels that follow the generator's own, with `S:` and `H:` marking the
 Sherpa and the Herwig block of the mixture. A label is not a setting. `SETTING` gives the setting
@@ -26,21 +26,20 @@ HERWIG8 = ('alpha_fsr', 'ptmin', 'clmax', 'clpow', 'psplit',
            'pwtsquark', 'pwtdiquark', 'clsmr')
 
 NAMES = {
-    'C_1M': ('alphas', 'strange_fraction', 'kt_0'),
     'E': SHERPA8,
     'F': HERWIG8,
     'MIX17': tuple('S:' + n for n in SHERPA8) + tuple('H:' + n for n in HERWIG8) + ('fraction',),
 }
 
-GENERATOR = {'C_1M': 'Sherpa 3', 'E': 'Sherpa 3', 'F': 'Herwig 7.3', 'MIX17': 'both'}
+GENERATOR = {'E': 'Sherpa 3', 'F': 'Herwig 7.3', 'MIX17': 'both'}
 
 DESIGN = {'E': 'stageE_design_v3all.csv', 'F': 'stageF_design_v3all.csv'}
 
 # The setting behind each name, copied from the cards that generated the training runs:
-# generators/gen_stageE.sh (Sherpa 3.0.4), generators/gen_stageF.sh (Herwig 7.3.0p1) and, for
-# C_1M, analysis/gen_stageC_v2.sh. A Herwig path goes after `set` in an input file. A Sherpa
-# name goes in the YAML run card, and BLOCK:KEY means KEY inside the BLOCK: block, which is how
-# the card writes every Ahadic parameter. card() writes both out in full.
+# generators/gen_stageE.sh (Sherpa 3.0.4) and generators/gen_stageF.sh (Herwig 7.3.0p1). A Herwig
+# path goes after `set` in an input file. A Sherpa name goes in the YAML run card, and BLOCK:KEY
+# means KEY inside the BLOCK: block, which is how the card writes every Ahadic parameter. card()
+# writes both out in full.
 SETTING = {
     'alphas': 'ALPHAS(MZ)',
     'pt_max': 'AHADIC:PT_MAX',
@@ -50,7 +49,6 @@ SETTING = {
     'baryon_fraction': 'AHADIC:BARYON_FRACTION',
     'alpha_g': 'AHADIC:ALPHA_G',
     'beta_l': 'AHADIC:BETA_L',
-    'kt_0': 'AHADIC:KT_0',
     'alpha_fsr': '/Herwig/Shower/AlphaQCDFSR:AlphaIn',
     'ptmin': '/Herwig/Shower/PTCutOff:pTmin',
     'clmax': '/Herwig/Hadronization/ClusterFissioner:ClMaxLight',
@@ -73,18 +71,17 @@ UNIT = {'ptmin': '*GeV'}
 DEFAULT = {
     'alphas': 0.118, 'pt_max': 0.68, 'alpha_l': 3.9, 'gamma_l': 0.48,
     'strange_fraction': 0.46, 'baryon_fraction': 0.17, 'alpha_g': 0.97, 'beta_l': 0.18,
-    'kt_0': 1.21,
     'alpha_fsr': 0.102337, 'ptmin': 0.654714, 'clmax': 3.528693, 'clpow': 1.849375,
     'psplit': 0.914156, 'pwtsquark': 0.374094, 'pwtdiquark': 0.33107, 'clsmr': 0.78,
-    # not a generator default: the paper's central point gives the two generators equal weight
+    # not a generator default: the paper's central point gives the two generators equal weight,
+    # the mean of its flat prior on the fraction
     'fraction': 0.5,
 }
 
 NOTES = {
     'alphas': 'the shower coupling at the Z mass',
-    'kt_0': 'the Ahadic cluster transverse momentum scale',
-    'gamma_l': 'enters the Ahadic cluster decay weight only as gamma_l/kt_0^2, so it and kt_0 '
-               'are one direction and not two',
+    'gamma_l': 'enters the Ahadic cluster decay weight only as gamma_l/kt_0^2, with AHADIC:KT_0, '
+               'the cluster transverse momentum scale, left at its default',
     'alpha_g': 'multiplies a weight z^a + (1-z)^a, which is flat at a = 1 exactly, so it looks '
                'inert in the code and is not. The strongest single knob for multiplicity here',
     'alpha_fsr': 'AlphaQCDFSR:AlphaIn, which Herwig hard-limits at 0.10',
@@ -97,8 +94,8 @@ NOTES = {
     'clsmr': 'ClusterDecayer:ClSmrLight, the smearing of the hadron directions in a light '
              'cluster decay. Never fitted by a published Herwig tune, so it is varied wide here '
              'and turns out to be weak',
-    'fraction': 'the mixing fraction of the multiplicative mixture, 0 for pure Sherpa and 1 for '
-                'pure Herwig',
+    'fraction': 'xi, the probability that an event comes from Herwig, 0 for Sherpa alone and 1 '
+                'for Herwig alone: the paper predicts (1 - xi) <O>_S + xi <O>_H (gentune.mixture)',
 }
 
 

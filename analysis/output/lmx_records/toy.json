@@ -1,0 +1,26 @@
+{
+ "step": "toy",
+ "run_id": "20261107-013026-2306821",
+ "code_md5": "b0ca0841b27e6e5427846e2db0716b6c",
+ "written": "Sat Nov  7 03:27:03 2026",
+ "files": {
+  "output/toy_final_K48_s0.json": "33e782519ff0976f669bc7eb86dd6dcb",
+  "output/toy_final_K48_s0.npz": "d27218ddde03abaf2de1ecd873b90a28",
+  "output/toy_final_K48_s1.json": "759043286e59516c3b094ba953fda244",
+  "output/toy_final_K48_s1.npz": "7f1c969f75674a891c6e7e7e8f94588e",
+  "output/toy_final_K48_s2.json": "444be9453f1adc48a339c3145c0ef412",
+  "output/toy_final_K48_s2.npz": "87da7a89da2cf38dcfa372b6d7edc836",
+  "output/toy_final_K1_s0.json": "daee36902e9c6e295507ef80369a8eab",
+  "output/toy_final_K1_s0.npz": "426794c85dcfe2b7e95115977474ee95",
+  "output/toy_final_K2_s0.json": "622c808cf631a61dcb93b1dd7fa6b2d3",
+  "output/toy_final_K2_s0.npz": "6e809448f191068348906c7cdc45f2b0",
+  "output/toy_final_K3_s0.json": "5562881adaaa0bab7f0a9d0d5c4715ea",
+  "output/toy_final_K3_s0.npz": "a20b81ef1720004571ddc68c57a71abc",
+  "output/toy_final_K4_s0.json": "35c17675a8e79f5937b5d96ac8659c44",
+  "output/toy_final_K4_s0.npz": "7fa1ab8902b19ea135f570dd5966f914",
+  "output/toy_final_K8_s0.json": "8fa023abf30360537d74982069e6d1bd",
+  "output/toy_final_K8_s0.npz": "68e017617f125ebfc4149f396c1737a7",
+  "output/toy_final_K16_s0.json": "f6364eccc3ffd164431e04b89865b940",
+  "output/toy_final_K16_s0.npz": "156c351c4d6e65d077d4eda296cb40e3"
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "step": "widths",
+ "run_id": "20261107-013026-2306821",
+ "code_md5": "b0ca0841b27e6e5427846e2db0716b6c",
+ "written": "Sat Nov  7 10:14:18 2026",
+ "files": {
+  "output/widths_v2_MIXGEOV3S9.json": "4329341183ef860a18103e28ed354afe",
+  "output/widths_v2_MIXGEOV3S9h400.json": "f313dd418f2b04da1a5d8a0182291f7e",
+  "output/widths_v2_MIXGEOV3S9s1.json": "9fe094f08a4dd3adb578fc51e6dbf218",
+  "output/widths_v2_MIXGEOV3S9s1h400.json": "96d1448eb89d904df6798a040154e391",
+  "output/widths_v2_MIXGEOV3S9s2.json": "0ee1fbf1839f1a96c295c5cd17eb8af6",
+  "output/widths_v2_MIXGEOV3S9s2h400.json": "332d55fd27f6cdb536e95f61b16f583f",
+  "output/widths_v2_MIXGEOV3M8S9.json": "e914ffb217cc7155e4a6d03c3f5f05a9",
+  "output/widths_v2_MIXGEOV3M8S9h400.json": "efc00981e5480e4fe57cdf62049fa7bc",
+  "output/widths_v2_MIXGEOV3S27F.json": "1ea0a1ad85bbc1dd51202b4f85e15b75",
+  "output/widths_v2_MIXGEOV3S27Fh400.json": "bf3696a89645e86529fbd1e8942ee9c5",
+  "output/widths_v2_MIXGEOV3E20S9.json": "ec98388897a8f16b47857c48cbfe3cb7",
+  "output/widths_v2_MIXGEOV3E20S9h400.json": "4af6f979469702d2ba6908b15376abbd",
+  "output/widths_v2_MIXGEOV3E160S9.json": "43afb0bfd9d99519d7900516d463f588",
+  "output/widths_v2_MIXGEOV3E160S9h400.json": "9e3d9503dee0fb370e4151f9ac4137cc",
+  "output/widths_v2_MIXGEOV3E320S9.json": "246bfe1ac59c66889f0f42a33ba32c35",
+  "output/widths_v2_MIXGEOV3E320S9h400.json": "0e69b1349b95c6a00884353a8f33f526"
+ }
+}

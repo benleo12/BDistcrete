@@ -17,9 +17,18 @@ counted:
           of 100->1, adding 23*(100+1) = 2323 parameters for a total of 84780. The published
           82457 is therefore NOT the K=24 event side; it is the matched K=1 crosscheck
           configuration.
-CPU-only. Writes output/param_count.json with the layer-by-layer breakdown.
+CPU-only. Writes output/param_count.json (PARAM_COUNT_OUT names another file) with the
+layer-by-layer breakdown.
+
+    python param_count.py [<trained trunk>_trunk.pt ...]
+
+With trained trunks (the rerun gives the three Stage A trunks of output/models), the count is
+also taken from the files: every tensor of each member's Phi and event head A, as trained (its
+own inputs and K outputs), and the same layers with four inputs and one output. That must equal
+the K=1 count above, so the networks the paper trained have the event side the text counts; the
+script stops otherwise. Without arguments the output is as before.
 """
-import os, json
+import os, json, sys
 os.environ.setdefault('LADDER_ACT', 'silu')
 import torch
 import torch.nn as nn
@@ -55,6 +64,28 @@ def count(K):
                 full_model_incl_B=event_side + b_tot)
 
 
+def from_trunk(path):
+    """The event side of the members of a trained trunk (output/models/<tag>_trunk.pt), from its tensors"""
+    sv = torch.load(path, map_location='cpu', weights_only=False)
+    members = []
+    for sd in sv['models']:
+        ev = {k: tuple(v.shape) for k, v in sd.items() if k.startswith(('phi.', 'A.'))}
+        lin = [k for k in ev if k.endswith('.weight') and len(ev[k]) == 2]          # the Linear layers, in order
+        lin.sort(key=lambda k: (k.split('.')[0] != 'phi', int(k.split('.')[1])))
+        first, last = lin[0], lin[-1]
+        trained = sum(int(torch.Size(s).numel()) for s in ev.values())
+        # the same layers with the four kinematic inputs and one output: the first weight has C_KIN
+        # columns, the last weight one row and its bias one entry
+        n_in, n_out = ev[first][1], ev[last][0]
+        k1 = trained - ev[first][0]*(n_in - C_KIN) - (n_out - 1)*(ev[last][1] + 1)
+        members.append(dict(layers=[[k, list(ev[k])] for k in lin], inputs=n_in, outputs=n_out,
+                            event_side_trained=trained, event_side_K1_four_inputs=k1,
+                            other_tensors=sorted(k for k in ev if k not in lin and not k.endswith('.bias'))))
+    shapes = {json.dumps(m['layers']) for m in members}
+    return dict(file=path, realpath=os.path.realpath(path), members=len(members), same_layers_in_every_member=len(shapes) == 1,
+                K=sv.get('K'), phi_sizes=list(sv.get('phi_sizes', ())), f_sizes=list(sv.get('f_sizes', ())), **members[0])
+
+
 def main():
     out = {}
     for K in (1, 24):
@@ -74,8 +105,19 @@ def main():
                    f'earlier draft holds {out["K24"]["event_side_total"]} (one 100->24 head layer '
                    'instead of 100->1)')
     assert out['K1']['event_side_total'] == 82457, out['K1']['event_side_total']
-    json.dump(out, open('output/param_count.json', 'w'), indent=1)
-    print('-> output/param_count.json')
+    if len(sys.argv) > 1:
+        out['trained_trunks'] = []
+        for p in sys.argv[1:]:
+            t = from_trunk(p)
+            out['trained_trunks'].append(t)
+            print(f'--- {p}: {t["members"]} members, {t["inputs"]} inputs, {t["outputs"]} outputs, event side as trained '
+                  f'{t["event_side_trained"]}, with four inputs and one output {t["event_side_K1_four_inputs"]}')
+            assert t['same_layers_in_every_member'], f'{p}: the members have different layers'
+            assert t['event_side_K1_four_inputs'] == out['K1']['event_side_total'], \
+                f'{p}: {t["event_side_K1_four_inputs"]} event-side coefficients with one output, not {out["K1"]["event_side_total"]}'
+    f = os.environ.get('PARAM_COUNT_OUT', 'output/param_count.json')
+    json.dump(out, open(f, 'w'), indent=1)
+    print(f'-> {f}')
 
 
 if __name__ == '__main__':

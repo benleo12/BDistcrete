@@ -1,7 +1,7 @@
 {
  "B": {
-  "master": 1.0222416326617079,
-  "master_raw": 1.0222503470785904,
+  "master": 1.0324301998638892,
+  "master_raw": 1.0324445484034503,
   "temperature": 1.0,
   "rank_K": 6,
   "best_step": 270000,
@@ -228,46 +228,46 @@
    ]
   ],
   "per_obs": {
-   "1_minus_thrust": 1.0510445064872687,
-   "mult_total": 1.0057170540886085,
-   "B_total": 0.9479467579112957,
-   "rho_heavy": 1.0301144580270931,
-   "nbaryon": 1.0763853867942734
+   "1_minus_thrust": 1.0666465192399222,
+   "mult_total": 1.0083493841037954,
+   "B_total": 0.9595250730161187,
+   "rho_heavy": 1.0512449236917474,
+   "nbaryon": 1.0763850992678616
   },
   "width_uniform": {
-   "1_minus_thrust": 2.596456752570196,
-   "mult_total": 1.6228437503619038,
-   "B_total": 2.6649554448790367,
-   "rho_heavy": 2.931816391865074,
+   "1_minus_thrust": 2.6222218104633432,
+   "mult_total": 1.6320667393018347,
+   "B_total": 2.6656508827280465,
+   "rho_heavy": 2.960748987094271,
    "nbaryon": 21.43197368268151
   },
   "gain_over_uniform": {
-   "1_minus_thrust": 2.47,
-   "mult_total": 1.61,
-   "B_total": 2.81,
-   "rho_heavy": 2.85,
+   "1_minus_thrust": 2.46,
+   "mult_total": 1.62,
+   "B_total": 2.78,
+   "rho_heavy": 2.82,
    "nbaryon": 19.91
   },
   "calibration_check": {
-   "1_minus_thrust": 0.9588979522075158,
-   "mult_total": 0.9661337875114366,
-   "B_total": 1.0390658084216906,
-   "rho_heavy": 0.9292091577333293,
+   "1_minus_thrust": 0.9775400320477208,
+   "mult_total": 0.9753680680611515,
+   "B_total": 0.9951666078757029,
+   "rho_heavy": 0.9411187632606118,
    "nbaryon": 1.1308156907937346
   },
   "calibration_spread": {
-   "1_minus_thrust": 0.1085733985319756,
-   "mult_total": 0.08731227234772786,
-   "B_total": 0.10914880259552223,
-   "rho_heavy": 0.19173658119625472,
+   "1_minus_thrust": 0.11041254746662137,
+   "mult_total": 0.08628575280179228,
+   "B_total": 0.11954236765998172,
+   "rho_heavy": 0.15439649220850235,
    "nbaryon": 0.2623266030789386
   },
   "N_eff": {
-   "(0.1175, 0.1)": 1643796.8358705968,
-   "(0.1225, 0.3)": 1703680.575581609,
-   "(0.115, 0.2)": 1772619.8218194288,
-   "(0.128, 0.3)": 1663946.5236762501,
-   "(0.12, 0.15)": 1792228.288132245
+   "(0.1175, 0.1)": 1643796.8381939146,
+   "(0.1225, 0.3)": 1703680.561573358,
+   "(0.115, 0.2)": 1772619.8215982136,
+   "(0.128, 0.3)": 1663946.5230893428,
+   "(0.12, 0.15)": 1792228.2858117202
   },
   "N_ref": 1872000,
   "min_count": 5,
@@ -279,48 +279,76 @@
    "nbaryon": 6
   },
   "pull_mean": {
-   "1_minus_thrust": 0.06251326949096106,
-   "mult_total": -0.05291373691816272,
-   "B_total": 0.04238638055238262,
-   "rho_heavy": 0.05501472095348185,
-   "nbaryon": -0.15859923691416786
+   "1_minus_thrust": 0.05632054349706104,
+   "mult_total": -0.05203643555550484,
+   "B_total": 0.038077633841622445,
+   "rho_heavy": 0.06341338176441613,
+   "nbaryon": -0.15859918755797286
   },
   "per_point": {
    "(0.1175, 0.1)": {
-    "1_minus_thrust": 1.0699181664259965,
-    "mult_total": 1.1732248836778947,
-    "B_total": 0.7793300303213344,
-    "rho_heavy": 1.204954894275061,
-    "nbaryon": 0.8673340851903889
+    "1_minus_thrust": 1.0036098016685142,
+    "mult_total": 1.1732248969136856,
+    "B_total": 0.8081008210626347,
+    "rho_heavy": 1.249846266403728,
+    "nbaryon": 0.86733407403455
    },
    "(0.1225, 0.3)": {
-    "1_minus_thrust": 0.9927196085852399,
-    "mult_total": 1.0208312997201106,
-    "B_total": 0.6146821395779077,
-    "rho_heavy": 0.9602929145123316,
-    "nbaryon": 1.468408669626396
+    "1_minus_thrust": 1.0816900752769638,
+    "mult_total": 1.0089419200883418,
+    "B_total": 0.648317746889198,
+    "rho_heavy": 0.9681589122605022,
+    "nbaryon": 1.4684070853043356
    },
    "(0.115, 0.2)": {
-    "1_minus_thrust": 1.1106827369163652,
-    "mult_total": 0.7609600059204497,
-    "B_total": 1.1195867982404208,
-    "rho_heavy": 1.0226322382991087,
-    "nbaryon": 0.7767135011032805
+    "1_minus_thrust": 1.0689679022095409,
+    "mult_total": 0.8001574832741295,
+    "B_total": 1.131706209736493,
+    "rho_heavy": 1.0085421200315563,
+    "nbaryon": 0.7767132641169794
    },
    "(0.128, 0.3)": {
-    "1_minus_thrust": 1.0795913642430346,
-    "mult_total": 1.0715836239152252,
-    "B_total": 0.9978156887374285,
-    "rho_heavy": 0.9261953910160337,
-    "nbaryon": 1.0549016455029865
+    "1_minus_thrust": 1.1547283133822575,
+    "mult_total": 1.0657697824941517,
+    "B_total": 0.9627373749868304,
+    "rho_heavy": 1.033758333709937,
+    "nbaryon": 1.0549017889955166
    },
    "(0.12, 0.15)": {
-    "1_minus_thrust": 1.0023106562657078,
-    "mult_total": 1.0019854572093616,
-    "B_total": 1.228319132679387,
-    "rho_heavy": 1.0364968520329303,
-    "nbaryon": 1.2145690325483152
+    "1_minus_thrust": 1.0242365036623349,
+    "mult_total": 0.9936528377486686,
+    "B_total": 1.2467632124054364,
+    "rho_heavy": 0.995918986053014,
+    "nbaryon": 1.2145692838879267
    }
+  },
+  "scored_from": "output/models/B_P2augK6fac0_trunk.pt",
+  "data": "/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_abc",
+  "n_held_events": {
+   "6700": 80000,
+   "6701": 80000,
+   "6702": 80000,
+   "6703": 80000,
+   "6704": 80000
+  },
+  "training_record": "output/published/p2augK6_B_fac_s0.json",
+  "temperature_trained": 1.0,
+  "temperature_source": "refit",
+  "stop_width": 0.9981653111331367,
+  "stop_width_at_trained_T": 0.9981733546409235,
+  "master_at_trained_T": 1.0324445484034503,
+  "beam_photons": "remove",
+  "data_realpath": "/mnt/beegfs/bassi/reweighting/gen/data_abc_nb",
+  "model_realpath": "/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code/output/models/B_P2augK6fac0_trunk.pt",
+  "lmx_fingerprint": {
+   "md5": "bef985f1985b81345f49b183a5930909",
+   "code_md5": "57b5bf3833c268b08d62763cf3acd9f0",
+   "spec": "OUT=output/p2augK6_B_fac_s0.json STAGE=B NET=fac SEED=0 K=6 MODEL=output/models/B_P2augK6fac0_trunk.pt DATA=/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_abc TMODE=refit TRAINED=output/published/p2augK6_B_fac_s0.json ABC=1",
+   "run_id": "20261107-013026-2306821",
+   "outputs": {
+    "output/temperature/B_P2augK6fac0.json": "08d3adf75eba5fdab745139c5357c466"
+   },
+   "inputs": {}
   }
  }
 }

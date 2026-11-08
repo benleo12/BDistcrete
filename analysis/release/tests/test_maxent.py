@@ -10,6 +10,8 @@ file (the deposit targets_thrust_nlo.npz, or the training code's thrust_targets_
 also reads that, checks the other layout of the same numbers reads the same, and imposes it.
 
     python tests/test_maxent.py [targets_thrust_nlo.npz]
+
+It prints PASS or FAIL for each check and exits 1 if any fails.
 """
 import os, sys, tempfile, warnings
 import numpy as np
@@ -59,7 +61,26 @@ def dual(lw0, inwin, F, c, S, lam):
     return lZ + 0.5*lam @ (P**2*S) @ lam, primal
 
 
+def usage(argv):
+    """None for a good command line, else the exit code: 0 after -h or --help, which print the
+    docstring, and 2 after a usage error, which is printed."""
+    args = argv[1:]
+    if '-h' in args or '--help' in args:
+        print(__doc__)
+        return 0
+    if len(args) > 1 or any(a.startswith('-') for a in args):
+        print('usage: python tests/test_maxent.py [targets_thrust_nlo.npz] (--help says more)')
+        return 2
+    if args and not os.path.isfile(args[0]):
+        print(f'ERROR: {args[0]}: no such file')
+        return 2
+    return None
+
+
 def main(argv):
+    code = usage(argv)
+    if code is not None:
+        return code
     # the names and the functions
     tau = np.array([0.0, 1e-7, 0.01, 0.1, 0.3])
     t = np.clip(tau, 1e-6, None); L = np.log(t)

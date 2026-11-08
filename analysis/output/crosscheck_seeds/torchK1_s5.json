@@ -1,6 +1,6 @@
 {
  "impl": "ours_pytorch_CondPFN_K1",
- "auc": 0.8055463495805215,
+ "auc": 0.8056772265277432,
  "n_train": 96000,
  "n_test": 24000,
  "Phi_sizes": [
@@ -15,6 +15,11 @@
  ],
  "epochs": 20,
  "batch_size": 500,
+ "params": 102958,
+ "params_event_side": 82457,
  "seed": 5,
- "device": "mps"
+ "device": "cpu",
+ "act": "relu",
+ "emb_scale": 1.0,
+ "emb_scale_mode": "1.0"
 }

@@ -1,7 +1,7 @@
 {
  "W": {
-  "master": 1.1360164588859658,
-  "master_raw": 1.136052762876657,
+  "master": 1.144975446194998,
+  "master_raw": 1.1450093025995924,
   "temperature": 1.0,
   "rank_K": 48,
   "best_step": 18000,
@@ -20,42 +20,42 @@
    ]
   ],
   "per_obs": {
-   "1_minus_thrust": 1.1314767601777442,
-   "mult_total": 1.0002674635770357,
-   "B_total": 1.179266914648251,
-   "rho_heavy": 1.2330546971408318
+   "1_minus_thrust": 1.1727176141456783,
+   "mult_total": 1.0016337584634638,
+   "B_total": 1.1931253171340497,
+   "rho_heavy": 1.2124250950368005
   },
   "width_uniform": {
-   "1_minus_thrust": 13.514387680541907,
-   "mult_total": 6.807929037946675,
-   "B_total": 13.94944651515663,
-   "rho_heavy": 12.217604261078407
+   "1_minus_thrust": 13.562125134879006,
+   "mult_total": 6.80252223868876,
+   "B_total": 13.970081480051519,
+   "rho_heavy": 12.245913572233201
   },
   "gain_over_uniform": {
-   "1_minus_thrust": 11.94,
-   "mult_total": 6.81,
-   "B_total": 11.83,
-   "rho_heavy": 9.91
+   "1_minus_thrust": 11.56,
+   "mult_total": 6.79,
+   "B_total": 11.71,
+   "rho_heavy": 10.1
   },
   "calibration_check": {
-   "1_minus_thrust": 0.9831417206040097,
-   "mult_total": 1.009240018051174,
-   "B_total": 1.0094202165919373,
-   "rho_heavy": 0.9881747564592216
+   "1_minus_thrust": 0.9711650189917826,
+   "mult_total": 1.0143770852832752,
+   "B_total": 0.986128636525607,
+   "rho_heavy": 1.0913859252748654
   },
   "calibration_spread": {
-   "1_minus_thrust": 0.1368087894731738,
-   "mult_total": 0.05052129162978406,
-   "B_total": 0.15845167256031006,
-   "rho_heavy": 0.16251896190840023
+   "1_minus_thrust": 0.13157129072507956,
+   "mult_total": 0.05714259195737985,
+   "B_total": 0.1585806784741505,
+   "rho_heavy": 0.17314720493793656
   },
   "N_eff": {
-   "(0.083,)": 27813.2043388194,
-   "(0.107,)": 42629.66210387187,
-   "(0.131,)": 52015.63620037611,
-   "(0.155,)": 50871.96943120361,
-   "(0.179,)": 40937.738203090266,
-   "(0.197,)": 33368.24764536014
+   "(0.083,)": 27813.203627086255,
+   "(0.107,)": 42629.66174746483,
+   "(0.131,)": 52015.63593556729,
+   "(0.155,)": 50871.96977757591,
+   "(0.179,)": 40937.73841653168,
+   "(0.197,)": 33368.247084813745
   },
   "N_ref": 63000,
   "min_count": 5,
@@ -66,48 +66,83 @@
    "rho_heavy": 25
   },
   "pull_mean": {
-   "1_minus_thrust": -0.07148520924643818,
-   "mult_total": -0.010779133582474865,
-   "B_total": -0.021056048778013082,
-   "rho_heavy": -0.10506082214956901
+   "1_minus_thrust": -0.04954372001653438,
+   "mult_total": -0.011678642246058907,
+   "B_total": -0.0017603115652151068,
+   "rho_heavy": -0.10381334251660924
   },
   "per_point": {
    "(0.083,)": {
-    "1_minus_thrust": 1.0068987910930318,
-    "mult_total": 0.9486443724261144,
-    "B_total": 1.3409276259355385,
-    "rho_heavy": 1.4015350319908948
+    "1_minus_thrust": 1.1831045302518035,
+    "mult_total": 0.9705814017671708,
+    "B_total": 1.3161066355578892,
+    "rho_heavy": 1.419502749532802
    },
    "(0.107,)": {
-    "1_minus_thrust": 0.9408531776258482,
-    "mult_total": 1.0209132564775936,
-    "B_total": 1.1022062481043713,
-    "rho_heavy": 1.0618617582116425
+    "1_minus_thrust": 1.0126435176983786,
+    "mult_total": 1.0224809727532178,
+    "B_total": 1.0482834359596547,
+    "rho_heavy": 1.1384459412215053
    },
    "(0.131,)": {
-    "1_minus_thrust": 1.3469230851003469,
-    "mult_total": 0.9771906767999698,
-    "B_total": 1.3161212735786314,
-    "rho_heavy": 1.3868770318012091
+    "1_minus_thrust": 1.2359233960338973,
+    "mult_total": 0.977190698798286,
+    "B_total": 1.3484570604826587,
+    "rho_heavy": 1.3301392712703888
    },
    "(0.155,)": {
-    "1_minus_thrust": 1.3051273754349395,
-    "mult_total": 1.0418126230921938,
-    "B_total": 1.1940569126586036,
-    "rho_heavy": 1.1211397551719733
+    "1_minus_thrust": 1.284199324144068,
+    "mult_total": 1.0430419815455263,
+    "B_total": 1.2685774566433163,
+    "rho_heavy": 1.0565308023032574
    },
    "(0.179,)": {
-    "1_minus_thrust": 0.9599339254864542,
-    "mult_total": 1.0298666716803555,
-    "B_total": 0.9521234956509999,
-    "rho_heavy": 1.2314214444106963
+    "1_minus_thrust": 1.0155729083961507,
+    "mult_total": 1.029866638910426,
+    "B_total": 1.0143020721939637,
+    "rho_heavy": 1.2377579761474342
    },
    "(0.197,)": {
-    "1_minus_thrust": 1.229124206325845,
-    "mult_total": 0.9831771809859857,
-    "B_total": 1.1701659319613624,
-    "rho_heavy": 1.1954931612585746
+    "1_minus_thrust": 1.3048620083497715,
+    "mult_total": 0.9666408570061552,
+    "B_total": 1.1630252419668154,
+    "rho_heavy": 1.0921738297454158
    }
+  },
+  "scored_from": "output/models/W_P2wb18poolfac0_trunk.pt",
+  "data": "/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_widebox",
+  "n_held_events": {
+   "9100": 80000,
+   "9101": 80000,
+   "9102": 80000,
+   "9103": 80000,
+   "9104": 80000,
+   "9105": 80000
+  },
+  "training_record": "output/published/p2wb18pool_W_fac_s0.json",
+  "temperature_trained": 1.0,
+  "temperature_source": "refit",
+  "stop_width": 1.1137557128268403,
+  "stop_width_at_trained_T": 1.1137864897969012,
+  "master_at_trained_T": 1.1450093025995924,
+  "beam_photons": "remove",
+  "data_realpath": "/mnt/beegfs/bassi/reweighting/gen/data_widebox_nb",
+  "model_realpath": "/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code/output/models/W_P2wb18poolfac0_trunk.pt",
+  "lmx_fingerprint": {
+   "md5": "dd7729af4fb2c25fd7837a2c529291f0",
+   "code_md5": "57b5bf3833c268b08d62763cf3acd9f0",
+   "spec": "OUT=output/p2wb18pool_W_fac_s0.json STAGE=W NET=fac SEED=0 K=48 MODEL=output/models/W_P2wb18poolfac0_trunk.pt DATA=/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_widebox TMODE=refit TRAINED=output/published/p2wb18pool_W_fac_s0.json STAGEW_CSV=/mnt/beegfs/bassi/reweighting/lmx_runs/gen/designs/stageW_design.csv NREF_TOTAL=63000 SUFFIX=_P2wb18poolfac0 DUMP=1",
+   "run_id": "20261107-013026-2306821",
+   "outputs": {
+    "output/temperature/W_P2wb18poolfac0.json": "4215c34b47b6b31715d85d0ae2cab068",
+    "output/models/W_P2wb18poolfac0_w_9100.npy": "65222e384f84542ab7fd56ea73e37cbd",
+    "output/models/W_P2wb18poolfac0_w_9101.npy": "cb265f23c52053f079d091a0bcbb5e00",
+    "output/models/W_P2wb18poolfac0_w_9102.npy": "ab545e6eae9956c7bf23e48633dababd",
+    "output/models/W_P2wb18poolfac0_w_9103.npy": "6337930093583acfc6fe3ee9adb72c08",
+    "output/models/W_P2wb18poolfac0_w_9104.npy": "fbd7dca0d4382216bc08e64e39c67409",
+    "output/models/W_P2wb18poolfac0_w_9105.npy": "16cc69091073ae0c2e305fc76c0994f7"
+   },
+   "inputs": {}
   }
  }
 }

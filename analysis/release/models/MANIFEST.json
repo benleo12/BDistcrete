@@ -1,45 +1,4 @@
 {
- "C_1M": {
-  "ntheta": 3,
-  "ens": 4,
-  "K": 24,
-  "K_bilinear": 24,
-  "act": "silu",
-  "temperature": 1.125,
-  "additive": 0,
-  "head_kind": "cond",
-  "has_trunk": true,
-  "box": [
-   [
-    0.11199999999999999,
-    0.128
-   ],
-   [
-    0.3,
-    0.6499999999999999
-   ],
-   [
-    0.8,
-    1.8
-   ]
-  ],
-  "centre": [
-   0.12,
-   0.475,
-   1.3
-  ],
-  "n_reference_events": 1080000,
-  "checksum_replay": 1.2589338094226576e-07,
-  "trunk_vs_export": 1.0210562724430803e-05,
-  "selftest_vs_export": 0.0,
-  "trunk_vs_export_float32": 1.0210562724430803e-05,
-  "trunk_vs_export_float16": 0.01466185754414641,
-  "sha256": {
-   "C_1M_head.npz": "9246b97285ad28e49129a34e0c4fba1964c51d40856de592db8eb1ce31cebcc1",
-   "C_1M_trunk.npz": "9e4909d9340433cefabd450bf64a2f4bfe0478bf354833b60d56acdd82d42ad4",
-   "C_1M_selftest.npz": "9fa13ad9ce55f6ffceb7f7af0834ae9bd1bca24ec1866f7aabddee3b4399f923"
-  }
- },
  "E": {
   "ntheta": 8,
   "ens": 4,

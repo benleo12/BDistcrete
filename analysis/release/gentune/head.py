@@ -6,7 +6,7 @@ An exported head is a factorized log-ratio,
 
 averaged over the ensemble members. a(Phi) is the event-side vector produced by the trunk
 (shipped precomputed for the reference sample in the export, or computed for your own events
-with gentune.embed), and b(theta) is a small network of the generator parameters, which is
+with gentune.Trunk.embed), and b(theta) is a small network of the generator parameters, which is
 what these classes evaluate.
 
 Two operations are useful, and they are not the same thing.
@@ -25,26 +25,39 @@ Two operations are useful, and they are not the same thing.
 
 Weights are returned normalized to sum to one over the events you passed in.
 
+MIX17 holds both generators. The paper evaluates its head only at the fraction xi = 0 (Sherpa
+alone) and xi = 1 (Herwig alone) and mixes the two predictions, (1 - xi) <O>_S + xi <O>_H:
+gentune.mixture does this, and gives the paper's prediction at every point of the box.
+
 The learning band of the paper, the uncertainty of the log ratio itself, comes from the WiFi fit
 of the ensemble (Benevedes and Thaler, arXiv:2506.00113), whose weights and covariance ship for
 MIX17 as models/MIX17_wifi.npz. wifi_basis(A, theta) gives its basis functions and
-learning_band(A, theta, O, wifi_path) the band of a weighted mean.
+learning_band(A, theta, O, wifi_path) the band of a weighted mean of one generator, with
+imposed=(inwin, F, info) of gentune.maxent.impose that of a prediction with the calculation
+imposed; gentune.mixture.learning_band() gives that of the mixture.
 """
 import os
+import warnings
 import numpy as np
 
 
-# head_kind of the two mixture exports: 'mixture' is the additive (1 - f) q_S + f q_H of an
-# earlier draft, 'geometric' the multiplicative q_S^(1-f) q_H^f of the paper's MIX17. Every
-# other export is a single-generator head.
+# head_kind of the two kinds of mixture export, by how the network combines the generators at
+# an interior fraction f: 'geometric', q_S^(1-f) q_H^f, is MIX17; 'mixture', the logarithm of
+# (1 - f) q_S + f q_H, is an export of an earlier draft. At f = 0 and f = 1 both are one generator
+# alone, which is all the paper uses (gentune.mixture). Every other export is a single-generator head.
 MIXTURE_KINDS = ('mixture', 'geometric')
+
+
+class GeometricFractionWarning(UserWarning):
+    """MixtureHead.weights or ratio_weights was called at a fraction strictly between 0 and 1."""
+
 
 def sigm(z):
     return 0.5*(1.0 + np.tanh(0.5*z))         # logistic, written so large |z| cannot overflow
 
 
 class Head:
-    """A single-generator head: `C_1M` or `E` (Sherpa), or `F` (Herwig)."""
+    """A single-generator head, such as `E` (Sherpa) or `F` (Herwig)."""
 
     def __init__(self, path):
         c = np.load(path)
@@ -207,17 +220,25 @@ class Head:
         return np.concatenate([self._bvec(m, thn) for m in range(self.ENS)])
 
     # -- logits and weights ------------------------------------------------------------------
-    def pack(self, A):
+    def pack(self, A, dtype=None):
         """Put event-side vectors in the (Nev, ENS*K) layout the matrix product expects.
-        Accepts either that layout or the (ENS, Nev, K) layout the export stores."""
+        Accepts either that layout or the (ENS, Nev, K) layout the export stores. dtype, for
+        example np.float64, also converts them, member by member, so that a loop over many points
+        does not convert the float32 file at every evaluation: A = head.pack(r['AE'], np.float64)
+        once, then head.weights(A, theta) or gentune.mixture.weights(head, A, theta) at each."""
         A = np.asarray(A)
         if A.ndim == 3:
             assert A.shape[0] == self.ENS and A.shape[2] == self.K, \
                 f'expected (ENS={self.ENS}, Nev, K={self.K}), got {A.shape}'
-            return np.ascontiguousarray(A.transpose(1, 0, 2).reshape(A.shape[1], self.ENS*self.K))
+            if dtype is None:
+                return np.ascontiguousarray(A.transpose(1, 0, 2).reshape(A.shape[1], self.ENS*self.K))
+            out = np.empty((A.shape[1], self.ENS*self.K), dtype)
+            for m in range(self.ENS):
+                out[:, m*self.K:(m + 1)*self.K] = A[m]
+            return out
         assert A.ndim == 2 and A.shape[1] == self.ENS*self.K, \
             f'expected (Nev, {self.ENS*self.K}), got {A.shape}'
-        return A
+        return A if dtype is None else np.asarray(A, dtype)
 
     def logit(self, A, theta, check_box=True):
         """f(Phi; theta) per event, ensemble mean of the member logits, before temperature."""
@@ -261,32 +282,81 @@ class Head:
         return np.concatenate([np.ones((len(a), 1)), f.reshape(len(a), self.ENS**2)], 1)
 
     def learning_band(self, A, theta, O, wifi_path, mask=None, theta_from=None, check_box=True,
-                      counts=None):
+                      counts=None, imposed=None):
         """The learning band of the weighted mean of O at theta, sqrt(g^T C g).
 
         C is the covariance of the WiFi weights in wifi_path, and g_k, the derivative of the
         mean with respect to w_k at w_published, is the weighted covariance of O with the basis
-        function k of wifi_basis(). The temperature sits inside w_published, so no separate
-        factor of 1/T enters g, and the constant has no covariance with anything. This is the
-        band the paper quotes for the generator alone, before a calculation is imposed.
+        function k of wifi_basis(). w_published is the published network at this head's
+        temperature, w_0 = 0 and w_ij = delta_ij/(ENS T), as in the paper's code; a WiFi file
+        written at another temperature keeps its covariance, and a warning says its own
+        w_published is not used. The temperature sits inside w_published, so no separate factor
+        of 1/T enters g, and the constant has no covariance with anything. This is the band of one
+        generator; for MIX17 the paper quotes that of its mixture of the two generators, which
+        gentune.mixture.learning_band() gives.
 
         The weights are those of weights(A, theta), so A is the reference sample. For a sample
         generated at theta_from pass it, which takes the weights of ratio_weights() and the
         difference of the two bases. O is one value per event, or (Nev, n) for n observables at
-        once, which returns n bands. mask restricts the mean to a subset of the events,
-        normalized over that subset: the mean of 1 - T inside a window is O = 1 - T with the
-        window as mask, and a bin of a distribution normalized over a set of bins is
-        O = (in the bin)/(bin width) with mask = (in any of the bins). counts, one number per
-        event, multiplies the weights, which for the counts of gentune.bands.resample_counts()
-        gives the band on a bootstrap resample of the events.
+        once, which returns n bands. A bin of a distribution, the fraction of all events in it over
+        its width, is O = (in the bin)/(bin width). mask restricts the mean to a subset of the
+        events, normalized over that subset: the mean of 1 - T inside a window is O = 1 - T with
+        the window as mask. counts, one number per event, multiplies the weights, which for the
+        counts of gentune.bands.resample_counts() gives the band on a bootstrap resample of the
+        events.
+
+        Without imposed, the band of the generator alone. With imposed=(inwin, F, info), the
+        (inwin, F, info) of the maxent.impose() that imposed a calculation on these weights, g is
+        taken through the multipliers solved again, as the paper does: a change of
+        the WiFi weights moves the multipliers by -J^-1 times its change of the calculation's
+        condition, which includes the change of the window fraction before the tilt in P^2 Sigma,
+        as in the paper's code (analysis/three_bands.py with directlib.tilt_on), so
+        g = Cov_w(r, f) - 2 P (J^-1 Cov_w(F, O)) . (Sigma lam) Cov_w0(Theta, f), with r the
+        projected per-event term of gentune.bands.mean_and_error. counts is not taken with imposed.
         """
         W = np.load(wifi_path)
+        self._check_wifi(W, wifi_path)
+        g = self._learning_gradient(A, theta, O, W, mask, theta_from, check_box, counts, imposed,
+                                    wifi_path)
+        band = np.sqrt(np.maximum(np.einsum('ak,kl,al->a', g, W['C'], g), 0.0))
+        return float(band[0]) if np.asarray(O).ndim == 1 else band
+
+    def _check_wifi(self, W, wifi_path):
+        """Raise unless the WiFi file W was fitted to a head of this shape and kind."""
         want = (self.ENS, self.K, getattr(self, 'kind', 'cond'))
         got = (int(W['ens']), int(W['K']), str(W['kind']))
         if got != want:
             raise ValueError(f'{wifi_path} was fitted to a head with (members, K, kind) = {got} '
                              f'and {self.path} has {want}, so its weights do not belong to this '
                              f'head')
+
+    def _w_published(self, W, wifi_path=None):
+        """The WiFi weights of the published network at this head's temperature, w_0 = 0 and
+        w_ij = delta_ij/(ENS T), where the learning band is taken (directlib.wifi_point). A WiFi
+        file written at another temperature, before a refit of the temperature, holds another
+        w_published; its covariance does not depend on the temperature and is kept, and a warning
+        says that the file's w_published is not used."""
+        w = np.zeros(self.ENS*self.ENS + 1)
+        w[1:] = np.eye(self.ENS).ravel()/(self.ENS*self.T)
+        wf = np.asarray(W['w_published'], np.float64) if 'w_published' in W.files else None
+        if wf is None or wf.shape != w.shape or not np.array_equal(wf, w):
+            key = str(wifi_path)
+            seen = self.__dict__.setdefault('_wifi_warned', set())
+            if key not in seen:
+                seen.add(key)
+                t = (1.0/(self.ENS*wf[1]) if wf is not None and wf.shape == w.shape and wf[1] != 0
+                     else float('nan'))
+                warnings.warn(f'{wifi_path} holds the published network at the temperature '
+                              f'T = {t!r} and {self.path} carries T = {self.T!r}: the learning band '
+                              f'is taken at the temperature of the head, as in the paper, with the '
+                              f'covariance of the file', stacklevel=4)
+        return w
+
+    def _learning_gradient(self, A, theta, O, W, mask=None, theta_from=None, check_box=True,
+                           counts=None, imposed=None, wifi_path=None):
+        """g, (n, 1 + ENS^2): the derivative of the weighted mean of each of the n columns of O
+        with respect to the WiFi weights of W, at w_published (see learning_band), with imposed
+        through the re-solved multipliers."""
         F = self.wifi_basis(A, theta, check_box)
         if theta_from is not None:
             F = F - self.wifi_basis(A, theta_from, check_box)
@@ -294,16 +364,37 @@ class Head:
         if O.ndim not in (1, 2) or len(O) != len(F):
             raise ValueError(f'O has shape {O.shape} and A has {len(F)} events, so O needs one row '
                              f'per event')
-        m = np.ones(len(F), bool) if mask is None else np.asarray(mask, bool)
-        z = F[m] @ np.asarray(W['w_published'], np.float64)
-        w = np.exp(z - z.max())
+        wp = self._w_published(W, wifi_path)
+        if imposed is None:
+            m = np.ones(len(F), bool) if mask is None else np.asarray(mask, bool)
+            z = F[m] @ wp
+            w = np.exp(z - z.max())
+            if counts is not None:
+                w = w*np.asarray(counts, np.float64)[m]
+            w /= w.sum()
+            X = O[m].reshape(len(w), -1)
+            return (w[:, None]*(X - w @ X)).T @ F[m]             # (n, 1 + ENS^2), Cov_w(O, f_k)
         if counts is not None:
-            w = w*np.asarray(counts, np.float64)[m]
-        w /= w.sum()
-        X = O[m].reshape(len(w), -1)
-        g = (w[:, None]*(X - w @ X)).T @ F[m]                 # (n, 1 + ENS^2), Cov_w(O, f_k)
-        band = np.sqrt(np.maximum(np.einsum('ak,kl,al->a', g, W['C'], g), 0.0))
-        return float(band[0]) if O.ndim == 1 else band
+            raise ValueError('counts and imposed together are not taken: on a resample the '
+                             'multipliers would have to be solved again first')
+        from .maxent import _Response, _tilted
+        z = F @ wp
+        w0 = np.exp(z - z.max())
+        w0 /= w0.sum()
+        w = np.exp(_tilted(z, imposed))                         # the imposed weights
+        R = _Response(w, imposed)
+        X = O.reshape(len(F), -1)
+        if mask is None:
+            r = X - w @ X
+        else:
+            m = np.asarray(mask, bool)
+            P = w[m].sum()
+            r = np.where(m[:, None], X - (w[m] @ X[m])/P, 0.0)/P
+        r, v = R.remove(r)
+        th = np.zeros(len(F))
+        th[R.iw] = 1.0
+        dP = (w0*(th - w0[R.iw].sum())) @ F                      # Cov_w0(Theta, f_k)
+        return (w[:, None]*r).T @ F - 2.0*R.P*np.outer(v.T @ (R.S @ R.lam), dP)
 
     def check_trunk(self, trunk, tol=1e-6):
         """Raise unless this head and that trunk come from the same trained stage.
@@ -345,20 +436,31 @@ class Head:
 class MixtureHead(Head):
     """The mixture head: two generators, their own parameters, and the fraction between them.
 
-    theta = (theta_S, theta_H, f), where theta_S are the first generator's parameters, theta_H
-    the second generator's, and f in [0, 1] the fraction of the second. Per ensemble member
+    theta = (theta_S, theta_H, f), where theta_S are Sherpa's parameters, theta_H Herwig's, and
+    f in [0, 1] the fraction of Herwig. At f = 0 the head is Sherpa alone at theta_S, and at
+    f = 1 Herwig alone at theta_H. The paper uses it there and nowhere else: its prediction at
+    theta is (1 - f) <O>_S + f <O>_H, each generator with its own weights, and gentune.mixture
+    computes it (mixture.weights, mixture.mean).
+
+    At an interior f the network has a value of its own, the interpolation built into it; it was
+    trained on runs at f = 0 and f = 1 only. Per ensemble member
 
         l_S = < a(Phi), b_S(theta_S) > ,   l_H = < a(Phi), b_H(theta_H) > ,
 
     and the member's logit is
 
         f_m = (1 - f) l_S + f l_H                       (head_kind 'geometric', MIX17)
-        f_m = log[ (1 - f) exp(l_S) + f exp(l_H) ]      (head_kind 'mixture', additive)
+        f_m = log[ (1 - f) exp(l_S) + f exp(l_H) ]      (head_kind 'mixture')
 
-    for the multiplicative mixture q_S^(1-f) q_H^f and the additive one (1 - f) q_S + f q_H.
-    The ensemble logit is the mean of f_m. Both forms are exact at the edges: the derivative
-    with respect to theta_H vanishes identically at f = 0 and the one with respect to theta_S
-    at f = 1, so a fraction of zero is the first generator alone and not an approximation to it.
+    which reweight to q_S^(1-f) q_H^f and to (1 - f) q_S + f q_H as single densities. The
+    ensemble logit is the mean of f_m. Both forms are exact at the edges: the derivative with
+    respect to theta_H vanishes identically at f = 0 and the one with respect to theta_S at
+    f = 1, so a fraction of zero is the first generator alone and not an approximation to it.
+    There logit() evaluates only that generator's network; with check_box it still wants the other
+    generator's parameters inside the box, which gentune.mixture does not ask. weights() and
+    ratio_weights() return this interpolation at an interior f, with a
+    GeometricFractionWarning, since it is not the paper's prediction there; logit() returns it
+    without one, as the self-test and the WiFi basis need it.
 
     The two parameter blocks are read from the shapes of the exported networks rather than
     assumed to be equal in size, so a mixture of generators with different parameter counts
@@ -396,6 +498,31 @@ class MixtureHead(Head):
         self.checksum_theta = c['f_checksum_theta'] if 'f_checksum_theta' in c.files else None
         self.theta_train = c['theta_train'].astype(np.float64) if 'theta_train' in c.files else None
         self._spacing = None
+
+    def _warn_interior(self, *thetas):
+        """Warn once per head when weights come from the network at an interior fraction."""
+        if getattr(self, '_warned', False):
+            return
+        fr = [float(np.asarray(t, np.float64).ravel()[-1]) for t in thetas]
+        if any(0.0 < f < 1.0 for f in fr):
+            self._warned = True
+            warnings.warn(f'{self.path}: weights at the fraction {", ".join(f"{f:g}" for f in fr)} '
+                          f'come from the network\'s own interpolation between the generators, which '
+                          f'is not the paper\'s prediction. The paper mixes the two generators\' '
+                          f'predictions: gentune.mixture.weights(head, A, theta) and '
+                          f'gentune.mixture.mean().', GeometricFractionWarning, stacklevel=3)
+
+    def weights(self, A, theta, check_box=True):
+        """Weights that take the REFERENCE sample to theta, the network's own value. At an interior
+        fraction that is the interpolation of the class docstring, not the paper's prediction,
+        which gentune.mixture.weights() gives."""
+        self._warn_interior(theta)
+        return super().weights(A, theta, check_box)
+
+    def ratio_weights(self, A, theta_to, theta_from, check_box=True):
+        """ratio_weights of Head, the network's own value; see weights() for an interior fraction."""
+        self._warn_interior(theta_to, theta_from)
+        return super().ratio_weights(A, theta_to, theta_from, check_box)
 
     def split(self, theta):
         """(theta_S, theta_H, f) from one physical parameter vector.
@@ -439,9 +566,17 @@ class MixtureHead(Head):
         fr = float(np.asarray(theta, np.float64)[-1])
         acc = np.zeros(Ap.shape[0])
         for m in range(self.ENS):
+            sl = slice(m*self.K, (m + 1)*self.K)
+            # at the fraction 0 or 1 both forms are one generator alone, exactly, so only its
+            # network is evaluated (for MIX17 the same numbers as the general form below)
+            if fr == 0.0:
+                acc += Ap[:, sl] @ self._bvec_net(self.W[m], self.b[m], tS)
+                continue
+            if fr == 1.0:
+                acc += Ap[:, sl] @ self._bvec_net(self.WH[m], self.bH[m], tH)
+                continue
             bS = self._bvec_net(self.W[m], self.b[m], tS)
             bH = self._bvec_net(self.WH[m], self.bH[m], tH)
-            sl = slice(m*self.K, (m + 1)*self.K)
             lS = Ap[:, sl] @ bS
             lH = Ap[:, sl] @ bH
             if self.kind == 'geometric':

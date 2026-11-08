@@ -9,15 +9,30 @@ means a better density ratio in the full phase space, whatever the binned closur
 observables says. The closure widths of all three are given alongside.
 
     python wifi_diag.py output/wifi_MIXGEO_basis.npz output/models/MIXGEO_cond.npz output/models/MIXGEO_ref_v2_slim.npz
+
+The rerun (score_obs.py): WIFI_FIT names the fit (default the basis name with _fit.npz) and
+WIFI_DIAG_OUT the output (default the basis name with _diag.json). BEAM_PHOTONS=remove needs a basis
+with photon-free held-out observables and takes the reference's multiplicity and kaon fraction from
+REF_PARTICLES, its shapes checked against REF_ORIG. With T_DIR set the export must carry the refitted
+temperature.
 """
 import os, sys, json, time
 import numpy as np
 sys.path.insert(0, '.')
 from r2_ladder import make_bins, pulls, width_of
+import score_obs as SO
 
 bas, export, refpath = sys.argv[1:4]
-B = np.load(bas); c = np.load(export, mmap_mode='r'); F = np.load(bas.replace('_basis.npz', '_fit.npz'))
-ENS, K = int(B['ens']), int(B['K']); M2 = ENS*ENS; OBS = [str(o) for o in B['obs']]; kind = str(B['kind']); T = float(c['temperature'])
+FIT = os.environ.get('WIFI_FIT', bas.replace('_basis.npz', '_fit.npz'))
+SO.need(bas, export, refpath, FIT)
+B = np.load(bas); c = np.load(export, mmap_mode='r'); F = np.load(FIT)
+ENS, K = int(B['ens']), int(B['K']); M2 = ENS*ENS; OBS = [str(o) for o in B['obs']]; kind = str(B['kind'])
+T = SO.check_export_T(export, float(c['temperature']))
+if SO.REMOVE and (str(B['beam_photons']) if 'beam_photons' in B.files else 'keep') != 'remove':
+    raise RuntimeError(f'{bas}: its held-out observables are not photon-free (make it with BEAM_PHOTONS=remove)')
+if SO.T_DIR:
+    assert np.allclose(np.asarray(F['w_published'])[1:], np.eye(ENS).ravel()/(ENS*T), rtol=1e-12, atol=0), \
+        f'{FIT} was fitted with another temperature than {T}'
 NDEN = int(os.environ.get('NDEN', '20000')); t0 = time.time()
 design = lambda f: np.column_stack([np.ones(len(f)), np.asarray(f, np.float64)])
 Xn, Xd = design(B['num_f']), design(B['den_f'])
@@ -69,7 +84,13 @@ def btilde(theta):
         ns = c['B0_W0'].shape[1]; nh = c['BH0_W0'].shape[1]; fr = float(np.clip(theta[-1], 0, 1))
         return np.stack([(1 - fr)*bnet('B', mi, x[:, :ns]).ravel() + fr*bnet('BH', mi, x[:, ns:ns + nh]).ravel() for mi in range(ENS)])
     return np.stack([bnet('B', mi, x).ravel() for mi in range(ENS)])
-ref = np.load(refpath); robs = {o: np.asarray(ref[o], np.float64) for o in OBS}; Nref = AE.shape[1]
+_rp, _ro, _pd = os.environ.get('REF_PARTICLES', ''), os.environ.get('REF_ORIG', ''), os.environ.get('POBS_DIR', '')
+if SO.REMOVE:
+    assert _rp and _ro, 'BEAM_PHOTONS=remove: set REF_PARTICLES and REF_ORIG'
+robs = SO.reference_obs(refpath, OBS, particles=_rp or None, orig=_ro or None,
+                        cache=os.path.join(_pd, os.path.basename(os.path.realpath(_rp)).replace('.npz', '_pobs.npz')) if _pd and _rp else None)
+Nref = AE.shape[1]
+assert len(robs[OBS[0]]) == Nref, (len(robs[OBS[0]]), Nref)
 rng = np.random.default_rng(3)
 # a third variant: the weights fitted on the SELECTION halves of the held-out runs, where the
 # published calibration constant is fitted, and judged like everything else on the comparison halves
@@ -113,5 +134,8 @@ for name in W:
                      per_run_obs={str(r): {o: float(per[name][(r, o)]) for o in OBS} for r in HELD},
                      neff_fraction={str(r): NEFF[name][r] for r in HELD})
     print(f'{name:10s}: held-out loss {out[name]["held_loss"]:.5f}   closure {out[name]["closure"]:.3f}   ' + ' '.join(f'{o} {v:.2f}' for o, v in widths.items()), flush=True)
-json.dump(out, open(bas.replace('_basis.npz', '_diag.json'), 'w'), indent=1)
-print(f'wrote {bas.replace("_basis.npz", "_diag.json")} [{time.time()-t0:.0f} s]')
+if SO.REMOVE or SO.T_DIR:
+    out['provenance'] = dict(SO.describe(), temperature=T, basis=bas, fit=FIT, ref=refpath)
+DOUT = os.environ.get('WIFI_DIAG_OUT', bas.replace('_basis.npz', '_diag.json'))
+json.dump(out, open(DOUT, 'w'), indent=1)
+print(f'wrote {DOUT} [{time.time()-t0:.0f} s]')

@@ -4,7 +4,12 @@ every variation of Sec. 5 (four scale variations and the change of scheme at the
 three variations of the dispersive model), for the appendix figure of the calculation against the data.
 Densities are normalized to the total rate, as the data. The same cumulants and
 shift as targets_nlo_point.py, which this script checks by recomputing the fourteen windowed moments of
-output/thrust_targets_nlo_point.npz. Writes output/calc_bins_nlo_point.json.
+output/thrust_targets_nlo_point.npz. The data are those of lepcov/lepdata_cov.py (DELPHI: d11-x01-y02, charged
+plus neutral particles), as published. Writes <OUTDIR>/calc_bins_nlo_point.json, OUTDIR by default output/ next to
+this script; OUTDIR and CALC_POINT given as relative paths are taken from the folder the script is started in. The json
+also holds power_correction: the rigid shift a_tau P of the distribution at the fixed point and central scales
+(np_shift.shift with the subtraction order of calc_point.json), which App. C quotes (a_tau P = 0.0093) and
+make_numbers.py writes as \\CalcShift.
 
     THRUST_ORDER=2 CHAIN_SUFFIX=_nlo python calc_bins.py
 """
@@ -12,13 +17,14 @@ import os, sys, json
 os.environ.setdefault('THRUST_ORDER', '2'); os.environ.setdefault('CHAIN_SUFFIX', '_nlo')
 assert os.environ['THRUST_ORDER'] == '2'
 import numpy as np
+OUTDIR, CALC_POINT = (os.path.abspath(os.environ[k]) if os.environ.get(k) else None for k in ('OUTDIR', 'CALC_POINT'))
 os.chdir(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, '.')
 import np_shift as N, thrust_chain as TC
 sys.path.insert(0, 'lepcov')
 from lepdata_cov import lepdata_split
 
 WLO, WHI = 0.05, 1.0/3.0
-CP = json.load(open(os.environ.get('CALC_POINT', 'output/calc_point.json'))); asc, a0c = float(CP['alpha_s']), float(CP['alpha_0'])
+CP = json.load(open(CALC_POINT or 'output/calc_point.json')); asc, a0c = float(CP['alpha_s']), float(CP['alpha_0'])
 N.SUB_ORDER = int(CP.get('np_sub_order', 2)); ALT = 2 if N.SUB_ORDER == 3 else 3
 G = np.load('output/thrust_targets_nlo_point.npz', allow_pickle=True)
 assert abs(float(G['alphas'][0]) - asc) < 1e-12 and abs(float(G['alpha0'][0]) - a0c) < 1e-12
@@ -65,14 +71,20 @@ VARS = [((1.0, 1.0, 'logR'), {}, 'central'),
         ((1.0, 1.0, 'logR'), dict(milan=1.2*N.MILAN), 'milan_up'), ((1.0, 1.0, 'logR'), dict(milan=0.8*N.MILAN), 'milan_dn'),
         ((1.0, 1.0, 'logR'), dict(sub=ALT), f'sub{ALT}')]
 out = dict(alpha_s=asc, alpha_0=a0c, window=[WLO, WHI], moments_check='passed')
+# App. C: the shift of the distribution by the power correction at the fixed point and central scales, a_tau P
+SH = float(N.shift(1.0, a0c, asmz=asc))
+out['power_correction'] = dict(shift=SH, a_tau=float(N.A_TAU), P=SH/float(N.A_TAU), milan=float(N.MILAN), mu_I=float(N.MUI),
+                               np_sub_order=int(N.SUB_ORDER), mur_mult=1.0)
 for ex in ('aleph', 'delphi'):
     lo, hi, y, st, sy = lepdata_split(ex)
     d = dict(lo=lo.tolist(), hi=hi.tolist(), y=y.tolist(), stat=st.tolist(), sys=sy.tolist(), calc={})
     for (mu, xv, sch), kw, lab in VARS:
         d['calc'][lab] = evaluate(lambda t, S: (N.cum_eval(hi, t, S) - N.cum_eval(lo, t, S))/(hi - lo), mu, xv, sch, **kw).tolist()
     out[ex] = d
-json.dump(out, open('output/calc_bins_nlo_point.json', 'w'), indent=1)
+OUTDIR = OUTDIR or 'output'; os.makedirs(OUTDIR, exist_ok=True); FOUT = os.path.join(OUTDIR, 'calc_bins_nlo_point.json')
+json.dump(out, open(FOUT, 'w'), indent=1)
 c = np.array(out['aleph']['calc']['central']); y = np.array(out['aleph']['y']); e = np.hypot(out['aleph']['stat'], out['aleph']['sys'])
 lo = np.array(out['aleph']['lo']); hi = np.array(out['aleph']['hi']); w = (lo >= WLO - 1e-9) & (hi <= WHI + 1e-9)
 print(f'moments check passed; ALEPH window chi2 (diagonal errors) {np.sum(((c - y)/e)[w]**2):.1f} for {w.sum()} bins')
-print('wrote output/calc_bins_nlo_point.json')
+print(f'power correction at the fixed point: a_tau P = {SH:.6f} (subtraction order {N.SUB_ORDER})')
+print('wrote', FOUT)

@@ -23,8 +23,11 @@ network (output/models/<stage>_cond.npz), no retraining:
 Writes output/ab_analysis.json and output/fig_m_ab.pdf.
 """
 import json, numpy as np
-from money_style import setup, save, trim, ideal, panel_tag, BLUE, RED, OCHRE, GREY, INK, MUTED
-import matplotlib.pyplot as plt
+try:        # the figures need matplotlib, the model loader Cond does not (it runs on Symmetry too)
+    from money_style import setup, save, trim, ideal, panel_tag, BLUE, RED, OCHRE, GREY, INK, MUTED
+    import matplotlib.pyplot as plt
+except ImportError:
+    plt = None
 
 MODELS = 'output/models'
 STAGES = ['A', 'B', 'C']

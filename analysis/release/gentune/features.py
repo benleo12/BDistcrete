@@ -8,7 +8,10 @@ particle selection changes the input and silently changes every weight.
 The conventions, all of which must be reproduced exactly:
 
   particles    every final state particle of the WHOLE event except neutrinos, both
-               hemispheres, ordered by descending energy fraction when truncating
+               hemispheres, ordered by descending energy fraction when truncating. The
+               photons radiated by the beams are among them: the networks read them, as they
+               were trained, and the observables of gentune.bands leave them out, as the paper
+               does (gentune.beam_photons finds them)
   z            E_i / sum_j E_j, the energy fraction of the whole event
   cos_theta    p_hat_i . n, SIGNED, so the hemisphere is carried by the sign
   phi          azimuth around n, measured from e1 = n x z_hat normalized

@@ -1,0 +1,69 @@
+# The files of the propagation, numbers and figure jobs (RERUN_PROP.md) that come from this working tree, relative to
+# analysis/. symmetry/rerun/sync_run.sh copies the union of this list and symmetry/rerun/files_score.txt into RUN and
+# compares their md5 on both sides. Globs are allowed; one path per line.
+#
+# Made from the code, not from memory: every script a job of RERUN_PROP runs, every import statement in it and in the
+# modules it imports, followed to the end (calc_vs_delphi.py executes the head of fig_thrust_vs_aleph.py, which counts
+# as an import), and every file those modules open. Inputs that other jobs write into RUN/output (exports, bundles,
+# temperatures, wifi fits, results) and data folders (CROSSCHECK_DATA, the D12 links) are not listed.
+
+# the scripts the jobs run
+envelope_test.py
+three_bands.py
+band_checks.py
+theory_variations.py
+calc_bins.py
+calc_vs_delphi.py
+fig_thrust_vs_aleph.py
+check_linear_mix.py
+bench_cost_final.py
+phase2tools/make_numbers.py
+figs_r8.py
+plot_envelope.py
+fig_cost.py
+bundle_rule.py
+crosscheck_data.py
+crosscheck_ef.py
+crosscheck_torch.py
+crosscheck_summary.py
+gauss_ref.py
+
+# the modules they import
+directlib.py
+fit_alpha0.py
+fit_alpha0_2d.py
+np_shift.py
+match_v3.py
+thrust_chain.py
+conventions.py
+score_obs.py
+beam_photons.py
+r2_ladder.py
+concat_baseline.py
+mixture_cfg.py
+money_style.py
+lepcov/lepdata_cov.py
+release/gentune/*.py
+
+# the batch scripts
+symmetry/envelope_test.sbatch
+symmetry/three_bands.sbatch
+symmetry/band_checks.sbatch
+symmetry/theory_variations.sbatch
+symmetry/bench_final_cpu.sbatch
+symmetry/bench_final_gpu.sbatch
+symmetry/pfn_lmx.sbatch
+
+# fixed inputs: the LEP tables (RIVET_REF, check_linear_mix --rivet), the HEPData tables of lepdata_cov (it would try to
+# download a missing one), the resummed calculation (fit_alpha0_2d, ARES_EXT=1 reads the _ext table), the EERAD3
+# cumulants (match_v3.fo_cumulants), the fixed point and the targets of the calculation, the release head and wifi fit
+# (the defaults of check_linear_mix), and the factors of D8 (conventions.py, after CONV_FACTORS)
+rivet_ref/*.yoda
+lepcov/hepdata/*
+ares_recovered/*
+output/eerad_*.npy
+output/calc_point.json
+output/thrust_targets_nlo_point.npz
+release/models/MIX17_head.npz
+release/models/MIX17_wifi.npz
+conventions/*

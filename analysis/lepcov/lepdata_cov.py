@@ -6,8 +6,10 @@ The Rivet reference tables read by fit_alpha0.lepdata carry only the total error
 quadrature. HEPData publishes the two components separately (label 'stat' and 'sys') for exactly
 the tables Rivet uses:
     ALEPH  ins636645 Table 54 (d54-x01-y01, in T)
-    DELPHI ins424112 Table 11 (d11-x01-y01, in 1-T)
+    DELPHI ins424112 Table 11 (d11-x01-y02, second dependent variable = charged plus neutral particles,
+           in 1-T; the first, d11-x01-y01, is the measurement from charged particles alone)
     OPAL   ins669402 Table 1  (d01-x01-y01, first dependent variable = 91 GeV, in 1-T)
+Each table is checked for the reaction it states (RE), so that a wrong column fails.
 The tables are cached as YAML under HEPDATA_DIR (default: ./hepdata next to this file); they are
 downloaded from https://www.hepdata.net/download/table/<ins>/Table%20<n>/yaml.
 
@@ -31,21 +33,25 @@ HEPDATA_DIR = os.environ.get('HEPDATA_DIR', os.path.join(HERE, 'hepdata'))
 sys.path.insert(0, os.environ.get('MAXENT_CODE', os.path.dirname(HERE)))   # fit_alpha0.py, in analysis/
 from fit_alpha0 import lepdata
 
-SRC = {'aleph': ('ins636645', 54, True), 'delphi': ('ins424112', 11, False), 'opal': ('ins669402', 1, False)}
+# (record, table, table in T, dependent variable, the reaction it must state)
+SRC = {'aleph': ('ins636645', 54, True, 0, 'E+ E- --> HADRONS'),
+       'delphi': ('ins424112', 11, False, 1, 'E+ E- --> (CHARGED + NEUTRAL) X'),
+       'opal': ('ins669402', 1, False, 0, 'E+ E- --> HADRONS')}
 
 
 def _read(name):
     import yaml
-    ins, tab, in_T = SRC[name]
+    ins, tab, in_T, col, react = SRC[name]
     f = os.path.join(HEPDATA_DIR, f'{ins}_{tab}.yaml')
     if not os.path.exists(f):
         import urllib.request
         os.makedirs(HEPDATA_DIR, exist_ok=True)
         urllib.request.urlretrieve(f'https://www.hepdata.net/download/table/{ins}/Table%20{tab}/yaml', f)
     d = yaml.safe_load(open(f))
-    dv = d['dependent_variables'][0]
+    dv = d['dependent_variables'][col]
     q = {x['name']: str(x['value']) for x in dv.get('qualifiers', [])}
     assert q.get('SQRT(S)', '').startswith('91'), (name, q)
+    assert q.get('RE') == react, (name, q)
     iv = d['independent_variables'][0]['values']
     lo = np.array([float(v['low']) for v in iv]); hi = np.array([float(v['high']) for v in iv])
     y = np.array([float(v['value']) for v in dv['values']])

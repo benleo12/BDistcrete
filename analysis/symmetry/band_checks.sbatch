@@ -3,17 +3,29 @@
 #SBATCH -c 8
 #SBATCH --mem=150G
 #SBATCH -t 2:00:00
-#SBATCH -J bandchk
-#SBATCH -o logs/band_checks_%j.out
+#SBATCH -J lmx_bandchk
+#SBATCH -o /mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code/logs/band_checks_%j.out
 # Checks behind the bands of Sec. 5 (band_checks.py): statistical errors, the part of the generator band
-# from the mixing fraction, the largest weight. Same model, point and hypercube as three_bands.sbatch.
-#   TAG=MIXGEOV3S9 sbatch --export=ALL band_checks.sbatch
+# from the mixing fraction, the largest weight. Same model, point and hypercube as three_bands.sbatch (pass the
+# same MIX, NODES and BOX). MIX=linear (the default) writes band_checks_<tag>_lin.json.
+#   MAXENT_DIR=$RUN TAG=MIXGEOV3S9 sbatch --export=ALL band_checks.sbatch
+# It runs only in the rerun's folder RUN (E7): MAXENT_DIR must resolve to it, and the scripts there must have the MIX
+# switch. The rerun's checks are on: the bundle must be one of the beam-photon rule in use (BEAM_PHOTONS=remove,
+# bundle_rule.py) and the export must carry the refitted temperature (T_DIR, E2). EXPORT, REF and OUT override the
+# files of TAG; TORCH_ENV the Python environment (default /mnt/beegfs/bassi/reweighting/env/torch).
 set -uo pipefail
-MAXENT_DIR=${MAXENT_DIR:-/mnt/beegfs/bassi/reweighting/maxent_code}; R=$(dirname "$MAXENT_DIR")   # analysis/ in the repository, R its parent
-cd "$MAXENT_DIR" || exit 1; [ -f $R/env/torch/bin/activate ] && source $R/env/torch/bin/activate
-export OMP_NUM_THREADS=8 TORCH_THREADS=8 RIVET_REF=$MAXENT_DIR/rivet_ref
+RUN=/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code    # E7: the only folder this script runs in
+[ "$(realpath "${MAXENT_DIR:-/nonexistent}" 2>/dev/null)" = "$RUN" ] || { echo "MAXENT_DIR must be $RUN (it is '${MAXENT_DIR:-unset}')"; exit 2; }
+grep -q "^MIX = " "$RUN/band_checks.py" || { echo "$RUN/band_checks.py has no MIX switch (an earlier draft's script)"; exit 2; }
+TORCH_ENV=${TORCH_ENV:-/mnt/beegfs/bassi/reweighting/env/torch}
+cd "$RUN" || exit 2; [ -f $TORCH_ENV/bin/activate ] || { echo "no Python environment at $TORCH_ENV"; exit 2; }; source $TORCH_ENV/bin/activate
+export OMP_NUM_THREADS=8 TORCH_THREADS=8 RIVET_REF=$RUN/rivet_ref PYTHONDONTWRITEBYTECODE=1
+export BEAM_PHOTONS=remove T_DIR=$RUN/output/temperature
 M=output/models/${TAG:?}
-export NODES=200 SEED=11
+EXPORT=${EXPORT:-${M}_cond.npz}; REF=${REF:-${M}_ref_v2_slim.npz}
+export MIX=${MIX:-linear}; SFX=$([ "$MIX" = linear ] && echo _lin)
+export NODES=${NODES:-$([ "$MIX" = linear ] && echo 2000 || echo 200)} SEED=11 BOX=${BOX:-full} OUT=${OUT:-output/band_checks_${TAG}${SFX}}
 export CENTRAL=0.118,0.68,3.9,0.48,0.46,0.17,0.97,0.18,0.102337,0.654714,3.528693,1.849375,0.914156,0.374094,0.33107,0.78,0.5
-python3 -u band_checks.py MIX ${M}_cond.npz ${M}_ref_v2_slim.npz output/thrust_targets_nlo_point.npz || { echo "BAND CHECKS FAILED"; exit 3; }
+echo "=== band checks $TAG ($MIX, $NODES points over $BOX) on $(hostname): $EXPORT $REF -> $OUT $(date)"
+python3 -B -u band_checks.py MIX $EXPORT $REF output/thrust_targets_nlo_point.npz || { echo "BAND CHECKS FAILED"; exit 3; }
 echo "BAND CHECKS $TAG DONE $(date)"

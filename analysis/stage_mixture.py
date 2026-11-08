@@ -35,6 +35,9 @@ count is needed. Set LADDER_K explicitly to override.
 """
 import json, os
 
+# the rerun (BEAM_PHOTONS=remove, score_obs.py) names its data set; the defaults are older data sets
+if (os.environ.get('BEAM_PHOTONS') or 'keep') != 'keep' and not os.environ.get('DM_DATA'):
+    raise SystemExit('BEAM_PHOTONS is set: give the data set as DM_DATA')
 DATA = os.environ.get('DM_DATA', 'data_stagePURE17' if os.path.exists('data_stagePURE17/meta.json') else 'data_stageDM17')
 meta = json.load(open(f'{DATA}/meta.json'))
 train = {m['rid']: tuple(m['theta']) for m in meta['train']}

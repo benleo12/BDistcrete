@@ -12,17 +12,29 @@ Writes output/valid_map.json.
 VALID_MODEL=<tag> scores output/models/<tag>_cond.npz with <tag>_ref.npz instead of the C model,
 VALID_DATA and VALID_BLIND_DATA give the folders of the held-out and the validation runs, and
 VALID_OUT the output file (the final densified Stage C model: C_P2augfullfac0, gen/data_abc and
-gen/data_abc_blind), VALID_HALF=report the report half of each run."""
+gen/data_abc_blind), VALID_HALF=report the report half of each run.
+
+The rerun (score_obs.py): VALID_DATA, VALID_MODEL and VALID_OUT are required, and a missing run is an
+error (VALID_ALLOW_MISSING=1 skips it, as before). BEAM_PHOTONS=remove takes the beam photons out of
+the multiplicity, the kaon fraction, the x_p spectrum and so the joint (1-T, mult) test, on both sides:
+the reference's from the particles of VALID_REF_PARTICLES (default the bundle), its shapes checked
+against the old bundle VALID_REF_ORIG. VALID_REF overrides the bundle (output/models/<model>_ref.npz).
+With T_DIR set the export must carry the refitted temperature of the model."""
 import json, os
 import numpy as np
 from ab_analysis import Cond
-from r2_ladder import make_bins, pulls, width_of, strange_frac
+from r2_ladder import make_bins, pulls, width_of
 from xp_closure import per_event_bincontents, width_xp, XP_BINS
+import score_obs as SO
 
-DATA = os.environ.get('VALID_DATA', 'data_stageC')
+DATA = os.environ['VALID_DATA']
 BLIND_DATA = os.environ.get('VALID_BLIND_DATA', DATA)
-MODEL = os.environ.get('VALID_MODEL', 'C')
-OUT = os.environ.get('VALID_OUT', 'output/valid_map.json')
+MODEL = os.environ['VALID_MODEL']
+OUT = os.environ['VALID_OUT']
+REF = os.environ.get('VALID_REF', f'output/models/{MODEL}_ref.npz')
+REF_PARTICLES = os.environ.get('VALID_REF_PARTICLES', REF)
+REF_ORIG = os.environ.get('VALID_REF_ORIG', '')
+ALLOW_MISSING = os.environ.get('VALID_ALLOW_MISSING', '') == '1'
 # VALID_HALF=report scores the report half of every run, the split and the test of the paper's
 # closure width (r2_ladder.py); unset, the whole run as before
 HALF = os.environ.get('VALID_HALF', '') == 'report'
@@ -68,26 +80,34 @@ def joint_width(x_ref, y_ref, w, x_t, y_t):
 
 
 def main():
-    cond = Cond(MODEL); ref = np.load(f'output/models/{MODEL}_ref.npz')
-    robs = {o: ref[o].astype(float) for o in CSV_OBS + ['nbaryon', 'strange']}
-    ref_counts = per_event_bincontents(ref['particles'][:, :, 0], ref['mask'], XP_BINS)
+    cond = Cond(MODEL)
+    T = SO.check_export_T(f'output/models/{MODEL}_cond.npz', cond.T)
+    SO.need(REF, REF_PARTICLES)
+    robs = SO.reference_obs(REF, CSV_OBS + ['nbaryon', 'strange'], particles=REF_PARTICLES, orig=REF_ORIG or None)
+    rp = np.load(REF_PARTICLES); Pref, Mref = rp['particles'], rp['mask']
+    ref_counts = per_event_bincontents(Pref[:, :, 0], SO.kept(Pref, Mref), XP_BINS)
+    del rp, Pref, Mref
     out = {}
     for rid, th in {**ANCHOR, **POINTS}.items():
         src = DATA if rid in ANCHOR else BLIND_DATA
         fnpz = f'{src}/particles_full_{rid:04d}.npz'
         fcsv = f'{src}/shapes_run_{rid:04d}.csv'
         if not (os.path.exists(fnpz) and os.path.exists(fcsv)):
-            continue
+            if ALLOW_MISSING:
+                continue
+            SO.need(fnpz, fcsv)
         import pandas as pd
-        d = np.load(fnpz); sh = pd.read_csv(fcsv)
+        d = np.load(fnpz); sh = SO.read_shapes(fcsv)
         parts, mask, nbar = d['particles'], d['mask'], d['nbaryon']
         sel = report_half(rid, len(sh)) if HALF else np.arange(len(sh))
         parts, mask, nbar = parts[sel], mask[sel], nbar[sel]
         tobs = {o: sh[o].values[sel] for o in CSV_OBS}
         tobs['nbaryon'] = nbar.astype(float)
-        tobs['strange'] = strange_frac(parts, mask).astype(float)
+        nb = SO.n_beam(parts, mask) if SO.REMOVE else None
+        tobs['strange'] = SO.strange_frac(parts, mask, nb=nb).astype(float)
+        tobs['mult_total'] = SO.mult_total(tobs['mult_total'], parts, mask, where=f'{src} run {rid}', nb=nb)
         f = cond.f_at(np.array(th))
-        w = np.exp((f-f.max())/cond.T); w /= w.sum()
+        w = np.exp((f-f.max())/T); w /= w.sum()
         neff = 1.0/np.sum(w**2)
         uni = np.full(cond.Nref, 1.0/cond.Nref)
         row = {'theta': list(th), 'N_eff': float(neff), 'kind': 'anchor' if rid in ANCHOR else 'valid'}
@@ -103,7 +123,7 @@ def main():
             mu_t = tobs[o].mean();    var_t = tobs[o].var()/len(tobs[o])
             row[f'{o}_z'] = round(float((mu_r-mu_t)/np.sqrt(var_r+var_t)), 2)
         # x_p spectrum
-        tgt_counts = per_event_bincontents(parts[:, :, 0], mask, XP_BINS)
+        tgt_counts = per_event_bincontents(parts[:, :, 0], SO.kept(parts, mask), XP_BINS)
         row['x_p'], _ = width_xp(ref_counts, w, tgt_counts)
         row['x_p'] = round(row['x_p'], 3)
         # joint 2D (1-T, mult)
@@ -128,6 +148,9 @@ def main():
             summ[f'{o}_absz_max'] = round(float(np.max(zz)), 2)
         print('SUMMARY over validation points:', summ)
         out['summary'] = summ
+    if SO.REMOVE or SO.T_DIR:
+        out['provenance'] = dict(SO.describe(), T=T, ref=REF, ref_particles=REF_PARTICLES, ref_orig=REF_ORIG or None,
+                                 data=DATA, blind_data=BLIND_DATA, data_realpath=os.path.realpath(DATA))
     json.dump(out, open(OUT, 'w'), indent=1)
     print('VALID MAP DONE')
 

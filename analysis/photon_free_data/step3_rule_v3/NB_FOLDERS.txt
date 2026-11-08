@@ -1,0 +1,30 @@
+# The photon-free mirror folders that Phase A made (nb_links.py FOLDERS through nb_name; B0's
+# nb_links_verify.json lists the same). The v3 step rewrites CSVs only directly inside these folders
+# (nb3_units.py refuses any other destination); B0's units are in 20 of them.
+/mnt/beegfs/bassi/reweighting/gen/data_release_nb
+/mnt/beegfs/bassi/reweighting/gen/data_release_orig_held_nb
+/mnt/beegfs/bassi/reweighting/gen/data_v3_nb
+/mnt/beegfs/bassi/reweighting/gen/data_abc_nb
+/mnt/beegfs/bassi/reweighting/gen/data_abc_blind_nb
+/mnt/beegfs/bassi/reweighting/gen/data_abc_ext_nb/k1
+/mnt/beegfs/bassi/reweighting/gen/data_abc_ext_nb/k2
+/mnt/beegfs/bassi/reweighting/gen/data_abc_ext_nb/k3
+/mnt/beegfs/bassi/reweighting/gen/data_abc_ext_nb/k4
+/mnt/beegfs/bassi/reweighting/gen/data_ext_nb/k1
+/mnt/beegfs/bassi/reweighting/gen/data_ext_nb/k2
+/mnt/beegfs/bassi/reweighting/gen/data_ext_nb/k3
+/mnt/beegfs/bassi/reweighting/gen/data_ext_nb/k4
+/mnt/beegfs/bassi/reweighting/gen/data_trainext_nb/k1
+/mnt/beegfs/bassi/reweighting/gen/data_trainext_nb/k2
+/mnt/beegfs/bassi/reweighting/gen/data_trainext_nb/k3
+/mnt/beegfs/bassi/reweighting/gen/data_widebox_nb
+/mnt/beegfs/bassi/reweighting/maxent_code/data_stagePURE17_v3_nb
+/mnt/beegfs/bassi/reweighting/maxent_code/data_stagePURE17_v3_h400_nb
+/mnt/beegfs/bassi/reweighting/maxent_code/data_stagePURE17_v3ev20_nb
+/mnt/beegfs/bassi/reweighting/maxent_code/data_stagePURE17_nb
+/mnt/beegfs/bassi/reweighting/maxent_code/data_stagePURE17_orig_nb
+/mnt/beegfs/bassi/reweighting/maxent_code/data_stagePURE17_orig_h400_nb
+/mnt/beegfs/bassi/reweighting/maxent_code/data_stagePURE17_orig48_nb
+/mnt/beegfs/bassi/reweighting/maxent_code/data_stagePURE17_orig48_h400_nb
+/mnt/beegfs/bassi/reweighting/maxent_code/data_abc_h400_nb
+/mnt/beegfs/bassi/reweighting/maxent_code/data_abc_blind_nb

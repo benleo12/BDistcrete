@@ -1,7 +1,7 @@
 {
  "B": {
-  "master": 1.005174285999336,
-  "master_raw": 1.0051547726526147,
+  "master": 1.0144244049995332,
+  "master_raw": 1.0144343610284134,
   "temperature": 1.0,
   "rank_K": 48,
   "best_step": 270000,
@@ -228,46 +228,46 @@
    ]
   ],
   "per_obs": {
-   "1_minus_thrust": 1.0324058644030998,
-   "mult_total": 1.0108479134841666,
-   "B_total": 0.9536946691081356,
-   "rho_heavy": 1.0244800301169694,
-   "nbaryon": 1.0044429528843086
+   "1_minus_thrust": 1.0485633305150877,
+   "mult_total": 1.0134513341547031,
+   "B_total": 0.9636257147118554,
+   "rho_heavy": 1.0420386122682754,
+   "nbaryon": 1.0044430333477452
   },
   "width_uniform": {
-   "1_minus_thrust": 2.596456752570196,
-   "mult_total": 1.6228437503619038,
-   "B_total": 2.6649554448790367,
-   "rho_heavy": 2.931816391865074,
+   "1_minus_thrust": 2.6222218104633432,
+   "mult_total": 1.6320667393018347,
+   "B_total": 2.6656508827280465,
+   "rho_heavy": 2.960748987094271,
    "nbaryon": 21.43197368268151
   },
   "gain_over_uniform": {
-   "1_minus_thrust": 2.51,
+   "1_minus_thrust": 2.5,
    "mult_total": 1.61,
-   "B_total": 2.79,
-   "rho_heavy": 2.86,
+   "B_total": 2.77,
+   "rho_heavy": 2.84,
    "nbaryon": 21.34
   },
   "calibration_check": {
-   "1_minus_thrust": 0.9588979522075158,
-   "mult_total": 0.9661337875114366,
-   "B_total": 1.0390658084216906,
-   "rho_heavy": 0.9292091577333293,
+   "1_minus_thrust": 0.9775400320477208,
+   "mult_total": 0.9753680680611515,
+   "B_total": 0.9951666078757029,
+   "rho_heavy": 0.9411187632606118,
    "nbaryon": 1.1308156907937346
   },
   "calibration_spread": {
-   "1_minus_thrust": 0.1085733985319756,
-   "mult_total": 0.08731227234772786,
-   "B_total": 0.10914880259552223,
-   "rho_heavy": 0.19173658119625472,
+   "1_minus_thrust": 0.11041254746662137,
+   "mult_total": 0.08628575280179228,
+   "B_total": 0.11954236765998172,
+   "rho_heavy": 0.15439649220850235,
    "nbaryon": 0.2623266030789386
   },
   "N_eff": {
-   "(0.1175, 0.1)": 1650488.6263089941,
-   "(0.1225, 0.3)": 1707489.9006251567,
-   "(0.115, 0.2)": 1773902.383170573,
-   "(0.128, 0.3)": 1667062.9495261738,
-   "(0.12, 0.15)": 1798607.556612048
+   "(0.1175, 0.1)": 1650488.623666938,
+   "(0.1225, 0.3)": 1707489.8962334786,
+   "(0.115, 0.2)": 1773902.3797487065,
+   "(0.128, 0.3)": 1667062.9519384287,
+   "(0.12, 0.15)": 1798607.5562338938
   },
   "N_ref": 1872000,
   "min_count": 5,
@@ -279,48 +279,76 @@
    "nbaryon": 6
   },
   "pull_mean": {
-   "1_minus_thrust": 0.018488303037503196,
-   "mult_total": -0.06802550382668784,
-   "B_total": 0.0095737722288986,
-   "rho_heavy": 0.015867366493222384,
-   "nbaryon": -0.06563618065708435
+   "1_minus_thrust": 0.011329379726869293,
+   "mult_total": -0.06684115338127772,
+   "B_total": 0.004925106257512505,
+   "rho_heavy": 0.023893271393776592,
+   "nbaryon": -0.06563624246807834
   },
   "per_point": {
    "(0.1175, 0.1)": {
-    "1_minus_thrust": 1.0128157342049908,
-    "mult_total": 1.1659809033197988,
-    "B_total": 0.7438418943671488,
-    "rho_heavy": 1.1450800349974268,
-    "nbaryon": 0.5496557157641725
+    "1_minus_thrust": 0.9439643598620916,
+    "mult_total": 1.165980904459487,
+    "B_total": 0.7834779993662561,
+    "rho_heavy": 1.184780135665178,
+    "nbaryon": 0.5496559324414628
    },
    "(0.1225, 0.3)": {
-    "1_minus_thrust": 0.9615792578236964,
-    "mult_total": 1.0220463378008766,
-    "B_total": 0.6135605295828342,
-    "rho_heavy": 0.9643297898671775,
-    "nbaryon": 1.3576856350130002
+    "1_minus_thrust": 1.0517109301095016,
+    "mult_total": 1.008361241999661,
+    "B_total": 0.6362438519645265,
+    "rho_heavy": 0.9667381189108158,
+    "nbaryon": 1.3576853226660972
    },
    "(0.115, 0.2)": {
-    "1_minus_thrust": 1.1593962595899328,
-    "mult_total": 0.7705962491910704,
-    "B_total": 1.177451684078485,
-    "rho_heavy": 1.0519617949277758,
-    "nbaryon": 1.129881425205537
+    "1_minus_thrust": 1.1181137331615196,
+    "mult_total": 0.8119580961669454,
+    "B_total": 1.1918090077591383,
+    "rho_heavy": 1.034694078097224,
+    "nbaryon": 1.129881467617206
    },
    "(0.128, 0.3)": {
-    "1_minus_thrust": 1.0555988460819732,
-    "mult_total": 1.1010407043964936,
-    "B_total": 1.0328569962957588,
-    "rho_heavy": 0.946104673069883,
-    "nbaryon": 0.8319748355471273
+    "1_minus_thrust": 1.1385641056604796,
+    "mult_total": 1.0945133467511614,
+    "B_total": 0.9897998832922188,
+    "rho_heavy": 1.0536608643213747,
+    "nbaryon": 0.8319751210842601
    },
    "(0.12, 0.15)": {
-    "1_minus_thrust": 0.9726392243149059,
-    "mult_total": 0.9945753727125934,
-    "B_total": 1.2007622412164511,
-    "rho_heavy": 1.014923857722585,
-    "nbaryon": 1.153017152891706
+    "1_minus_thrust": 0.9904635237818462,
+    "mult_total": 0.9864430813962604,
+    "B_total": 1.2167978311771377,
+    "rho_heavy": 0.9703198643467841,
+    "nbaryon": 1.1530173229297
    }
+  },
+  "scored_from": "output/models/B_P2augfac1_trunk.pt",
+  "data": "/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_abc",
+  "n_held_events": {
+   "6700": 80000,
+   "6701": 80000,
+   "6702": 80000,
+   "6703": 80000,
+   "6704": 80000
+  },
+  "training_record": "output/published/p2aug_B_fac_s1.json",
+  "temperature_trained": 1.0,
+  "temperature_source": "refit",
+  "stop_width": 0.9989203539404512,
+  "stop_width_at_trained_T": 0.9989032535960091,
+  "master_at_trained_T": 1.0144343610284134,
+  "beam_photons": "remove",
+  "data_realpath": "/mnt/beegfs/bassi/reweighting/gen/data_abc_nb",
+  "model_realpath": "/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code/output/models/B_P2augfac1_trunk.pt",
+  "lmx_fingerprint": {
+   "md5": "7facff62b75e0ffd83701bece65537c1",
+   "code_md5": "57b5bf3833c268b08d62763cf3acd9f0",
+   "spec": "OUT=output/p2aug_B_fac_s1.json STAGE=B NET=fac SEED=1 K=48 MODEL=output/models/B_P2augfac1_trunk.pt DATA=/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_abc TMODE=refit TRAINED=output/published/p2aug_B_fac_s1.json ABC=1",
+   "run_id": "20261107-013026-2306821",
+   "outputs": {
+    "output/temperature/B_P2augfac1.json": "f92e80477e8983a4286fb950b331434e"
+   },
+   "inputs": {}
   }
  }
 }

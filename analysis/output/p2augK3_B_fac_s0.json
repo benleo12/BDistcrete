@@ -1,7 +1,7 @@
 {
  "B": {
-  "master": 1.2466503732346204,
-  "master_raw": 1.246625468459638,
+  "master": 1.2584850795964435,
+  "master_raw": 1.2584616652234917,
   "temperature": 1.0,
   "rank_K": 3,
   "best_step": 270000,
@@ -228,46 +228,46 @@
    ]
   ],
   "per_obs": {
-   "1_minus_thrust": 1.1908789871570127,
-   "mult_total": 1.121747630901673,
-   "B_total": 1.1633692377953753,
-   "rho_heavy": 1.1538688507999724,
-   "nbaryon": 1.603387159519069
+   "1_minus_thrust": 1.2109380863188988,
+   "mult_total": 1.1263722727738146,
+   "B_total": 1.1770775702488572,
+   "rho_heavy": 1.1746500440065328,
+   "nbaryon": 1.6033874246341135
   },
   "width_uniform": {
-   "1_minus_thrust": 2.596456752570196,
-   "mult_total": 1.6228437503619038,
-   "B_total": 2.6649554448790367,
-   "rho_heavy": 2.931816391865074,
+   "1_minus_thrust": 2.6222218104633432,
+   "mult_total": 1.6320667393018347,
+   "B_total": 2.6656508827280465,
+   "rho_heavy": 2.960748987094271,
    "nbaryon": 21.43197368268151
   },
   "gain_over_uniform": {
-   "1_minus_thrust": 2.18,
+   "1_minus_thrust": 2.17,
    "mult_total": 1.45,
-   "B_total": 2.29,
-   "rho_heavy": 2.54,
+   "B_total": 2.26,
+   "rho_heavy": 2.52,
    "nbaryon": 13.37
   },
   "calibration_check": {
-   "1_minus_thrust": 0.9588979522075158,
-   "mult_total": 0.9661337875114366,
-   "B_total": 1.0390658084216906,
-   "rho_heavy": 0.9292091577333293,
+   "1_minus_thrust": 0.9775400320477208,
+   "mult_total": 0.9753680680611515,
+   "B_total": 0.9951666078757029,
+   "rho_heavy": 0.9411187632606118,
    "nbaryon": 1.1308156907937346
   },
   "calibration_spread": {
-   "1_minus_thrust": 0.1085733985319756,
-   "mult_total": 0.08731227234772786,
-   "B_total": 0.10914880259552223,
-   "rho_heavy": 0.19173658119625472,
+   "1_minus_thrust": 0.11041254746662137,
+   "mult_total": 0.08628575280179228,
+   "B_total": 0.11954236765998172,
+   "rho_heavy": 0.15439649220850235,
    "nbaryon": 0.2623266030789386
   },
   "N_eff": {
-   "(0.1175, 0.1)": 1644208.8290050863,
-   "(0.1225, 0.3)": 1702180.0917875967,
-   "(0.115, 0.2)": 1781156.8576126026,
-   "(0.128, 0.3)": 1667770.7554451057,
-   "(0.12, 0.15)": 1809235.4876056805
+   "(0.1175, 0.1)": 1644208.8185608247,
+   "(0.1225, 0.3)": 1702180.0753481071,
+   "(0.115, 0.2)": 1781156.8577784242,
+   "(0.128, 0.3)": 1667770.7690958849,
+   "(0.12, 0.15)": 1809235.4869504727
   },
   "N_ref": 1872000,
   "min_count": 5,
@@ -279,48 +279,76 @@
    "nbaryon": 6
   },
   "pull_mean": {
-   "1_minus_thrust": 0.03835197796826301,
-   "mult_total": -0.029095006107458944,
-   "B_total": 0.012926434007999438,
-   "rho_heavy": 0.023026169083705594,
-   "nbaryon": 0.14169452782620748
+   "1_minus_thrust": 0.0323635556194104,
+   "mult_total": -0.028289131984329596,
+   "B_total": 0.008775256464859443,
+   "rho_heavy": 0.03119273378027575,
+   "nbaryon": 0.1416945419899062
   },
   "per_point": {
    "(0.1175, 0.1)": {
-    "1_minus_thrust": 1.3060928947055372,
-    "mult_total": 1.3055144339403368,
-    "B_total": 1.1078622151277697,
-    "rho_heavy": 1.4341671353325784,
-    "nbaryon": 1.6982088081031237
+    "1_minus_thrust": 1.239445141710629,
+    "mult_total": 1.305514470324603,
+    "B_total": 1.1147024719784449,
+    "rho_heavy": 1.4803704793814931,
+    "nbaryon": 1.6982097110576506
    },
    "(0.1225, 0.3)": {
-    "1_minus_thrust": 1.141259008438267,
-    "mult_total": 1.0913711774921349,
-    "B_total": 0.8428936812657598,
-    "rho_heavy": 1.047483027303098,
-    "nbaryon": 1.205805612728162
+    "1_minus_thrust": 1.2329472734972238,
+    "mult_total": 1.0839618367972044,
+    "B_total": 0.865428131839973,
+    "rho_heavy": 1.0606031122985875,
+    "nbaryon": 1.2058052121770426
    },
    "(0.115, 0.2)": {
-    "1_minus_thrust": 1.171791389342562,
-    "mult_total": 0.7657478059463061,
-    "B_total": 1.1936990241458103,
-    "rho_heavy": 1.076965905826954,
-    "nbaryon": 2.2765361832549735
+    "1_minus_thrust": 1.1215009983779283,
+    "mult_total": 0.80550772348705,
+    "B_total": 1.205814969592226,
+    "rho_heavy": 1.0596180146891712,
+    "nbaryon": 2.2765363312216573
    },
    "(0.128, 0.3)": {
-    "1_minus_thrust": 1.3004677546107937,
-    "mult_total": 1.3188943408447416,
-    "B_total": 1.2916671388646772,
-    "rho_heavy": 1.1623541438670817,
-    "nbaryon": 1.7603693377069367
+    "1_minus_thrust": 1.3756959309768595,
+    "mult_total": 1.3150739552881863,
+    "B_total": 1.2750657373067935,
+    "rho_heavy": 1.2490805620023382,
+    "nbaryon": 1.7603699667125021
    },
    "(0.12, 0.15)": {
-    "1_minus_thrust": 1.034783888687904,
-    "mult_total": 1.1272103962848457,
-    "B_total": 1.3807241295728598,
-    "rho_heavy": 1.0483740416701488,
-    "nbaryon": 1.0760158558021489
+    "1_minus_thrust": 1.0851010870318534,
+    "mult_total": 1.121803377972029,
+    "B_total": 1.4243765405268494,
+    "rho_heavy": 1.0235780516610742,
+    "nbaryon": 1.0760159020017144
    }
+  },
+  "scored_from": "output/models/B_P2augK3fac0_trunk.pt",
+  "data": "/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_abc",
+  "n_held_events": {
+   "6700": 80000,
+   "6701": 80000,
+   "6702": 80000,
+   "6703": 80000,
+   "6704": 80000
+  },
+  "training_record": "output/published/p2augK3_B_fac_s0.json",
+  "temperature_trained": 1.0,
+  "temperature_source": "refit",
+  "stop_width": 1.2761080667404472,
+  "stop_width_at_trained_T": 1.2760974813988157,
+  "master_at_trained_T": 1.2584616652234917,
+  "beam_photons": "remove",
+  "data_realpath": "/mnt/beegfs/bassi/reweighting/gen/data_abc_nb",
+  "model_realpath": "/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code/output/models/B_P2augK3fac0_trunk.pt",
+  "lmx_fingerprint": {
+   "md5": "b5116a38f798aef8ce28cda88864daf8",
+   "code_md5": "57b5bf3833c268b08d62763cf3acd9f0",
+   "spec": "OUT=output/p2augK3_B_fac_s0.json STAGE=B NET=fac SEED=0 K=3 MODEL=output/models/B_P2augK3fac0_trunk.pt DATA=/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_abc TMODE=refit TRAINED=output/published/p2augK3_B_fac_s0.json ABC=1",
+   "run_id": "20261107-013026-2306821",
+   "outputs": {
+    "output/temperature/B_P2augK3fac0.json": "797eee598c314babae3f3731bf9efcb6"
+   },
+   "inputs": {}
   }
  }
 }

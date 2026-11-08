@@ -1,0 +1,52 @@
+# Every file of the working tree (~/BDistcrete/analysis) that the jobs of the scoring side read in RUN. sync_run.sh
+# copies it, with symmetry/files_prop.txt of the propagation side. Paths relative to analysis/, globs allowed, one
+# per line, # comments. Made from the scripts the jobs run and every local module they import (ast, followed),
+# and the files they open; lmx_fingerprint.py takes the md5 of all of it for the records of the steps.
+# -- the batch scripts, their tools, the scorings
+symmetry/rerun/*.sbatch
+symmetry/rerun/*.sh
+symmetry/rerun/*.py
+symmetry/rerun/files_score.txt
+symmetry/rerun/specs/*.txt
+# -- the scripts the jobs run
+r2_ladder.py
+stage_mixture.py
+recalibrate_T.py
+apply_T.py
+ladder_widths_big.py
+eval_valid.py
+single_members.py
+xp_null.py
+wifi_embed.py
+wifi_fit.py
+wifi_diag.py
+wifi_coverage.py
+wifi_gensplit.py
+fig_closure_mix.py
+kscan_collect.py
+widebox_collect.py
+toy_final.py
+trunc_frac.py
+param_count.py
+# -- the release phase (package_lmx, table_lmx, accuracy_lmx)
+package_release.py
+make_stage_table.py
+precision_gap.py
+closure_vs_distance.py
+fit_accuracy_law.py
+# -- the modules they import
+score_obs.py
+beam_photons.py
+bundle_rule.py
+mixture_cfg.py
+ab_analysis.py
+money_style.py
+xp_closure.py
+directlib.py
+fit_alpha0.py
+np_shift.py
+release/gentune/*.py
+# -- the designs the scorers read from RUN (r2_ladder.py: STAGEE_CSV, STAGEF_CSV and their defaults), and the NLO
+#    thrust targets of wifi_coverage.py
+*.csv
+output/thrust_targets_nlo_point.npz

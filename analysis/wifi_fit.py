@@ -25,17 +25,27 @@ the published network (w_ij = delta_ij/(M T)) and for the wifi fit, so the fit c
 make the weights worse.
 
     python wifi_fit.py output/wifi_MIXGEO_basis.npz output/models/MIXGEO_cond.npz output/models/MIXGEO_ref_v2_slim.npz
+
+The rerun (score_obs.py): BEAM_PHOTONS=remove needs a basis whose held-out observables are photon-free
+(wifi_embed.py under remove) and takes the reference's multiplicity and kaon fraction without the
+beam photons from REF_PARTICLES (the particles of the same events), its shapes checked against the
+old bundle REF_ORIG. With T_DIR set the export must carry the refitted temperature, which enters the
+published weights. WIFI_FIT_OUT names the output (without its extension).
 """
 import os, sys, json, time
 import numpy as np
 from scipy.special import expit
 sys.path.insert(0, '.')
 from r2_ladder import make_bins, pulls, width_of
+import score_obs as SO
 
 bas, export, refpath = sys.argv[1], sys.argv[2], sys.argv[3]
+SO.need(bas, export, refpath)
 B = np.load(bas); c = np.load(export, mmap_mode='r')
 ENS, K = int(B['ens']), int(B['K']); M2 = ENS*ENS; OBS = [str(o) for o in B['obs']]
-kind = str(B['kind']); T = float(c['temperature'])
+kind = str(B['kind']); T = SO.check_export_T(export, float(c['temperature']))
+if SO.REMOVE and (str(B['beam_photons']) if 'beam_photons' in B.files else 'keep') != 'remove':
+    raise RuntimeError(f'{bas}: its held-out observables are not photon-free (make it with BEAM_PHOTONS=remove)')
 OUT = os.environ.get('WIFI_FIT_OUT', bas.replace('_basis.npz', '_fit'))
 LOSS = os.environ.get('WIFI_LOSS', 'mlc'); assert LOSS in ('mlc', 'bce'), LOSS
 t0 = time.time()
@@ -117,7 +127,12 @@ def btilde(theta):
         ns = c['B0_W0'].shape[1]; nh = c['BH0_W0'].shape[1]; fr = float(np.clip(theta[-1], 0, 1))
         return np.stack([(1 - fr)*bnet('B', mi, x[:, :ns]).ravel() + fr*bnet('BH', mi, x[:, ns:ns + nh]).ravel() for mi in range(ENS)])
     return np.stack([bnet('B', mi, x).ravel() for mi in range(ENS)])
-ref = np.load(refpath); robs = {o: np.asarray(ref[o], np.float64) for o in OBS}; Nref = len(robs[OBS[0]])
+_rp, _ro, _pd = os.environ.get('REF_PARTICLES', ''), os.environ.get('REF_ORIG', ''), os.environ.get('POBS_DIR', '')
+if SO.REMOVE:
+    assert _rp and _ro, 'BEAM_PHOTONS=remove: set REF_PARTICLES and REF_ORIG'
+robs = SO.reference_obs(refpath, OBS, particles=_rp or None, orig=_ro or None,
+                        cache=os.path.join(_pd, os.path.basename(os.path.realpath(_rp)).replace('.npz', '_pobs.npz')) if _pd and _rp else None)
+Nref = len(robs[OBS[0]])
 assert AE.shape[1] == Nref, (AE.shape, Nref)
 w_pub = np.zeros(M2 + 1); w_pub[1:] = np.eye(ENS).ravel()/(ENS*T)
 res = {'published': {}, 'wifi': {}}; per = {'published': {}, 'wifi': {}}
@@ -144,5 +159,6 @@ np.savez(OUT + '.npz', w=w, C=Cw, V=V, U=U, w_published=w_pub, ens=ENS, K=K, kin
 json.dump(dict(export=export, basis=bas, loss=LOSS, n_weights=len(w), loss_published=float(L0), loss_wifi=float(L), newton_iterations=int(it + 1),
                w=w.tolist(), w_err=sd.tolist(), corr_max_offdiag=float(np.abs(corr - np.eye(len(w))).max()),
                closure=res, logw_sigma_median=float(np.sqrt(np.median(sig2))), logw_sigma_p95=float(np.sqrt(np.percentile(sig2, 95))),
-               fit_split=int(B['fit_split'])), open(OUT + '.json', 'w'), indent=1)
+               fit_split=int(B['fit_split']), **({'temperature': T, **SO.describe()} if (SO.REMOVE or SO.T_DIR) else {})),
+          open(OUT + '.json', 'w'), indent=1)
 print(f'wrote {OUT}.npz and {OUT}.json [{time.time()-t0:.0f} s]')

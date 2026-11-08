@@ -1,7 +1,7 @@
 {
  "W": {
-  "master": 1.091604814468912,
-  "master_raw": 1.027933192448684,
+  "master": 1.1468913207945104,
+  "master_raw": 1.0907536049789137,
   "temperature": 0.9,
   "rank_K": 48,
   "best_step": 12000,
@@ -20,59 +20,84 @@
    ]
   ],
   "per_obs": {
-   "1_minus_thrust": 1.0410342614522405,
-   "mult_total": 1.0474007038845028,
-   "B_total": 1.2846599896225723,
-   "rho_heavy": 0.9933243029163331
+   "1_minus_thrust": 1.1982213737566205,
+   "mult_total": 1.0530976631743159,
+   "B_total": 1.3209334225829747,
+   "rho_heavy": 1.0153128236641304
   },
   "width_uniform": {
-   "1_minus_thrust": 2.4941284464531384,
-   "mult_total": 3.5412442839973903,
-   "B_total": 2.9803946169728674,
-   "rho_heavy": 2.7792702784971937
+   "1_minus_thrust": 2.5387199851181417,
+   "mult_total": 3.521705210868477,
+   "B_total": 3.002309499790415,
+   "rho_heavy": 2.8526433171301084
   },
   "gain_over_uniform": {
-   "1_minus_thrust": 2.4,
-   "mult_total": 3.38,
-   "B_total": 2.32,
-   "rho_heavy": 2.8
+   "1_minus_thrust": 2.12,
+   "mult_total": 3.34,
+   "B_total": 2.27,
+   "rho_heavy": 2.81
   },
   "calibration_check": {
-   "1_minus_thrust": 0.879315967239785,
-   "mult_total": 0.9716109283084036,
-   "B_total": 0.9073828026057661,
-   "rho_heavy": 0.9654965662782522
+   "1_minus_thrust": 1.0373084349197057,
+   "mult_total": 0.9643111240879055,
+   "B_total": 0.9570295311945782,
+   "rho_heavy": 0.9927379425958326
   },
   "calibration_spread": {
-   "1_minus_thrust": 0.17703924153486178,
-   "mult_total": 0.01927484295554119,
-   "B_total": 0.1512981732607322,
-   "rho_heavy": 0.18737952837737226
+   "1_minus_thrust": 0.14617571533775325,
+   "mult_total": 0.012055596991783343,
+   "B_total": 0.11015021049187224,
+   "rho_heavy": 0.2067901469650015
   },
   "N_eff": {
-   "(0.083,)": 55241.632022426886
+   "(0.083,)": 55241.63133548396
   },
   "N_ref": 63000,
   "min_count": 5,
   "nbins_used": {
    "1_minus_thrust": 25,
-   "mult_total": 76,
+   "mult_total": 77,
    "B_total": 25,
    "rho_heavy": 25
   },
   "pull_mean": {
-   "1_minus_thrust": -0.12503199841554255,
-   "mult_total": 0.10712459513564102,
-   "B_total": -0.11894449074305964,
-   "rho_heavy": -0.19868198160915437
+   "1_minus_thrust": -0.11998030328128806,
+   "mult_total": 0.10211048518498936,
+   "B_total": -0.12905485877316136,
+   "rho_heavy": -0.22127656748160376
   },
   "per_point": {
    "(0.083,)": {
-    "1_minus_thrust": 1.0410342614522405,
-    "mult_total": 1.0474007038845028,
-    "B_total": 1.2846599896225723,
-    "rho_heavy": 0.9933243029163331
+    "1_minus_thrust": 1.1982213737566205,
+    "mult_total": 1.0530976631743159,
+    "B_total": 1.3209334225829747,
+    "rho_heavy": 1.0153128236641304
    }
+  },
+  "scored_from": "output/models/W_P2wb18local9100fac0_trunk.pt",
+  "data": "/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_widebox",
+  "n_held_events": {
+   "9100": 80000
+  },
+  "training_record": "output/published/p2wb18local9100_W_fac_s0.json",
+  "temperature_trained": 0.9,
+  "temperature_source": "refit",
+  "stop_width": 1.101128507788272,
+  "stop_width_at_trained_T": 1.101116904310329,
+  "master_at_trained_T": 1.146793281618124,
+  "beam_photons": "remove",
+  "data_realpath": "/mnt/beegfs/bassi/reweighting/gen/data_widebox_nb",
+  "model_realpath": "/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code/output/models/W_P2wb18local9100fac0_trunk.pt",
+  "lmx_fingerprint": {
+   "md5": "70685cb12e109584bedd7e7c099c440a",
+   "code_md5": "57b5bf3833c268b08d62763cf3acd9f0",
+   "spec": "OUT=output/p2wb18local9100_W_fac_s0.json STAGE=W NET=fac SEED=0 K=48 MODEL=output/models/W_P2wb18local9100fac0_trunk.pt DATA=/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_widebox TMODE=refit TRAINED=output/published/p2wb18local9100_W_fac_s0.json STAGEW_CSV=/mnt/beegfs/bassi/reweighting/lmx_runs/gen/designs/stageW_local_9100.csv NREF_TOTAL=63000 SUFFIX=_P2wb18local9100fac0 DUMP=1",
+   "run_id": "20261107-013026-2306821",
+   "outputs": {
+    "output/temperature/W_P2wb18local9100fac0.json": "a173756bcafc2d8c04a10aeaa1fd482f",
+    "output/models/W_P2wb18local9100fac0_w_9100.npy": "f565a3ef5bb5d039238a9a0452794722"
+   },
+   "inputs": {}
   }
  }
 }

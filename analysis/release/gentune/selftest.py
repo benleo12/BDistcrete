@@ -32,15 +32,21 @@ on a different axis altogether, as events rebuilt in a rotated frame have shown.
   - every other event must reproduce its log weight to TOL_LOGW, after the normalization, which
     a moved event shifts for all of them, is taken out
 
+Between the two, the rule that finds the photons radiated by the beams, which the paper leaves out
+of every observable (gentune.beam_photons), runs on the stored events of every bundle and must do
+what it states in every event. A failure there leaves the weights as they are, but the observables
+of gentune.bands would then not be the paper's.
+
 Usage: python -m gentune.selftest [models_dir [examples_dir]]
 """
-import glob, os, sys
+import glob, os, sys, warnings
 import numpy as np
 
-from .head import load_head
+from .head import load_head, GeometricFractionWarning, MIXTURE_KINDS
 from .trunk import Trunk
 from .features import trunk_features, parse_hepmc, features_from_events
 from . import axes
+from . import beam_photons
 
 TOL = 1e-3            # far above the float32 rounding of the pooled sum, far below any real error
 
@@ -53,6 +59,13 @@ TOL_FEATURE = 1e-5
 TOL_LOGW = 1e-2
 MOVED = 0.05
 AXIS_FREE = [0, 3, 4, 5]      # z, log10 mass, baryon number, charge
+
+
+def _label(tag, kind):
+    """What a stage is, in the README's words: its generator, or the two-generator mixture."""
+    if kind in MIXTURE_KINDS:
+        return 'two-generator mixture'
+    return axes.GENERATOR.get(tag, 'one generator')
 
 
 def check(tag, models='models'):
@@ -73,7 +86,10 @@ def check(tag, models='models'):
         A, dA = sb['AE'], float('nan')
     f = np.stack([head.logit(A, t) for t in sb['theta_probe']])
     df = float(np.max(np.abs(f - sb['logit_probe'])))
-    w = head.ratio_weights(A, sb['theta_probe'][-1], sb['theta_probe'][0])
+    with warnings.catch_warnings():
+        # the MIX17 probe pair sits at interior fractions on purpose: it tests the network itself
+        warnings.simplefilter('ignore', GeometricFractionWarning)
+        w = head.ratio_weights(A, sb['theta_probe'][-1], sb['theta_probe'][0])
     ok = df < TOL
     tr = 'own events' if os.path.exists(tp) else 'reference only'
     # dA compares against the reference vectors the TRAINING run exported. It is reported and
@@ -81,7 +97,7 @@ def check(tag, models='models'):
     # float16-trained features in float32 and differs there by construction. The logit
     # comparison is the test: it is against the path a user actually runs.
     neff = head.n_eff(w)/len(w)
-    print(f'{tag:>12} {kind:>9} d={head.nt:<3} events={len(sb["mask"]):<6} {tr:>14}  '
+    print(f'{tag:>12}  {_label(tag, kind):<21} d={head.nt:<3} events={len(sb["mask"]):<6} {tr:>14}  '
           f'dA(vs training)={dA:.1e}  max|dlogit|={df:.2e}  '
           f'N_eff/N={neff:.3f}  {"PASS" if ok else "FAIL"}')
     if neff < 0.5:
@@ -92,19 +108,37 @@ def check(tag, models='models'):
 def _probe_note(tag, head, probe):
     """What the N_eff/N of the first stage measures, read off the stored probe pair.
 
-    The weights it summarizes take the first probe point to the last. In C_1M, E and F that pair
-    moves one weak parameter and N_eff/N stays near one. In MIX17 it moves only the mixing
-    fraction, from 0.5 to 0.9, so from an even mixture of the two generators most of the way to
-    pure Herwig, and N_eff/N = 0.073 next to PASS reads like a failure when it is not one."""
+    The weights it summarizes take the first probe point to the last. In a single-generator stage
+    that pair moves one weak parameter and N_eff/N stays near one. In MIX17 it moves only the
+    fraction of the network, from 0.5 to 0.9, which takes the network's own interpolation between
+    the generators most of the way to Herwig, so a small N_eff/N next to PASS reads like a failure
+    when it is not one. The network is tested there as it stands; the paper's predictions use it
+    at the fractions 0 and 1 only (gentune.mixture)."""
     try:
         nm = axes.names(tag, head.nt)
     except ValueError:
         nm = tuple(f'parameter {i}' for i in range(head.nt))
     d = np.flatnonzero(np.abs(probe[-1] - probe[0]) > 1e-12)
     moves = ' and '.join(f'{nm[i]} {probe[0][i]:.3g} -> {probe[-1][i]:.3g}' for i in d)
-    why = (', from an even mixture of the generators to mostly Herwig, so a low N_eff/N is '
-           'expected and is not a failure' if [nm[i] for i in d] == ['fraction'] else '')
+    why = (', the network\'s own interpolation from half Sherpa to mostly Herwig, so a low '
+           'N_eff/N is expected and is not a failure' if [nm[i] for i in d] == ['fraction'] else '')
     return f'the probe pair moves only {moves}{why}'
+
+
+def check_beam_photons(tags, models='models'):
+    """The rule of gentune.beam_photons on the stored events of every bundle, with its own checks.
+    Returns True or False."""
+    good = True
+    for tag in tags:
+        sb = np.load(f'{models}/{tag}_selftest.npz')
+        try:
+            r = beam_photons.check(sb['particles'], sb['mask'].astype(bool))
+            res = (f'{r["photons"]} beam photons in {r["with_beam_photon"]} of {r["events"]} '
+                   f'events  PASS')
+        except beam_photons.RuleCheckError as e:
+            res, good = f'FAIL, {e}', False
+        print(f'{tag:>12}  rule version {beam_photons.RULE_VERSION}  {res}')
+    return good
 
 
 def check_examples(models='models', examples=EXAMPLES):
@@ -169,8 +203,18 @@ def check_examples(models='models', examples=EXAMPLES):
 
 
 def main(argv):
-    models = argv[1] if len(argv) > 1 else 'models'
-    examples = argv[2] if len(argv) > 2 else EXAMPLES
+    import argparse
+    head_line, rest = __doc__.split('\n', 1)
+    ap = argparse.ArgumentParser(prog='python -m gentune.selftest', description=head_line,
+                                 epilog=rest.split('\nUsage:')[0],
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('models', nargs='?', default='models',
+                    help='the folder of the released stages (default: models)')
+    ap.add_argument('examples', nargs='?', default=EXAMPLES,
+                    help='the folder of the example HepMC files and expected.npz (default: '
+                         'examples/data of the checkout next to gentune)')
+    a = ap.parse_args(argv[1:])
+    models, examples = a.models, a.examples
     tags = sorted(os.path.basename(p)[:-len('_selftest.npz')]
                   for p in glob.glob(f'{models}/*_selftest.npz'))
     if not tags:
@@ -183,6 +227,12 @@ def main(argv):
               f'or file version mismatch, so check the sha256 values in MANIFEST.json first.')
         return 1
     print('\nall stages reproduce the shipped logits to better than 1e-3')
+    print('\nthe rule for the photons radiated by the beams, on the stored events')
+    if not check_beam_photons(tags, models):
+        print('\nFAILED: the beam-photon rule breaks its own checks on these events. The networks '
+              'passed, so the weights stand, but the observables of gentune.bands are not the '
+              'paper\'s with this install.')
+        return 1
     ok2 = check_examples(models, examples)
     if ok2 is False:
         print(f'\nFAILED: the example HepMC files do not give the stored features and weights. '

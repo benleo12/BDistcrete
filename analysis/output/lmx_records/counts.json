@@ -1,0 +1,10 @@
+{
+ "step": "counts",
+ "run_id": "20261107-013026-2306821",
+ "code_md5": "b0ca0841b27e6e5427846e2db0716b6c",
+ "written": "Sat Nov  7 03:33:35 2026",
+ "files": {
+  "output/truncation_fraction.json": "5d763fc6e6e73017de3ea1abec5cccca",
+  "output/param_count.json": "fcb7daaab3c33b32d7e44f96e3954e02"
+ }
+}

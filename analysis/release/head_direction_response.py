@@ -11,14 +11,22 @@ db/dtheta along each by central differences, and compares the least explored dir
 the rest. A ratio below one is the healthy case, the network responding least where it knows
 least. A ratio above one is the pathology.
 
-Measured with this script: the Sherpa head, whose eight-parameter box is isotropic, gives
-0.59. The Herwig head, which varies two of its eight parameters at 30 percent of the amplitude
-of the other six to follow published tune correlations, gives 2.05, and its total
-multiplicity closure fails by 3.4 percent at the held points furthest off that locus.
+The test is for a design that moves some directions much less than others, such as the first
+Herwig design, which varied two of its eight parameters at a fraction of the amplitude of the
+other six to follow published tune correlations. The designs of the released heads fill their
+boxes (generators/README.md), so the spread of the design is nearly the same along every
+direction, the anisotropy printed is close to one, and the ratio then says little either way:
+the script says so instead of naming a verdict. It prints the ratio of each head, and of each
+generator's block of MIX17.
 
-Usage: python head_direction_response.py <release/models dir> <tag> [<tag> ...]
+    python head_direction_response.py                        # E and F, from models/ here
+    python head_direction_response.py models E F MIX17
+
+NWEAK (default 2) in the environment sets how many of the least explored directions are compared
+with the rest, and NPTS (default 64) at how many points of the design cloud the derivatives are
+taken.
 """
-import sys, os
+import argparse, sys, os
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -27,6 +35,9 @@ from gentune.head import MIXTURE_KINDS, load_head
 NWEAK = int(os.environ.get('NWEAK', '2'))
 NPTS = int(os.environ.get('NPTS', '64'))
 EPS = 1e-3
+# below this ratio of the largest to the smallest spread of the design, the least explored
+# directions are not much less explored than the rest and the ratio is not read as a verdict
+ISOTROPIC = 1.5
 
 
 def probe(models, tag, block=None):
@@ -83,16 +94,34 @@ def probe(models, tag, block=None):
         print(f'   direction {i}: design sd {s:.3f}, |db/dv| {g:.3f}{mark}')
     print(f'   least explored {NWEAK}: design sd {weak[:, 0].mean():.3f}, |db/dv| {weak[:, 1].mean():.3f}')
     print(f'   the other {nd-NWEAK}:    design sd {rest[:, 0].mean():.3f}, |db/dv| {rest[:, 1].mean():.3f}')
-    print(f'   RATIO {ratio:.2f}   {"healthy, responds least where it knows least" if ratio < 1 else "PATHOLOGY, responds most where it knows least"}\n')
+    if anis < ISOTROPIC:
+        verdict = (f'the design is nearly isotropic (anisotropy below {ISOTROPIC:g}), so the least '
+                   f'explored directions are explored almost as much as the rest and this says little')
+    else:
+        verdict = ('healthy, responds least where it knows least' if ratio < 1 else
+                   'PATHOLOGY, responds most where it knows least')
+    print(f'   RATIO {ratio:.2f}   {verdict}\n')
     return ratio
 
 
-if __name__ == '__main__':
+def main(argv=None):
+    head_line, rest = __doc__.split('\n', 1)
+    ap = argparse.ArgumentParser(description=head_line, epilog=rest,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     # This file ships inside the release, so the default is relative to it.
-    _here = os.path.dirname(os.path.abspath(__file__))
-    models = sys.argv[1] if len(sys.argv) > 1 else os.path.join(_here, 'models')
-    tags = sys.argv[2:] or ['E', 'F']
-    res = {t: probe(models, t) for t in tags}
+    ap.add_argument('models', nargs='?',
+                    default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models'),
+                    help='the folder of the heads (default: models/ next to this file)')
+    ap.add_argument('tags', nargs='*', default=['E', 'F'], metavar='stage',
+                    help='the stages to probe, such as E, F or MIX17 (default: E F)')
+    a = ap.parse_args(argv)
+    missing = [p for p in (f'{a.models}/{t}_head.npz' for t in a.tags) if not os.path.exists(p)]
+    if missing:
+        print(f'ERROR: {", ".join(missing)} {"does" if len(missing) == 1 else "do"} not exist. The '
+              f'first argument is the folder of the heads, then the stages, as in: '
+              f'python head_direction_response.py models E F')
+        return 2
+    res = {t: probe(a.models, t) for t in a.tags}
     flat = {}
     for t, r in res.items():
         if isinstance(r, dict):
@@ -103,3 +132,8 @@ if __name__ == '__main__':
             flat[t] = r
     if flat:
         print('summary: ' + ', '.join(f'{t} {r:.2f}' for t, r in flat.items()))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -1,0 +1,15 @@
+{
+ "run_id": "20261107-013026-2306821",
+ "written": "Sat Nov  7 01:30:26 2026",
+ "code_md5": "57b5bf3833c268b08d62763cf3acd9f0",
+ "code": {
+  "r2_ladder.py": "e1d340ae87a340ad1b2ae782ca2b8049",
+  "stage_mixture.py": "1b5badb6a23ceb9bf276897b3223a195",
+  "mixture_cfg.py": "7c4d24cddddf1b2cd2a03b7955638b72",
+  "score_obs.py": "b36dc5bcaf5b05f5655abf62d8cdf324",
+  "beam_photons.py": "ea7f82ed77c067ee727114a72d038d93",
+  "symmetry/rerun/score_p2_lmx.sbatch": "0076e2e256043af8165aa4b5fe025f87",
+  "symmetry/rerun/common_lmx.sh": "e6e839ea46b35e77140d426aa5106302",
+  "output/bundle_rule.json": "45b5672e7c0af1723e17b3a5cb937cb7"
+ }
+}

@@ -1,7 +1,7 @@
 {
  "B": {
-  "master": 1.121714835257149,
-  "master_raw": 1.1217102402592058,
+  "master": 1.1327432793047116,
+  "master_raw": 1.1327529247821182,
   "temperature": 1.0,
   "rank_K": 4,
   "best_step": 228000,
@@ -228,46 +228,46 @@
    ]
   ],
   "per_obs": {
-   "1_minus_thrust": 1.150260663043405,
-   "mult_total": 1.1054138642396822,
-   "B_total": 1.0810183403531204,
-   "rho_heavy": 1.1205076317353422,
-   "nbaryon": 1.1513736769141958
+   "1_minus_thrust": 1.1697090652058288,
+   "mult_total": 1.1096221829410828,
+   "B_total": 1.0948450989239795,
+   "rho_heavy": 1.1381659638415933,
+   "nbaryon": 1.151374085611073
   },
   "width_uniform": {
-   "1_minus_thrust": 2.596456752570196,
-   "mult_total": 1.6228437503619038,
-   "B_total": 2.6649554448790367,
-   "rho_heavy": 2.931816391865074,
+   "1_minus_thrust": 2.6222218104633432,
+   "mult_total": 1.6320667393018347,
+   "B_total": 2.6656508827280465,
+   "rho_heavy": 2.960748987094271,
    "nbaryon": 21.43197368268151
   },
   "gain_over_uniform": {
-   "1_minus_thrust": 2.26,
+   "1_minus_thrust": 2.24,
    "mult_total": 1.47,
-   "B_total": 2.47,
-   "rho_heavy": 2.62,
+   "B_total": 2.43,
+   "rho_heavy": 2.6,
    "nbaryon": 18.61
   },
   "calibration_check": {
-   "1_minus_thrust": 0.9588979522075158,
-   "mult_total": 0.9661337875114366,
-   "B_total": 1.0390658084216906,
-   "rho_heavy": 0.9292091577333293,
+   "1_minus_thrust": 0.9775400320477208,
+   "mult_total": 0.9753680680611515,
+   "B_total": 0.9951666078757029,
+   "rho_heavy": 0.9411187632606118,
    "nbaryon": 1.1308156907937346
   },
   "calibration_spread": {
-   "1_minus_thrust": 0.1085733985319756,
-   "mult_total": 0.08731227234772786,
-   "B_total": 0.10914880259552223,
-   "rho_heavy": 0.19173658119625472,
+   "1_minus_thrust": 0.11041254746662137,
+   "mult_total": 0.08628575280179228,
+   "B_total": 0.11954236765998172,
+   "rho_heavy": 0.15439649220850235,
    "nbaryon": 0.2623266030789386
   },
   "N_eff": {
-   "(0.1175, 0.1)": 1640007.4932103357,
-   "(0.1225, 0.3)": 1708558.9745853343,
-   "(0.115, 0.2)": 1768984.4850605023,
-   "(0.128, 0.3)": 1671785.0962136728,
-   "(0.12, 0.15)": 1794827.7558812553
+   "(0.1175, 0.1)": 1640007.472754362,
+   "(0.1225, 0.3)": 1708558.97577739,
+   "(0.115, 0.2)": 1768984.4815526842,
+   "(0.128, 0.3)": 1671785.0794366174,
+   "(0.12, 0.15)": 1794827.7519122444
   },
   "N_ref": 1872000,
   "min_count": 5,
@@ -279,48 +279,76 @@
    "nbaryon": 6
   },
   "pull_mean": {
-   "1_minus_thrust": 0.038220617135198594,
-   "mult_total": -0.026912970077681724,
-   "B_total": 0.01994443068183136,
-   "rho_heavy": 0.03520841151533466,
-   "nbaryon": -0.06015683440296169
+   "1_minus_thrust": 0.031735641963910155,
+   "mult_total": -0.026216169267571955,
+   "B_total": 0.015530874066230932,
+   "rho_heavy": 0.04325119994713683,
+   "nbaryon": -0.060156985390658765
   },
   "per_point": {
    "(0.1175, 0.1)": {
-    "1_minus_thrust": 1.1975857648123942,
-    "mult_total": 1.2587089346487765,
-    "B_total": 0.9303714588782893,
-    "rho_heavy": 1.3303936646141208,
-    "nbaryon": 0.7117141758050028
+    "1_minus_thrust": 1.131991237441338,
+    "mult_total": 1.2587090026419154,
+    "B_total": 0.9493718484581279,
+    "rho_heavy": 1.3772737212779393,
+    "nbaryon": 0.7117160351044315
    },
    "(0.1225, 0.3)": {
-    "1_minus_thrust": 1.0680379577033106,
-    "mult_total": 1.0615743200903065,
-    "B_total": 0.7317534122481774,
-    "rho_heavy": 1.0021646589959983,
-    "nbaryon": 1.1790547158970746
+    "1_minus_thrust": 1.1613722412438408,
+    "mult_total": 1.0525572928489064,
+    "B_total": 0.7575243338523789,
+    "rho_heavy": 1.010495195521693,
+    "nbaryon": 1.1790550673093678
    },
    "(0.115, 0.2)": {
-    "1_minus_thrust": 1.1628490267976748,
-    "mult_total": 0.7726732696331151,
-    "B_total": 1.1689157524754912,
-    "rho_heavy": 1.074073640343184,
-    "nbaryon": 0.9364085428296458
+    "1_minus_thrust": 1.1199501997214267,
+    "mult_total": 0.8126481208947194,
+    "B_total": 1.1839709569653283,
+    "rho_heavy": 1.0539212493044827,
+    "nbaryon": 0.9364088437466839
    },
    "(0.128, 0.3)": {
-    "1_minus_thrust": 1.2898939544866097,
-    "mult_total": 1.3458647136639095,
-    "B_total": 1.2743685873830446,
-    "rho_heavy": 1.148093863535789,
-    "nbaryon": 1.8570856393074875
+    "1_minus_thrust": 1.3679063227055732,
+    "mult_total": 1.3422072735851531,
+    "B_total": 1.2550398095385527,
+    "rho_heavy": 1.236940694076971,
+    "nbaryon": 1.8570848807891176
    },
    "(0.12, 0.15)": {
-    "1_minus_thrust": 1.0329366114170353,
-    "mult_total": 1.0882480831623034,
-    "B_total": 1.2996824907805988,
-    "rho_heavy": 1.0478123311876193,
-    "nbaryon": 1.0726053107317686
+    "1_minus_thrust": 1.0673253249169645,
+    "mult_total": 1.0819892247347196,
+    "B_total": 1.3283185458055093,
+    "rho_heavy": 1.012198959026881,
+    "nbaryon": 1.0726056011057634
    }
+  },
+  "scored_from": "output/models/B_P2augK4fac0_trunk.pt",
+  "data": "/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_abc",
+  "n_held_events": {
+   "6700": 80000,
+   "6701": 80000,
+   "6702": 80000,
+   "6703": 80000,
+   "6704": 80000
+  },
+  "training_record": "output/published/p2augK4_B_fac_s0.json",
+  "temperature_trained": 1.0,
+  "temperature_source": "refit",
+  "stop_width": 1.0676908930529347,
+  "stop_width_at_trained_T": 1.0677044022039748,
+  "master_at_trained_T": 1.1327529247821182,
+  "beam_photons": "remove",
+  "data_realpath": "/mnt/beegfs/bassi/reweighting/gen/data_abc_nb",
+  "model_realpath": "/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code/output/models/B_P2augK4fac0_trunk.pt",
+  "lmx_fingerprint": {
+   "md5": "d015c2cd32c90601823b80c880861cd8",
+   "code_md5": "57b5bf3833c268b08d62763cf3acd9f0",
+   "spec": "OUT=output/p2augK4_B_fac_s0.json STAGE=B NET=fac SEED=0 K=4 MODEL=output/models/B_P2augK4fac0_trunk.pt DATA=/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_abc TMODE=refit TRAINED=output/published/p2augK4_B_fac_s0.json ABC=1",
+   "run_id": "20261107-013026-2306821",
+   "outputs": {
+    "output/temperature/B_P2augK4fac0.json": "945053b99ff97e24d37f5f596f063b9c"
+   },
+   "inputs": {}
   }
  }
 }

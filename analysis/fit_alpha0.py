@@ -39,8 +39,11 @@ def aleph():
     return lo[o], hi[o], y[o], err[o]
 
 
+# DELPHI's thrust table (Table 21 of the paper, HEPData Table 11) has two columns: y01 is measured from
+# charged particles and corrected to the charged final state, y02 from charged plus neutral particles and
+# corrected to the full hadronic final state. The predictions use all particles, so DELPHI is y02.
 LEP = {'aleph': ('ALEPH_2004_S5765862', 'd54-x01-y01', True),    # table in T, converted to tau = 1-T
-       'delphi': ('DELPHI_1996_S3430090', 'd11-x01-y01', False),  # table in 1-T
+       'delphi': ('DELPHI_1996_S3430090', 'd11-x01-y02', False),  # table in 1-T, charged plus neutral
        'opal': ('OPAL_2004_S6132243', 'd01-x01-y01', False)}      # table in 1-T, 91 GeV
 
 

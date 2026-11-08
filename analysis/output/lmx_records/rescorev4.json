@@ -1,0 +1,12 @@
+{
+ "step": "rescorev4",
+ "run_id": "20261107-013026-2306821",
+ "code_md5": "b0ca0841b27e6e5427846e2db0716b6c",
+ "written": "Sat Nov  7 10:22:46 2026",
+ "files": {
+  "output/widths_v2_MIXGEOV4S9r415.json": "654aa3ac047df7a429eabc8ded70af1f",
+  "output/widths_v2_MIXGEOV4S9h400r415.json": "6f774882a2ed6f9a11e669aa0e449893",
+  "output/widths_v2_MIXGEOV4Lr415.json": "19c2ec921eb4ee3ea501a58955fc95cc",
+  "output/widths_v2_MIXGEOV4Lh400r415.json": "3cbe372fc5cb4967bebd3def2132597b"
+ }
+}

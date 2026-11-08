@@ -20,9 +20,11 @@ pfn.fit(Xtr, ytr, epochs=20, batch_size=500, verbose=2)
 pred = pfn.predict(Xte, batch_size=1000).ravel()
 auc = float(roc_auc_score(yte, pred))
 print(f'ENERGYFLOW PFN test AUC = {auc:.4f}')
+# params: the adjustable coefficients of the package's network, as Keras counts them (App. A.2 compares this count
+# with that of our event network with one output, crosscheck_torch.py)
 res = dict(impl='energyflow_PFN_tensorflow', auc=auc, n_train=int(len(Xtr)),
            n_test=int(len(Xte)), Phi_sizes=[100,100,256], F_sizes=[100,100,100],
-           epochs=20, batch_size=500)
+           epochs=20, batch_size=500, params=int(pfn.model.count_params()))
 if SEED >= 0:
     res['seed'] = SEED
 json.dump(res, open(OUT, 'w'), indent=1)

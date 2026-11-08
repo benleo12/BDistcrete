@@ -262,7 +262,20 @@ def apply_feature_norm(f, m, mu, sd):
     return ((f - mu)/sd) * m.unsqueeze(-1)
 
 
+# D4 at score time (score_obs.py): BEAM_PHOTONS=remove takes the beam photons out of the
+# observables computed here from all kept particles (the kaon fraction, the multiplicity) and makes
+# run_stage read only photon-free shapes files. Unset (keep), everything is as published.
+try:
+    import score_obs as _SO
+except ImportError:
+    _SO = None
+    if (os.environ.get('BEAM_PHOTONS') or 'keep') != 'keep':
+        raise SystemExit('BEAM_PHOTONS is set, but score_obs.py is not next to r2_ladder.py')
+
+
 def strange_frac(p, mask):
+    if _SO is not None and _SO.REMOVE:
+        return _SO.strange_frac(p, mask)          # the beam photons leave the denominator
     lm = p[..., 3]; m = mask.astype(bool); ink = ((lm > -0.36) & (lm < -0.20)) & m
     return ink.sum(1) / np.maximum(m.sum(1), 1)
 
@@ -482,6 +495,18 @@ CONCAT = HEAD_KIND in CONCAT_KINDS
 # training. Pointing the data at a held-out set with more events gives the sharper test with
 # the same estimator. Nothing is exported.
 SCORE_FROM = os.environ.get('LADDER_SCORE_FROM', '')
+# LADDER_SCORE_T (with LADDER_SCORE_FROM): the temperature of the scoring. 'trained', the default, is
+# the one stored with the model, as published. 'refit' fits it again on the stop split by the
+# training run's own procedure (fit_temperature, the same objective and grid), for observables that
+# changed (D11), and writes it to T_DIR/<model>.json when T_DIR is set; 'table' reads it from there
+# (the strict test of a model refitted on its standard test); a number is used as given.
+SCORE_T_MODE = os.environ.get('LADDER_SCORE_T', 'trained')
+# LADDER_SCORE_LIGHT=1 (with LADDER_SCORE_FROM, LADDER_LOWMEM=1 and LADDER_MMAP=1): build the features
+# of the training runs only where a scoring reads them, the reference draw (rounded to float16 as
+# the memory map stores it) and the first 4000 events of each run (the standardization), and keep no
+# particles of the held-out runs. The same numbers as the memory-map path, bit for bit, without
+# writing a memory map of every training run or holding the held-out particles.
+SCORE_LIGHT = os.environ.get('LADDER_SCORE_LIGHT', '') == '1'
 # LADDER_PATIENCE=<steps> ends training once the stop-split width has not improved for that many
 # steps (the selected checkpoint is unchanged whenever no later improvement would have come after
 # such a stretch). 0, the default, trains the full budget.
@@ -613,6 +638,9 @@ def emb_all(m, f, mask, chunk=EMB_CHUNK):
 
 
 MIN_BIN_FRAC = 0.002        # a bin must hold this fraction of the combined sample
+# the temperatures fit_temperature chooses from (recalibrate_T.py and single_members.py use the same)
+T_GRID = sorted(set([0.5, 0.6, 0.7, 0.8] + [round(x, 3) for x in np.arange(0.85, 1.60, 0.025)]
+                    + [1.75, 2.0, 2.5, 3.0]))
 
 
 def make_bins(vals_all, obs):
@@ -656,6 +684,41 @@ def make_bins(vals_all, obs):
     return np.linspace(lo, hi, NBIN)
 
 
+# LADDER_FAST_HIST=1: the weighted histograms of a reference observable, which the calibration of the
+# temperature recomputes for every value of its grid with new weights only, reuse the sorting that
+# np.histogram does on each block of 65536 values (register_sorted, once per observable) and then repeat
+# numpy's own arithmetic on the sorted weights, so the counts are bit for bit those of np.histogram.
+# Unset, np.histogram is called as before.
+FAST_HIST = os.environ.get('LADDER_FAST_HIST', '') == '1'
+_HBLOCK = 65536                       # numpy's BLOCK in np.histogram (numpy/lib/_histograms_impl.py)
+_SORTED = {}
+
+
+def register_sorted(v):
+    """Sort the blocks of a reference observable once, for hist_dens (LADDER_FAST_HIST=1 only)."""
+    if FAST_HIST and isinstance(v, np.ndarray) and v.ndim == 1 and v.dtype.kind == 'f' and id(v) not in _SORTED:
+        blocks = []
+        for i in range(0, len(v), _HBLOCK):
+            tmp = v[i:i+_HBLOCK]; si = np.argsort(tmp)
+            blocks.append((i, si, tmp[si]))
+        _SORTED[id(v)] = (v, blocks)
+
+
+def _histogram_sorted(entry, w, bin_edges):
+    """np.histogram(v, bin_edges, weights=w)[0] for a registered v: numpy's sorted-block path, its steps
+    and their order unchanged, with the sorting of each block taken from the registry."""
+    w = np.asarray(w).ravel()
+    ntype = w.dtype
+    cum_n = np.zeros(bin_edges.shape, ntype)
+    zero = np.zeros(1, dtype=ntype)
+    for i, si, sa in entry[1]:
+        sw = w[i:i+_HBLOCK][si]
+        cw = np.concatenate((zero, sw.cumsum()))
+        bin_index = np.concatenate((sa.searchsorted(bin_edges[:-1], 'left'), sa.searchsorted(bin_edges[-1:], 'right')))
+        cum_n += cw[bin_index]
+    return np.diff(cum_n)
+
+
 def hist_dens(o, w, bins):
     """In-range-normalized density, the effective count per bin, and the effective total.
     Weighted case uses Kish effective counts so that a weighted sample is described by the
@@ -665,7 +728,12 @@ def hist_dens(o, w, bins):
         n, _ = np.histogram(o, bins); N = float(n.sum())
         if N <= 0: return np.zeros(len(bw)), np.zeros(len(bw)), 0.0
         return n/(N*bw), n.astype(float), N
-    h, _ = np.histogram(o, bins, weights=w); h2, _ = np.histogram(o, bins, weights=w**2)
+    _ent = _SORTED.get(id(o)) if FAST_HIST else None
+    if _ent is not None and _ent[0] is o and np.ndim(bins) == 1 and np.all(np.diff(bins) >= 0):
+        _b = np.asarray(bins)
+        h = _histogram_sorted(_ent, w, _b); h2 = _histogram_sorted(_ent, w**2, _b)
+    else:
+        h, _ = np.histogram(o, bins, weights=w); h2, _ = np.histogram(o, bins, weights=w**2)
     W = float(h.sum()); W2 = float(h2.sum())
     if W <= 0 or W2 <= 0: return np.zeros(len(bw)), np.zeros(len(bw)), 0.0
     neff = np.where(h2 > 0, h**2/np.where(h2 > 0, h2, 1.0), 0.0)     # effective count per bin
@@ -766,7 +834,11 @@ def run_stage(tag):
     # deterministic. Off by default so the published stages are bit-for-bit unchanged.
     LOWMEM = os.environ.get('LADDER_LOWMEM', '') == '1'
     P = {}; SH = {}; NB = {}; STR = {}
-    tf = {}; tm = {}; Psub = {}; SUBIDX = {}; HEAD = {}; FITIDX = {}; TRAINIDX = {}
+    tf = {}; tm = {}; Psub = {}; SUBIDX = {}; HEAD = {}; FITIDX = {}; TRAINIDX = {}; REFROWS = {}
+    assert SCORE_T_MODE == 'trained' or SCORE_FROM, 'LADDER_SCORE_T needs LADDER_SCORE_FROM'
+    assert not SCORE_LIGHT or (SCORE_FROM and LOWMEM and MMAP), \
+        'LADDER_SCORE_LIGHT is the memory-map path of a scoring (LADDER_SCORE_FROM) without the map'
+    _remove = _SO is not None and _SO.REMOVE
     assert not (FIT_FRAC > 0 and not LOWMEM), 'the fit split needs LADDER_LOWMEM=1 (per-run reference draws)'
     assert LOWMEM or not (REF_RUNS or NREF_TOTAL), 'LADDER_REF_RUNS and LADDER_NREF_TOTAL need LADDER_LOWMEM=1'
     assert set(REF_RUNS) <= set(cfg['train']), f'LADDER_REF_RUNS {REF_RUNS} are not all training runs'
@@ -777,13 +849,49 @@ def run_stage(tag):
     for rid in list(cfg['train']) + list(cfg['held']):
         d = np.load(f'{DATA}/particles_full_{rid:04d}.npz')
         part, msk = d['particles'], d['mask']
-        SH[rid] = pd.read_csv(f'{DATA}/shapes_run_{rid:04d}.csv')
+        _csv = f'{DATA}/shapes_run_{rid:04d}.csv'
+        if _SO is not None:
+            _SO.check_csv(_csv)          # photon-free shapes under BEAM_PHOTONS=remove, the old ones under keep
+        SH[rid] = pd.read_csv(_csv)
         # the CSV and the npz are indexed by the same event order; a mismatch would silently
         # pair one event's shape with another event's particles
         assert len(SH[rid]) == len(msk), f'{rid}: csv {len(SH[rid])} vs npz {len(msk)}'
         if 'nbaryon' in cfg['flav_obs']: NB[rid] = d['nbaryon'].astype(np.float32)
-        if 'strange' in cfg['flav_obs']: STR[rid] = strange_frac(part, msk).astype(np.float32)
-        if LOWMEM and rid in cfg['train']:
+        if SCORE_LIGHT and rid in cfg['train']:
+            # the reference draw of a training run, the only events of it a scoring reads
+            n = len(msk)
+            idx = np.random.default_rng(50000 + rid).choice(n, min(_nref_per if rid in _ref_from else 0, n), replace=False)
+        if _remove and SCORE_LIGHT and rid in cfg['train']:
+            # D4 on the reference draw only (the rest of the run is never read): the kaon fraction and the
+            # multiplicity of all kept particles without the beam photons, event by event as below
+            _pi, _mi = part[idx], msk[idx]; _nb = _SO.n_beam(_pi, _mi)
+            if 'strange' in cfg['flav_obs']:
+                STR[rid] = np.zeros(n, np.float32); STR[rid][idx] = _SO.strange_frac(_pi, _mi, nb=_nb).astype(np.float32)
+            if 'mult_total' in cfg['obs']:
+                _m = SH[rid]['mult_total'].values.copy()
+                _m[idx] = _SO.mult_total(_m[idx], _pi, _mi, where=f'{DATA} run {rid}', nb=_nb)
+                SH[rid]['mult_total'] = _m
+        elif _remove:
+            # D4: the kaon fraction and the multiplicity of all kept particles without the beam photons
+            _nb = _SO.n_beam(part, msk)
+            if 'strange' in cfg['flav_obs']: STR[rid] = _SO.strange_frac(part, msk, nb=_nb).astype(np.float32)
+            if 'mult_total' in cfg['obs']:
+                SH[rid]['mult_total'] = _SO.mult_total(SH[rid]['mult_total'].values, part, msk,
+                                                       where=f'{DATA} run {rid}', nb=_nb)
+        elif 'strange' in cfg['flav_obs']: STR[rid] = strange_frac(part, msk).astype(np.float32)
+        if SCORE_LIGHT and rid in cfg['train']:
+            # the memory-map path below without the map: the first 4000 events for the
+            # standardization, and the reference draw stored as the map would return it
+            HEAD[rid] = build_feats(part[:4000], msk[:4000], cfg['flavor'])
+            SUBIDX[rid] = idx
+            Psub[rid] = (None, None)     # the reference particles are written only by a training's export
+            _rf, _rm = build_feats(part[idx], msk[idx], cfg['flavor'])
+            REFROWS[rid] = (_rf.numpy().astype(np.float16), _rm.numpy().astype(np.uint8))
+            if FIT_FRAC > 0:
+                FITIDX[rid], TRAINIDX[rid] = fit_split(rid, n, idx, FIT_FRAC)
+        elif SCORE_LIGHT:
+            P[rid] = None                # a scoring needs only the held-out observables above
+        elif LOWMEM and rid in cfg['train']:
             tf[rid], tm[rid] = build_feats(part, msk, cfg['flavor'])
             if MMAP:
                 os.makedirs(MMAP_DIR, exist_ok=True)
@@ -819,6 +927,11 @@ def run_stage(tag):
     FMU_D, FSD_D = FMU.to(DEV), FSD.to(DEV)
     def fetch(rid, idx):
         """Normalized (features, mask) rows of a training run; from the memmap under MMAP."""
+        if SCORE_LIGHT:
+            assert idx is SUBIDX[rid], 'the light scoring path holds only the reference draw'
+            _f16, _m8 = REFROWS.pop(rid)
+            f = torch.from_numpy(_f16.astype(np.float32)); m = torch.from_numpy(_m8.astype(np.float32))
+            return apply_feature_norm(f, m, FMU, FSD), m
         if MMAP and GPU_FETCH:
             f = torch.from_numpy(np.asarray(tf[rid][idx])).to(DEV).float()
             m = torch.from_numpy(np.asarray(tm[rid][idx])).to(DEV).float()
@@ -841,9 +954,14 @@ def run_stage(tag):
             rpart.append(P[rid][0][idx]); rpmask.append(P[rid][1][idx])
         _f, _m = fetch(rid, idx); rf.append(_f); rm.append(_m)
         for o in OBS: robs[o].append(obsvals(rid, o, idx))
-    ref_particles = np.concatenate(rpart); ref_pmask = np.concatenate(rpmask)
+    ref_particles = None if SCORE_LIGHT else np.concatenate(rpart)
+    ref_pmask = None if SCORE_LIGHT else np.concatenate(rpmask)
     ref_f = torch.cat(rf).to(DEV); ref_m = torch.cat(rm).to(DEV)
+    if SCORE_LIGHT:
+        rf = rm = None                             # the pieces of the reference, now in ref_f and ref_m
     robs = {o: np.concatenate(v) for o, v in robs.items()}; Nref = len(ref_f)
+    for o in OBS:
+        register_sorted(robs[o])                   # LADDER_FAST_HIST=1 only
     Cdim = ref_f.shape[-1]
     for rid in cfg['train']:                       # particles are no longer needed once features exist
         P[rid] = None
@@ -889,11 +1007,23 @@ def run_stage(tag):
               f'written to output/models/{tag}{SUF}_fitsplit.npz', flush=True)
     LABELS = sorted(set(cfg['train'][r] for r in rids)); BY_LABEL = {lab: [r for r in rids if cfg['train'][r] == lab] for lab in LABELS}
 
+    # logits_at keeps, for one embeddings() result and one ensemble, what the temperature scan (39
+    # stop-split closures) and the report closures recomputed at every call of a factorized head: the
+    # array it returned at each theta (returned again, the same object, read only) and, under the latent
+    # store, each member's m.A(E), the very call f_from makes on the very same tensor, which the
+    # member's f_from_a then contracts with b(theta) as f_from does. Nothing is computed differently, so
+    # every number is the old one bit for bit. Es and the members are held by reference and compared
+    # with `is` (an id() is handed on once an object is collected), the weights by their version
+    # counters; embeddings() empties the cache, and a closure that makes its own embeddings (a training
+    # checkpoint) does not use it. The concatenation networks (_concat_logits) are unchanged.
+    _LC = {}
+
     def embeddings():
         """Reference embeddings do not depend on theta, so they are computed once per pass.
         Under LADDER_EMB_STORE=a they are reduced at once to the K-vectors a(Phi). For the
         concatenation network nothing is theta-free: each member gets an empty cache of its
         reference logits per theta, filled by _concat_logits and dropped with the pass."""
+        _LC.clear()                               # logits_at's cache belongs to the previous pass
         if CONCAT:
             return [dict() for _ in models]
         Es = []
@@ -905,16 +1035,42 @@ def run_stage(tag):
             Es.append(E); m.train()
         return Es
 
+    # LADDER_LOGIT_CACHE=<dir> (with LADDER_SCORE_FROM): a concatenation member's log ratio on the
+    # reference at a theta is kept on disk, keyed by the model, the member, the theta and a fingerprint
+    # of the reference features, so the strict test and the truncation test of a model read what its
+    # standard test computed (the same reference and the same held-out points) instead of evaluating
+    # the network again. The values are the same float32 numbers either way. Unset, nothing is kept.
+    _LCACHE = os.environ.get('LADDER_LOGIT_CACHE', '') if (SCORE_FROM and CONCAT) else ''
+    if _LCACHE:
+        import hashlib
+        _h = hashlib.md5(); _h.update(np.int64(Nref).tobytes())
+        _h.update(ref_f[::max(1, Nref//2000)].detach().cpu().numpy().tobytes())
+        _h.update(ref_m[::max(1, Nref//2000)].detach().cpu().numpy().tobytes())
+        _REFKEY = _h.hexdigest()[:16]
+        _MKEY = os.path.basename(os.path.realpath(SCORE_FROM)).replace('.pt', '')
+        os.makedirs(_LCACHE, exist_ok=True)
+
     def _concat_logits(m, cache, th):
         """A concatenation member's log ratio on the whole reference at one theta (th holds the
         same theta on every row), computed in chunks and cached for the rest of the pass."""
         key = tuple(np.round(th[0].detach().cpu().numpy().astype(np.float64), 10))
         if key not in cache:
+            f = None
+            if _LCACHE:
+                _mi = [i for i, x in enumerate(models) if x is m][0]
+                _tk = hashlib.md5(np.array(key, np.float64).tobytes()).hexdigest()[:16]
+                f = f'{_LCACHE}/{_MKEY}_m{_mi}_{_tk}_{_REFKEY}.npy'
+                if os.path.exists(f):
+                    cache[key] = torch.from_numpy(np.load(f)).to(DEV)
+                    return cache[key]
             was = m.training; m.eval()
             with torch.no_grad():
                 cache[key] = torch.cat([m(ref_f[i:i+EMB_CHUNK], ref_m[i:i+EMB_CHUNK], th[i:i+EMB_CHUNK])
                                         for i in range(0, Nref, EMB_CHUNK)])
             m.train(was)
+            if f:
+                _tmp = f[:-4] + f'.tmp{os.getpid()}.npy'
+                np.save(_tmp, cache[key].detach().cpu().numpy()); os.replace(_tmp, f)
         return cache[key]
 
     def fval(m, E, th):
@@ -923,12 +1079,35 @@ def run_stage(tag):
             return _concat_logits(m, E, th)
         return m.f_from_a(E, th) if EMB_STORE == 'a' else m.f_from(E, th)
 
-    def logits_at(Es, theta):
+    def _lcache(Es):
+        """logits_at's cache (_LC) for these embeddings, these members and their present weights;
+        emptied and started again if any of the three is not the one it was made for."""
+        ver = [p._version for m in models for p in m.parameters()]
+        if not (_LC.get('Es') is Es and len(_LC['models']) == len(models) and _LC['ver'] == ver
+                and all(a is b for a, b in zip(_LC['models'], models))):
+            _LC.clear(); _LC.update(Es=Es, models=list(models), ver=ver, a={}, f={})
+        return _LC
+
+    def logits_at(Es, theta, cache=True):
         th = torch.tensor(tn(theta), device=DEV).float().expand(Nref, cfg['ntheta'])
+        c = _lcache(Es) if cache and not CONCAT else None
+        if c is not None:
+            key = th[0].cpu().numpy().tobytes()           # the float32 theta the members read
+            if key in c['f']:
+                return c['f'][key]
+        def fv(i, m, E):
+            if c is None or EMB_STORE == 'a' or type(m).f_from is not CondPFN.f_from:
+                return fval(m, E, th)
+            if i not in c['a']:
+                c['a'][i] = m.A(E)                        # f_from(E, th) = f_from_a(A(E), th)
+            return m.f_from_a(c['a'][i], th)
         with torch.no_grad():
             # the ensemble is combined as the MEAN OF LOGITS (a geometric mean of density
             # ratios); downstream reloads must use the same rule
-            return np.mean([fval(m, E, th).cpu().numpy() for m, E in zip(models, Es)], 0)
+            f = np.mean([fv(i, m, E).cpu().numpy() for i, (m, E) in enumerate(zip(models, Es))], 0)
+        if c is not None:
+            f.flags.writeable = False; c['f'][key] = f
+        return f
 
     def weights_from(f, T=1.0):
         w = np.exp((f - f.max())/T); w /= w.sum()
@@ -936,10 +1115,11 @@ def run_stage(tag):
 
     def closure(which, T=1.0, want_controls=False, Es=None):
         idxs = stop_idx if which == 'stop' else rep_idx
-        if Es is None: Es = embeddings()
+        own = Es is None                 # a training checkpoint: these embeddings are read here only
+        if own: Es = embeddings()
         out = {}; ctrl = {}; uni = np.full(Nref, 1.0/Nref)
         for rid, theta in cfg['held'].items():
-            w, neff = weights_from(logits_at(Es, theta), T); po = {}; cu = {}
+            w, neff = weights_from(logits_at(Es, theta, cache=not own), T); po = {}; cu = {}
             for o in OBS:
                 ot = obsvals(rid, o, idxs[rid]); b = BINS[(rid, o)]
                 p, nb = pulls(robs[o], w, ot, b)
@@ -964,10 +1144,8 @@ def run_stage(tag):
         # and the Stage C anchor head was assigned 1.2 when its optimum under this same objective
         # is 1.10: on twelve fresh validation points the rms closure of all six observables is
         # 0.83 percent at 1.2 and 0.65 at 1.10. A coarse grid is a systematic, not a convenience.
-        grid = sorted(set([0.5, 0.6, 0.7, 0.8] + [round(x, 3) for x in np.arange(0.85, 1.60, 0.025)]
-                          + [1.75, 2.0, 2.5, 3.0]))
         best_T, best_d = 1.0, None
-        for T in grid:
+        for T in T_GRID:
             d = abs(master(closure('stop', T=T, Es=Es)) - 1.0)
             if best_d is None or d < best_d: best_d, best_T = d, T
         return best_T
@@ -1090,8 +1268,18 @@ def run_stage(tag):
 
     Es_final = embeddings()
     Traw = master(closure('report', T=1.0, Es=Es_final))
-    T = SCORE_T if SCORE_FROM else fit_temperature(Es_final)
-    print(f'[{tag}] temperature T={T} ({"as trained" if SCORE_FROM else "fit on stop split"}); raw report width={Traw:.3f}')
+    if SCORE_FROM and SCORE_T_MODE == 'refit':
+        T = fit_temperature(Es_final)                     # D11: the training run's own procedure
+    elif SCORE_FROM and SCORE_T_MODE == 'table':
+        assert _SO is not None and _SO.T_DIR, 'LADDER_SCORE_T=table reads the refitted temperature from T_DIR'
+        T = _SO.temperature(_SO.model_key(SCORE_FROM))
+    elif SCORE_FROM and SCORE_T_MODE != 'trained':
+        T = float(SCORE_T_MODE)
+    else:
+        T = SCORE_T if SCORE_FROM else fit_temperature(Es_final)
+    _tsrc = ('fit on stop split' if not SCORE_FROM else 'as trained' if SCORE_T_MODE == 'trained'
+             else 'refit on the stop split' if SCORE_T_MODE == 'refit' else f'given ({SCORE_T_MODE})')
+    print(f'[{tag}] temperature T={T} ({_tsrc}); raw report width={Traw:.3f}')
     rep, ctrl = closure('report', T=T, want_controls=True, Es=Es_final)
     # LADDER_DUMP_WEIGHTS=1 saves the normalized reference weights at every held-out point
     # (output/models/<stage><suffix>_w_<rid>.npy), for the weight panel of the wide scan
@@ -1157,6 +1345,31 @@ def run_stage(tag):
         result['truncation'] = trunc
     if SCORE_FROM:
         result.update(scored_from=SCORE_FROM, data=DATA, n_held_events={str(r): int(len(SH[r])) for r in cfg['held']})
+        # LADDER_TRAINED_RESULT=<the result file the training wrote>: a scoring that stands in for the
+        # training's own standard test keeps the training's record (the selected step and the stop
+        # trajectory), which the network carries unchanged and make_numbers.py reads
+        _trf = os.environ.get('LADDER_TRAINED_RESULT', '')
+        if _trf:
+            _trd = json.load(open(_trf)); _trd = _trd if 'master' in _trd else list(_trd.values())[0]
+            assert abs(float(_trd['temperature']) - SCORE_T) < 1e-12 and int(_trd['rank_K']) == K, \
+                f'{_trf} is not the training of {SCORE_FROM} (T {_trd["temperature"]} against {SCORE_T})'
+            result.update(best_step=_trd['best_step'], stop_trajectory=_trd['stop_trajectory'], training_record=_trf)
+        if SCORE_T_MODE != 'trained' or _remove:
+            # the rerun's record: where the temperature came from, the observables, and the
+            # same test at the temperature stored with the model
+            _sw = master(closure('stop', T=T, Es=Es_final))
+            _swt = master(closure('stop', T=SCORE_T, Es=Es_final))
+            result.update(temperature_trained=SCORE_T, temperature_source=SCORE_T_MODE,
+                          stop_width=_sw, stop_width_at_trained_T=_swt,
+                          master_at_trained_T=master(closure('report', T=SCORE_T, Es=Es_final)),
+                          beam_photons=_SO.MODE if _SO is not None else 'keep',
+                          data_realpath=os.path.realpath(DATA), model_realpath=os.path.realpath(SCORE_FROM))
+            if SCORE_T_MODE == 'refit' and _SO is not None and _SO.T_DIR:
+                _SO.write_temperature(_SO.model_key(SCORE_FROM), dict(
+                    T=T, T_trained=SCORE_T, stop_width=_sw, stop_width_at_trained_T=_swt,
+                    objective='|master width - 1| on the stop split (r2_ladder.fit_temperature)', grid=T_GRID,
+                    data=DATA, data_realpath=os.path.realpath(DATA), beam_photons=_SO.MODE,
+                    scored_from=SCORE_FROM, tool='r2_ladder.py LADDER_SCORE_T=refit'))
         print(f'[{tag}] RESULT width={result["master"]:.3f} (null 1.0), scored from {SCORE_FROM}')
         return result
     # export: cached A-vectors + B nets + the conventions needed to rebuild f, plus a checksum

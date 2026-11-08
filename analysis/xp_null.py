@@ -7,17 +7,21 @@ the comparison half of each held-out run of Stage C is split into two random
 halves, ten times per run. Writes output/xp_null.json.
 
     python xp_null.py ../gen/data_abc
+
+The data folder is required. BEAM_PHOTONS=remove (score_obs.py) leaves the beam photons out of the
+spectrum; XP_NULL_OUT names the output file.
 """
-import sys, json
+import os, sys, json
 import numpy as np
 from xp_closure import per_event_bincontents, width_xp, XP_BINS
+import score_obs as SO
 
-DATA = sys.argv[1] if len(sys.argv) > 1 else '../gen/data_abc'
+DATA = sys.argv[1]
 RUNS, SPLITS = range(6900, 6905), 10
 res = {}
 for rid in RUNS:
-    z = np.load(f'{DATA}/particles_full_{rid:04d}.npz')
-    C = per_event_bincontents(z['particles'][:, :, 0], z['mask'], XP_BINS)
+    z = np.load(SO.need(f'{DATA}/particles_full_{rid:04d}.npz')); P = z['particles']
+    C = per_event_bincontents(P[:, :, 0], SO.kept(P, z['mask']), XP_BINS)
     rep = np.random.default_rng(1000 + rid).permutation(len(C))[len(C)//2:]   # the comparison half, as r2_ladder
     C = C[rep]; ws = []
     for s in range(SPLITS):
@@ -27,5 +31,7 @@ for rid in RUNS:
     print(rid, f'{len(C)} events, halves of {len(C)//2}: mean width {np.mean(ws):.3f}', flush=True)
 allw = [w for v in res.values() for w in v]
 out = dict(data=DATA, runs=list(res), splits=SPLITS, per_run=res, mean=float(np.mean(allw)), sd=float(np.std(allw, ddof=1)))
-json.dump(out, open('output/xp_null.json', 'w'), indent=1)
+if SO.REMOVE:
+    out.update(SO.describe(), data_realpath=os.path.realpath(DATA))
+json.dump(out, open(os.environ.get('XP_NULL_OUT', 'output/xp_null.json'), 'w'), indent=1)
 print(f'mean over {len(allw)} splits: {out["mean"]:.3f} (sd {out["sd"]:.3f})')

@@ -18,7 +18,7 @@ license = "MIT"
 authors = [{name = "Benoît Assi"}, {name = "Jesse Thaler"}]
 # numpy is the only dependency, with the same floor as requirements.txt.
 requires-python = ">=3.9"
-dependencies = ["numpy>=1.20"]
+dependencies = ["numpy>=2.0"]
 
 [project.urls]
 Repository = "https://github.com/benleo12/BDistcrete"

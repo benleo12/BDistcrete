@@ -13,6 +13,13 @@ point of quoting both, since the relative shift says how wrong the model is and 
 whether the sample can tell.
 
 Usage: python make_stage_table.py [<stage> ...]     (default: everything in the manifest)
+
+The rerun (score_obs.py): BEAM_PHOTONS=remove takes the beam photons out of the closure observables on
+both sides. The reference bundle output/models/<tag>_ref.npz gives its photon-free shapes, checked
+against the old bundle of the same events, REF_ORIG_DIR/<tag>_ref.npz, and its multiplicity and kaon
+fraction without the beam photons of its own particles (cached in POBS_DIR when set); a held-out run
+gives the shapes of its photon-free (_nb) shapes file and the kaon fraction and multiplicity without
+its beam photons. With T_DIR set an export must carry the refitted temperature of its model.
 """
 import json, os, sys
 import numpy as np
@@ -23,6 +30,7 @@ from r2_ladder import STAGES, strange_frac
 from mixture_cfg import register as _register_mixture
 from gentune.head import Head, MixtureHead
 from gentune import axes
+import score_obs as SO
 
 REL = os.environ.get('RELEASE_DIR', 'release')
 ALIAS = {'C_1M': 'C', 'Faug': 'F'}
@@ -52,7 +60,33 @@ def obs_of(cfg, data, rid, kind):
         d = np.load(f'{data}/particles_full_{rid:04d}.npz')
         return (d['nbaryon'].astype(float) if kind == 'nbaryon'
                 else strange_frac(d['particles'], d['mask']).astype(float))
+    if SO.REMOVE:
+        # photon-free shapes files only, and the multiplicity checked against the particles (score_obs)
+        v = SO.read_shapes(f'{data}/shapes_run_{rid:04d}.csv', usecols=[kind])[kind].values
+        if kind == 'mult_total':
+            d = np.load(SO.need(f'{data}/particles_full_{rid:04d}.npz'))
+            v = SO.mult_total(v, d['particles'], d['mask'], where=f'{data} run {rid}')
+        return v.astype(float)
     return pd.read_csv(f'{data}/shapes_run_{rid:04d}.csv')[kind].values.astype(float)
+
+
+def reference_obs(tag, rp, r, obs):
+    """The closure observables of the reference bundle rp (r, loaded). Under BEAM_PHOTONS=remove through
+    score_obs.reference_obs; a multiplicity the bundle does not store is the kept count, as below,
+    less the beam photons."""
+    if not SO.REMOVE:
+        return {o: (r[o].astype(float) if o in r.files
+                    else (r['mask'].sum(1).astype(float) if o == 'mult_total' else None)) for o in obs}
+    assert os.environ.get('REF_ORIG_DIR'), 'BEAM_PHOTONS=remove: set REF_ORIG_DIR, the folder of the old bundles'
+    orig = f'{os.environ["REF_ORIG_DIR"]}/{tag}_ref.npz'
+    cache =(os.path.join(os.environ['POBS_DIR'], os.path.basename(os.path.realpath(rp)).replace('.npz', '_pobs.npz'))
+             if os.environ.get('POBS_DIR') else None)
+    ref = dict.fromkeys(obs)
+    ref.update(SO.reference_obs(rp, [o for o in obs if o in r.files or o == 'strange'], orig=orig, cache=cache))
+    if 'mult_total' in obs and ref['mult_total'] is None:
+        po = SO.particle_obs(rp, cache)
+        ref['mult_total'] = (po['n_kept'] - po['n_beam']).astype(float)
+    return ref
 
 
 def closure(tag):
@@ -77,12 +111,10 @@ def closure(tag):
                       f'right mixture data set.')
     HK = MixtureHead if str(cond.get('head_kind', 'cond')) in ('mixture', 'geometric') else Head
     h = HK(cp)
+    SO.check_export_T(cp, h.T)
     r = np.load(rp)
     OBS = cfg['obs'] + cfg['flav_obs']
-    ref = {}
-    for o in OBS:
-        ref[o] = (r[o].astype(float) if o in r.files
-                  else (r['mask'].sum(1).astype(float) if o == 'mult_total' else None))
+    ref = reference_obs(tag, rp, r, OBS)
     rows = []
     # Held-out runs that duplicate a training run event for event (the Stage C ladder runs set no
     # random seed, so held-out 6902 at the grid centre repeats training run 6813) test nothing.

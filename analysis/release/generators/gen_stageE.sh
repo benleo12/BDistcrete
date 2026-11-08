@@ -52,6 +52,8 @@ for c in events.hepmc3 events events.hepmc; do
 done
 [ -f events.hepmc ] || { echo "NO HEPMC $rid"; exit 1; }
 python3 "$HERE/extract_particles_full_flavor.py" --input events.hepmc --output $DATA/particles_full_${rid}.npz > extract.log 2>&1 || { echo "EXTRACT FAIL $rid"; tail -5 extract.log; exit 1; }
+# the event shapes leave out the photons radiated by the beams, as in the paper (compute_efps.py;
+# the rule is ../gentune/beam_photons.py, so keep this folder next to gentune/)
 python3 "$HERE/compute_shapes_only.py" --input events.hepmc --output-dir $DATA --run-id $rid > shapes.log 2>&1 || { echo "SHAPES FAIL $rid"; tail -5 shapes.log; exit 1; }
 rm -f events.hepmc
 rm -rf Process Results.zip Results.zip~ 2>/dev/null

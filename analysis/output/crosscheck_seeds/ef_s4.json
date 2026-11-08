@@ -1,6 +1,6 @@
 {
  "impl": "energyflow_PFN_tensorflow",
- "auc": 0.8004414714736039,
+ "auc": 0.8019814703134636,
  "n_train": 96000,
  "n_test": 24000,
  "Phi_sizes": [
@@ -15,5 +15,6 @@
  ],
  "epochs": 20,
  "batch_size": 500,
+ "params": 82457,
  "seed": 4
 }

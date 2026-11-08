@@ -1,0 +1,337 @@
+{
+ "built": "2026-11-07T20:46:10+00:00",
+ "build_script": "build_reference.py",
+ "build_script_sha256": "90e8df8d7ffcecbd8b1a25fcd221aab32cef9cfca556fa059862420889743107",
+ "outputs": {
+  "reference_MIX17.npz": {
+   "bytes": 865346461,
+   "sha256": "3a1ff95851ebc078e77e373381457e2e0dcd4d5c05885c8c305029ca264b6fc6"
+  }
+ },
+ "sources": {
+  "output/models/MIXGEOV3S9_cond.npz": "b76793040c88b46e6e3139942824a602cab175b78bd6a79ad7fd4d12e94b41d4",
+  "output/models/MIXGEOV3S9_ref.npz": "78d69bd35dcbab370f8d7d11baf50226cc7f3f3e4330aa9a4e5189a78d7255a9",
+  "output/models/MIXGEOV3S9_ref_v2_slim.npz": "15e7d1f7ea4f47ea8d4a90fece43060eefd100ca5ab914daa5eafb6b6e521b4c",
+  "data_stagePURE17_v3/meta.json": "47754a696aeb887e74e15c655537c40ca570740ff31d6907f76887159762ec44",
+  "output/thrust_targets_nlo_point.npz": "f2e994cf5ecd3867bb49c9f6f3de0ba272fab7bd451a5b78deb7763e08920075",
+  "output/three_bands_MIXGEOV3S9_lin.json": "e8b37da31ba7451f74b734c35044f97a295621364b651797567b661ee4fbc234",
+  "output/three_bands_MIXGEOV3S9_lin.npz": "b68a941d2575214433012fa962e09b35e9667daf661974731309a8997066f811"
+ },
+ "release": {
+  "MIX17_head.npz": "d82ae3b78b120914565ef979d2e38448c9319e5733c73fdf5461f132265f9d63",
+  "MIX17_trunk.npz": "df6c91765aa655e70f546ecec7c21d80966f56d95ffe153d14571c1c7371f58b",
+  "MIX17_selftest.npz": "a303545d3dc253a45325434248fb529c7c117e9bbdc4120da885ef351be6b350"
+ },
+ "numpy": "2.2.4",
+ "python": "3.12.9",
+ "checks": {
+  "release_head_equals_export": "92 arrays bitwise equal, 2 only in the release",
+  "runs": {
+   "n": 720,
+   "sherpa": 352,
+   "herwig": 368,
+   "nper": 1597,
+   "events_per_run": [
+    80000
+   ]
+  },
+  "replayed_runs_bitwise": [
+   7000,
+   8000,
+   8655
+  ],
+  "order": {
+   "events": 5760,
+   "max_abs_dA": 4.0411949157714844e-05,
+   "max_abs_A": 15.871829986572266,
+   "max_abs_dA_shifted_by_one": 15.846589356660843,
+   "max_abs_dlogit_at_central": 3.7301063214201235e-05,
+   "nch_equal_all_events": true,
+   "strange_equal_all_events": true,
+   "events_truncated_at_100": 622,
+   "mult_total_equals_stored_count_below_100": 1.0,
+   "logits_at_central_taken_at_fractions": [
+    0.0,
+    1.0
+   ]
+  },
+  "beam_photons": {
+   "beam_photons": "remove",
+   "t_dir": "/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code/output/temperature",
+   "beam_photons_md5": "ea7f82ed77c067ee727114a72d038d93",
+   "checked_against": "/mnt/beegfs/bassi/reweighting/maxent_code/output/models/MIXGEOV3S9_ref_v2_slim.npz",
+   "checked_against_sha256": "46a6c21ef96f1acd68ad20d00617a68552959ff89c645478b99d6a3c4267a54a",
+   "events_with_beam_photons": 1076397
+  },
+  "logits": {
+   "selftest_events": 2000,
+   "selftest_points": 18,
+   "max_abs_dAE_selftest": 0.0,
+   "max_abs_dlogit_vs_export": 0.0,
+   "max_abs_dlogit_vs_selftest": 1.2756593356755275e-05,
+   "max_abs_dlogit_checksum": 1.2730310094966057e-07
+  },
+  "targets": {
+   "numbers_bitwise_equal_to_source": [
+    "central",
+    "np_variations",
+    "scale_variations",
+    "sigma_pert",
+    "window"
+   ],
+   "sigma_pert_rebuilt_rel": 5.039334470460079e-18,
+   "deposited_file_kept": {
+    "file": "targets_thrust_nlo.npz",
+    "bytes": 30098,
+    "sha256": "7e125ae4e03da92255f0f2ae92b91553a86cd016b334eaf11b01ea3873a835ca",
+    "built": "2026-11-01T23:42Z",
+    "build_script_sha256": "88bdc8a82f9c00ef4b202274e7fe3b18eb432277402995475afb41f32b895e83"
+   },
+   "deposited_arrays_bitwise_equal": [
+    "alpha_0",
+    "alpha_s",
+    "calc_point",
+    "central",
+    "floor_rel",
+    "milan",
+    "moment_names",
+    "moment_powers",
+    "np_labels",
+    "np_variations",
+    "order",
+    "pwin",
+    "scale_labels",
+    "scale_pwin",
+    "scale_variations",
+    "sigma_pert",
+    "sub_order_central",
+    "window"
+   ],
+   "deposited_source_is_this_calculation": true
+  },
+  "bands": {
+   "mix": "linear",
+   "box": "full",
+   "nodes": 2000,
+   "seed": 11,
+   "test": "delphi",
+   "central": [
+    0.118,
+    0.68,
+    3.9,
+    0.48,
+    0.46,
+    0.17,
+    0.97,
+    0.18,
+    0.102337,
+    0.654714,
+    3.528693,
+    1.849375,
+    0.914156,
+    0.374094,
+    0.33107,
+    0.78,
+    0.5
+   ],
+   "max_node_difference_half_widths": 0.0
+  },
+  "paper": {
+   "xi": 0.5,
+   "events_in_window": 535993,
+   "generators": {
+    "sherpa": {
+     "fraction": 0.0,
+     "newton_iterations": 3,
+     "window_fraction": 0.4385611435859975,
+     "max_rel_window_fraction": 2.459952241906649e-10,
+     "lam": [
+      0.03838071004330295,
+      0.790719809499868,
+      -0.8540708452300273,
+      -0.022335509535207354,
+      -13.66258764793204,
+      0.2519468736132188,
+      7.243356553115843,
+      0.0027838691262204833,
+      139.78340235537252,
+      0.12160978528253147,
+      35.36063808498777,
+      2.941036784855919,
+      0.002730575834125203,
+      -202.03841428280845
+     ],
+     "before": {
+      "max_rel_means": 1.5471662839772193e-09,
+      "max_rel_hist": 1.7382706436118759e-09,
+      "thrust_mean": 0.06546173554920792,
+      "thrust_mean_paper": 0.06546173555907084
+     },
+     "after": {
+      "max_rel_means": 1.5396836028358507e-09,
+      "max_rel_hist": 1.7383191995433947e-09,
+      "thrust_mean": 0.06549705789574607,
+      "thrust_mean_paper": 0.06549705790335072
+     }
+    },
+    "herwig": {
+     "fraction": 1.0,
+     "newton_iterations": 3,
+     "window_fraction": 0.38427989596974343,
+     "max_rel_window_fraction": 2.5290916028097854e-09,
+     "lam": [
+      0.08356389071400788,
+      1.1795991970103898,
+      -1.1273435876252604,
+      -0.0657972942010105,
+      -7.157624213592594,
+      0.507603147387939,
+      3.5247477223302384,
+      0.02018475097224152,
+      -0.24638709318250646,
+      0.0053788167705154065,
+      6.9474877514529805,
+      1.3929841775745666,
+      0.010178854221336518,
+      30.259567540177002
+     ],
+     "before": {
+      "max_rel_means": 2.5290907146313657e-09,
+      "max_rel_hist": 1.2014439654591075e-08,
+      "thrust_mean": 0.05867481014169722,
+      "thrust_mean_paper": 0.05867481001492452
+     },
+     "after": {
+      "max_rel_means": 2.5831765615436098e-09,
+      "max_rel_hist": 1.1987396401051961e-08,
+      "thrust_mean": 0.0598851316677598,
+      "thrust_mean_paper": 0.05988513155559539
+     }
+    }
+   },
+   "mixed": {
+    "before": {
+     "max_rel_means": 1.1173565406252806e-09,
+     "max_rel_hist": 7.382131316775378e-09,
+     "thrust_mean": 0.06206827284545257,
+     "thrust_mean_paper": 0.06206827278699768
+    },
+    "after": {
+     "max_rel_means": 1.1177209158219625e-09,
+     "max_rel_hist": 7.402028096745172e-09,
+     "thrust_mean": 0.06269109478175294,
+     "thrust_mean_paper": 0.06269109472947305
+    }
+   }
+  }
+ },
+ "paper_from_files_read_back": {
+  "xi": 0.5,
+  "events_in_window": 535993,
+  "generators": {
+   "sherpa": {
+    "fraction": 0.0,
+    "newton_iterations": 3,
+    "window_fraction": 0.4385611435859975,
+    "max_rel_window_fraction": 2.459952241906649e-10,
+    "lam": [
+     0.03838071004330295,
+     0.790719809499868,
+     -0.8540708452300273,
+     -0.022335509535207354,
+     -13.66258764793204,
+     0.2519468736132188,
+     7.243356553115843,
+     0.0027838691262204833,
+     139.78340235537252,
+     0.12160978528253147,
+     35.36063808498777,
+     2.941036784855919,
+     0.002730575834125203,
+     -202.03841428280845
+    ],
+    "before": {
+     "max_rel_means": 1.5471662839772193e-09,
+     "max_rel_hist": 1.7382706436118759e-09,
+     "thrust_mean": 0.06546173554920792,
+     "thrust_mean_paper": 0.06546173555907084
+    },
+    "after": {
+     "max_rel_means": 1.5396836028358507e-09,
+     "max_rel_hist": 1.7383191995433947e-09,
+     "thrust_mean": 0.06549705789574607,
+     "thrust_mean_paper": 0.06549705790335072
+    }
+   },
+   "herwig": {
+    "fraction": 1.0,
+    "newton_iterations": 3,
+    "window_fraction": 0.38427989596974343,
+    "max_rel_window_fraction": 2.5290916028097854e-09,
+    "lam": [
+     0.08356389071400788,
+     1.1795991970103898,
+     -1.1273435876252604,
+     -0.0657972942010105,
+     -7.157624213592594,
+     0.507603147387939,
+     3.5247477223302384,
+     0.02018475097224152,
+     -0.24638709318250646,
+     0.0053788167705154065,
+     6.9474877514529805,
+     1.3929841775745666,
+     0.010178854221336518,
+     30.259567540177002
+    ],
+    "before": {
+     "max_rel_means": 2.5290907146313657e-09,
+     "max_rel_hist": 1.2014439654591075e-08,
+     "thrust_mean": 0.05867481014169722,
+     "thrust_mean_paper": 0.05867481001492452
+    },
+    "after": {
+     "max_rel_means": 2.5831765615436098e-09,
+     "max_rel_hist": 1.1987396401051961e-08,
+     "thrust_mean": 0.0598851316677598,
+     "thrust_mean_paper": 0.05988513155559539
+    }
+   }
+  },
+  "mixed": {
+   "before": {
+    "max_rel_means": 1.1173565406252806e-09,
+    "max_rel_hist": 7.382131316775378e-09,
+    "thrust_mean": 0.06206827284545257,
+    "thrust_mean_paper": 0.06206827278699768
+   },
+   "after": {
+    "max_rel_means": 1.1177209158219625e-09,
+    "max_rel_hist": 7.402028096745172e-09,
+    "thrust_mean": 0.06269109478175294,
+    "thrust_mean_paper": 0.06269109472947305
+   }
+  }
+ },
+ "seconds": 141,
+ "rerun": {
+  "run_dir": "/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code",
+  "mark_run_id": "20261107-013026-2306821",
+  "t_dir": "/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code/output/temperature",
+  "beam_photons": {
+   "beam_photons": "remove",
+   "t_dir": "/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code/output/temperature",
+   "beam_photons_md5": "ea7f82ed77c067ee727114a72d038d93"
+  },
+  "bundle_rule_sha256": "bdd05934a868c5c781f030fb3c2ec95fed967da970b3dc8b73e35023ebaae883",
+  "targets_kept": {
+   "file": "targets_thrust_nlo.npz",
+   "bytes": 30098,
+   "sha256": "7e125ae4e03da92255f0f2ae92b91553a86cd016b334eaf11b01ea3873a835ca",
+   "built": "2026-11-01T23:42Z",
+   "build_script_sha256": "88bdc8a82f9c00ef4b202274e7fe3b18eb432277402995475afb41f32b895e83"
+  },
+  "worst_relative_difference_paper": 1.2014439654591075e-08,
+  "worst_relative_difference_paper_read_back": 1.2014439654591075e-08
+ }
+}

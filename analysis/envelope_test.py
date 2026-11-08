@@ -2,7 +2,31 @@
 """The envelope of NDRAW parameter variations against the linear covariance, for the main section of the
 paper (prior only: generators and learning) and for the application (with the calculation imposed in the window).
 
-Prior. Every parameter of the box, the mixing fraction included, is flat on its range, written as a standard
+MIX sets how the two generators combine:
+  linear      (default) the prediction is (1 - xi) <O>_S(theta_S) + xi <O>_H(theta_H): each generator from its own
+              weights, the head at xi = 0 (Sherpa) and at xi = 1 (Herwig), the calculation imposed on each one
+              alone, the two predictions mixed with (1 - xi, xi). The thrust histogram is normalized to the total
+              rate, so every prediction is linear in xi. NDRAW defaults to 2000 and the outputs end in _lin.
+  geometric   the weight of the geometric head at the drawn xi, the thrust histogram normalized over the fitted
+              bins: the results of the earlier draft, unchanged.
+
+Linear. BOX is tune or full, alone or with _sherpa or _herwig (directlib.lin_box):
+  full          each generator's parameters over the trained box, xi over [0, 1], slopes at the box centre
+  tune          each generator range TUNE_SCALE of its width, centred on the default tunes (CENTRAL) and cut
+                symmetrically where the box edge is nearer, so the default stays the centre; xi over [0, 1]
+  <box>_sherpa, <box>_herwig   one generator alone (xi = 0 or 1) over its tune-sized or full ranges
+Per generator g, at its parameters at the centre (xi = 0 or 1), the slopes J_g = dy_g/d(theta_g, omega, c) through
+the re-solved multipliers (saved as J_theta_S, J_omega_S, J_c_S, ... with y_central_S, y_central_H), and
+  lin_flat    Var(xi) D D^T + sum_g E[xi_g^2] J_g diag((hi - lo)^2/12) J_g^T, D = y_H - y_S at the centre
+  lin_z       the same with every flat variance replaced by ((hi - lo) phi(0))^2, slopes in z (= 6/pi lin_flat)
+  learn       sum_gh E[xi_g xi_h] J_g^omega C J_h^omega^T, the shared learning weights
+  theory      the same with Sigma_c for the shared calculation (after only)
+  learn_mid, theory_mid   the same with xi at the centre, for the draws that vary the learning weights or the
+              calculation alone and keep theta and xi at the centre
+with E[xi_g xi_h] = 1/3 on the diagonal and 1/6 off it for xi over [0, 1] (directlib.mix_cov). The draws are
+exact: both generators reweighted (and re-solved after) at each draw and mixed. No quadrature in xi.
+
+Geometric. Every parameter of the box, the mixing fraction included, is flat on its range, written as a standard
 Gaussian z through u = erfc(-z/sqrt(2))/2, theta = lo + (hi - lo) u, so the middle 68% of each range is one sigma
 and no draw leaves the trained box. BOX picks the ranges:
   full          the trained box, linear at its centre (xi = 1/2)
@@ -14,8 +38,10 @@ and no draw leaves the trained box. BOX picks the ranges:
 The learning weights are omega = w_at + N(0, C) and, after only, the calculation c = c0 + N(0, Sigma_c).
 
 Predictions (labels in the json): the seven means of three_bands.py, the thrust histogram of TEST (its bins
-below the window first, normalized over the fitted bins), the charged-multiplicity histogram (bins of two,
-fractions summing to one) and the heavy-jet-mass histogram (density over [0, 0.4)), before and after.
+below the window first, normalized over the fitted bins, or to the total rate when linear), the charged-
+multiplicity histogram (bins of two, fractions summing to one) and the heavy-jet-mass histogram (density over
+[0, 0.4) as a fraction of all events), before and after. When linear, the window mean tau_win is each
+generator's mean of tau inside the window, mixed with (1 - xi, xi) like every other prediction.
 
 Exact: the sample covariance over the NDRAW draws (Latin hypercube in u, so iid Gaussian in z up to the
 stratification), each reweighted exactly and re-solved after, jointly and one source at a time (the others at
@@ -27,21 +53,27 @@ m of the box (omega = w_at, c = c0), with J = dy/dtheta through the re-solved mu
             Var_xi[y(m, xi)] + E_xi[J(xi) diag(V) J(xi)^T]
 plus J_omega C J_omega^T for learning and J_c Sigma_c J_c^T for the calculation (after), at the centre or averaged
 over the xi nodes. Writes OUT.json (bands, ratios, SEs, correlation and whole-matrix comparisons) and OUT.npz
-(draws, covariances, central values, bin edges, the test data).
+(draws, covariances, central values, bin edges, the test data, and mix). Linear: the expansion point of the formula,
+the centre of the prior (the defaults for tune, D6; the box centre for full, D10), is recorded as expansion_point.
+The learning weights are expanded at the published network of the export's temperature (directlib.wifi_point).
+DRAW_LIMIT (tests) evaluates only the first DRAW_LIMIT draws of the NDRAW of each set.
 
-    BOX=full python envelope_test.py MIXGEOV3S9 output/models/MIXGEOV3S9_cond.npz \\
+    BOX=tune python envelope_test.py MIXGEOV3S9 output/models/MIXGEOV3S9_cond.npz \\
         output/models/MIXGEOV3S9_ref_v2_slim.npz output/thrust_targets_nlo_point.npz output/wifi_MIXGEOV3S9_fit.npz
 """
 import os, sys, json, time, copy, resource
 import numpy as np, torch
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from directlib import Model, tilt_on_t
+from directlib import Model, tilt_on_t, at_fraction, xi_moments, mix_cov, lin_box, wifi_point
 
 tag, export, ref, grid, wfit = sys.argv[1:6]
 E = os.environ.get
-BOX = E('BOX', 'full'); NDRAW = int(E('NDRAW', '400')); NREF = int(E('NREF', '0')); SEED = int(E('SEED', '11'))
+MIX = E('MIX', 'linear'); assert MIX in ('linear', 'geometric'), MIX
+LINEAR = MIX == 'linear'; SFX = '_lin' if LINEAR else ''
+BOX = E('BOX', 'full'); NDRAW = int(E('NDRAW', '2000' if LINEAR else '400')); NREF = int(E('NREF', '0')); SEED = int(E('SEED', '11'))
 TUNE = float(E('TUNE_SCALE', str(1/3))); XI_NODES = int(E('XI_NODES', '8')); NBOOT = int(E('NBOOT', '300'))
-TEST = E('TEST_DATA', 'delphi'); OUT = E('OUT', f'output/envelope_test_{tag}_{BOX}'); RES_TOL = float(E('RES_TOL', '1e-8'))
+DRAW_LIMIT = int(E('DRAW_LIMIT', '0')); NEVAL = min(NDRAW, DRAW_LIMIT) if DRAW_LIMIT else NDRAW
+TEST = E('TEST_DATA', 'delphi'); OUT = E('OUT', f'output/envelope_test_{tag}_{BOX}{SFX}'); RES_TOL = float(E('RES_TOL', '1e-8'))
 MC_NP = E('MC_NP', '0') == '1'
 CENTRAL = E('CENTRAL')
 torch.set_num_threads(int(E('TORCH_THREADS', '8'))); np.seterr(divide='ignore', invalid='ignore')
@@ -49,7 +81,7 @@ t0 = time.time()
 M = Model(tag, export=export, ref=ref, exps=(TEST,), first_bin=0.05, floor_rel=0.002, a0_stride=1, ae_dtype='float32', grid=grid)
 H = copy.copy(M); H.AE = M.AE.to(torch.float64); H.wifi = None    # float64 head for the derivatives, M (float32) for the draws
 G = M.G; assert len(G['alphas']) == 1 and len(G['alpha0']) == 1, 'a single-point target file is expected'
-W = np.load(wfit); C = np.asarray(W['C'], np.float64); W_AT = np.asarray(W['w_published'], np.float64)
+W = np.load(wfit); C = np.asarray(W['C'], np.float64); W_AT, W_AT_NOTE = wifi_point(W, M)
 NT = M.NT; cen = M.CEN.numpy(); hw = M.HW.numpy(); is_mix = M.kind == 'mixture'; XI = NT - 1 if is_mix else None
 assert is_mix and abs(cen[-1] - 0.5) < 1e-9 and abs(hw[-1] - 0.5) < 1e-9, ('xi box', cen[-1], hw[-1])
 NS = M.NS                                                           # theta = (theta_S [NS], theta_H, xi)
@@ -75,12 +107,15 @@ GROUPS = dict(means=np.arange(NM), thrust=np.arange(NM, NM + NTH), nch=np.arange
 
 
 def outv(lw):
-    """The predictions as one differentiable vector: the means, then the thrust, multiplicity and rho histograms."""
+    """The predictions as one differentiable vector: the means, then the thrust, multiplicity and rho histograms.
+    lw is normalized over all events; the thrust histogram is normalized over the fitted bins (geometric) or to
+    the total rate (linear)."""
     w = torch.exp(lw); o = M.observables(w)
     cnt = torch.zeros(x['nb'], dtype=w.dtype).index_add(0, x['idx'], w[x['ins']])
     nh = torch.zeros(NNB, dtype=w.dtype).index_add(0, NIDX, w)
     rh = torch.zeros(NRB, dtype=w.dtype).index_add(0, RIDX, w[RIN])/RWID
-    return torch.cat([torch.stack([o[k] for k in OBK]), cnt[EXT]/(WEXT*cnt[x['use']].sum()), nh, rh])
+    th = cnt[EXT]/WEXT if LINEAR else cnt[EXT]/(WEXT*cnt[x['use']].sum())
+    return torch.cat([torch.stack([o[k] for k in OBK]), th, nh, rh])
 
 
 # ---- the calculation and its variations (as strategy_test.py) ----------------------------------------------
@@ -128,6 +163,20 @@ def evaluate(theta, om, c, lw0=None):
         return np.r_[outv(lw0).numpy(), outv(tilt(lw0, c)).numpy()]
 
 
+GENS = (('S', 0.0), ('H', 1.0))                                    # the generators and their xi in the head
+
+
+def evaluate_lin(theta, om, c, lw0s=None):
+    """The linear mixture at theta = (theta_S, theta_H, xi): ({g: y_g}, (1 - xi) y_S + xi y_H), each y_g from
+    evaluate() at xi = 0 or 1, so with its own tilt; a generator with no weight is skipped. lw0s = {g: log w0_g}
+    skips the head."""
+    xi = float(theta[XI]); ys = {}
+    for g, xg in GENS:
+        if (1 - xi if g == 'S' else xi) != 0:
+            ys[g] = evaluate(at_fraction(theta, xg), om, c, None if lw0s is None else lw0s[g])
+    return ys, sum((1 - xi if g == 'S' else xi)*y for g, y in ys.items())
+
+
 def jac(theta, om, c):
     """(y, {theta, omega, c: dy/d.}) through the re-solved multipliers (y = before, after)."""
     leaf = dict(theta=torch.tensor(np.asarray(theta, np.float64), requires_grad=True),
@@ -166,26 +215,38 @@ def clean(o):
 central = cen.copy(); central[XI] = 0.5
 if CENTRAL:
     central = np.array([float(v) for v in CENTRAL.split(',')], np.float64); assert len(central) == NT
-P = cen.copy() if BOX == 'full' else central.copy(); g = np.ones(NT)
-if BOX != 'full':
-    g[:] = TUNE
-    if BOX == 'tune_xifull':
-        g[XI] = 1.0
-    if BOX in ('tune_sherpa', 'tune_herwig'):
-        P[XI] = 0.0 if BOX == 'tune_sherpa' else 1.0; g[XI] = 0.0
-        g[NS:XI] = 0.0 if BOX == 'tune_sherpa' else TUNE          # the other generator's parameters do not enter
-        g[:NS] = TUNE if BOX == 'tune_sherpa' else 0.0
-assert BOX in ('full', 'tune', 'tune_xifull', 'tune_sherpa', 'tune_herwig'), BOX
-lo, hi = np.maximum(P - g*hw, cen - hw), np.minimum(P + g*hw, cen + hw)
+if LINEAR:                                                          # D6: tune-sized ranges centred on the defaults
+    lo, hi = lin_box(cen, hw, central, BOX, TUNE, NS)
+    XE, XVAR = xi_moments(lo[XI], hi[XI])                          # E[xi_g xi_h] and Var(xi) of the flat prior
+    A0 = dict(S=1 - (lo[XI] + hi[XI])/2, H=(lo[XI] + hi[XI])/2)    # (1 - xi, xi) at the centre
+    XE_MID = np.outer([A0['S'], A0['H']], [A0['S'], A0['H']])
+    ACTIVE = [g for i, (g, _) in enumerate(GENS) if XE[i, i] > 0]  # the generators that enter
+    OWN = dict(S=np.arange(NS), H=np.arange(NS, XI))               # each generator's own parameters in theta
+else:
+    P = cen.copy() if BOX == 'full' else central.copy(); g = np.ones(NT)
+    if BOX != 'full':
+        g[:] = TUNE
+        if BOX == 'tune_xifull':
+            g[XI] = 1.0
+        if BOX in ('tune_sherpa', 'tune_herwig'):
+            P[XI] = 0.0 if BOX == 'tune_sherpa' else 1.0; g[XI] = 0.0
+            g[NS:XI] = 0.0 if BOX == 'tune_sherpa' else TUNE          # the other generator's parameters do not enter
+            g[:NS] = TUNE if BOX == 'tune_sherpa' else 0.0
+    assert BOX in ('full', 'tune', 'tune_xifull', 'tune_sherpa', 'tune_herwig'), BOX
+    lo, hi = np.maximum(P - g*hw, cen - hw), np.minimum(P + g*hw, cen + hw)
 m = (lo + hi)/2; R = hi - lo
 PHI0 = 1/np.sqrt(2*np.pi)
-print(f'[{tag}] {BOX}: {M.N} events, d={NT}, {len(W_AT)} learning weights, {NO} predictions; box centre {np.round(m, 4).tolist()}, '
-      f'widths {np.round(R, 4).tolist()} [{time.time()-t0:.0f} s]', flush=True)
-res = dict(tag=tag, box=BOX, tune_scale=TUNE, ndraw=NDRAW, nref=NREF, seed=SEED, xi_nodes=XI_NODES, labels=LAB,
+print(f'[{tag}] {BOX} ({MIX}): {M.N} events, d={NT}, {len(W_AT)} learning weights, {NO} predictions; box centre {np.round(m, 6).tolist()}, '
+      f'widths {np.round(R, 6).tolist()} [{time.time()-t0:.0f} s]', flush=True)
+res = dict(tag=tag, mix=MIX, box=BOX, tune_scale=TUNE, ndraw=NEVAL, nref=NREF, seed=SEED, xi_nodes=0 if LINEAR else XI_NODES, labels=LAB,
            groups={k: v.tolist() for k, v in GROUPS.items()}, lo=lo.tolist(), hi=hi.tolist(), centre=m.tolist(),
            nch_edges=[float(e) if np.isfinite(e) else None for e in NCH_EDGES], rho_edges=RHO_EDGES.tolist(),
            thrust_edges=[float(x['lo'][b]) for b in ext] + [float(x['hi'][ext[-1]])], newton=NEWTON, timings={})
 tick = [time.time()]
+if NEVAL < NDRAW:
+    res['draws_generated'] = NDRAW                                 # tests: only the first NEVAL of them evaluated
+if LINEAR:
+    res['expansion_point'] = m.tolist(); res['learning_point'] = W_AT_NOTE
 
 
 def done(stage):
@@ -197,10 +258,28 @@ def done(stage):
 
 
 # ---- linear at the centre, and xi by quadrature ---------------------------------------------------------
-yc, J = jac(m, W_AT, C0); Jt, Jw, Jc = J['theta'], J['omega'], J['c']
 VFLAT = R**2/12; VZ = (R*PHI0)**2
-LIN = dict(lin_z=(Jt*VZ) @ Jt.T, lin_flat=(Jt*VFLAT) @ Jt.T, learn=Jw @ C @ Jw.T, theory=Jc @ SIGC @ Jc.T)
-if R[XI] > 0 and XI_NODES > 0:
+if LINEAR:
+    # each generator at the centre of its ranges: its predictions and their slopes in its own parameters, the
+    # learning weights and the calculation, then the covariance of the mixture (directlib.mix_cov)
+    YG0, JG = {}, {}
+    for g, xg in GENS:
+        if g in ACTIVE:
+            YG0[g], JG[g] = jac(at_fraction(m, xg), W_AT, C0)
+            print(f'  slopes of {g} at the centre [{time.time()-t0:.0f} s]', flush=True)
+    yc = sum(A0[g]*YG0[g] for g in ACTIVE)
+    own = lambda V: [(JG[g]['theta'][:, OWN[g]] if g in JG else None, V[OWN[g]]) for g, _ in GENS]
+    shared = lambda k, Cov: [(JG['S'][k] if 'S' in JG else None, JG['H'][k] if 'H' in JG else None, Cov)]
+    delta = YG0['H'] - YG0['S'] if len(ACTIVE) == 2 else None
+    LIN = dict(lin_flat=mix_cov(XE, XVAR, delta, own(VFLAT)), lin_z=mix_cov(XE, (R[XI]*PHI0)**2, delta, own(VZ)),
+               learn=mix_cov(XE, 0, shared=shared('omega', C)), theory=mix_cov(XE, 0, shared=shared('c', SIGC)),
+               learn_mid=mix_cov(XE_MID, 0, shared=shared('omega', C)), theory_mid=mix_cov(XE_MID, 0, shared=shared('c', SIGC)))
+    res['xi'] = dict(E=XE.tolist(), var=XVAR, E_mid=XE_MID.tolist(), generators=ACTIVE)
+    res['central_generators'] = {g: dict(before=per(YG0[g][:NO]), after=per(YG0[g][NO:])) for g in ACTIVE}
+else:
+    yc, J = jac(m, W_AT, C0); Jt, Jw, Jc = J['theta'], J['omega'], J['c']
+    LIN = dict(lin_z=(Jt*VZ) @ Jt.T, lin_flat=(Jt*VFLAT) @ Jt.T, learn=Jw @ C @ Jw.T, theory=Jc @ SIGC @ Jc.T)
+if not LINEAR and R[XI] > 0 and XI_NODES > 0:
     uq, wq = np.polynomial.legendre.leggauss(XI_NODES); uq, wq = (uq + 1)/2, wq/2
     V0 = VFLAT.copy(); V0[XI] = 0.0; YQ = []; Cq = np.zeros((2*NO, 2*NO)); Lq = np.zeros_like(Cq); Tq = np.zeros_like(Cq)
     for u, wk in zip(uq, wq):
@@ -232,17 +311,23 @@ def draws(n, tagn):
 
 
 DR = draws(NDRAW, 'main'); SETS = dict(joint=('TH', 'OM', 'CS'), theta=('TH',), omega=('OM',), c=('CS',))
-with torch.no_grad():
-    LW_M = prior(torch.as_tensor(m), W_AT, M)                      # the c-only set: the head at the centre, once
-Y = {}
+with torch.no_grad():                                               # the c-only set: the head at the centre, once
+    LW_M = ({g: prior(torch.as_tensor(at_fraction(m, xg)), W_AT, M) for g, xg in GENS if g in ACTIVE} if LINEAR
+            else prior(torch.as_tensor(m), W_AT, M))
+Y, YG = {}, {}
 for name, vary in SETS.items():
-    rows = []
-    for i in range(NDRAW):
+    rows, rows_g = [], []
+    for i in range(NEVAL):
         th = DR['TH'][i] if 'TH' in vary else m; om = DR['OM'][i] if 'OM' in vary else W_AT; cc = DR['CS'][i] if 'CS' in vary else C0
-        rows.append(evaluate(th, om, cc, LW_M if name == 'c' else None))
+        if LINEAR:
+            ys, y = evaluate_lin(th, om, cc, LW_M if name == 'c' else None); rows.append(y); rows_g.append(ys)
+        else:
+            rows.append(evaluate(th, om, cc, LW_M if name == 'c' else None))
         if i % 100 == 0:
-            print(f'  {name} draw {i+1}/{NDRAW} [{time.time()-t0:.0f} s]', flush=True)
+            print(f'  {name} draw {i+1}/{NEVAL} [{time.time()-t0:.0f} s]', flush=True)
     Y[name] = np.array(rows)
+    if LINEAR:
+        YG[name] = {g: np.array([r[g] for r in rows_g]) for g in ACTIVE}
 done('draws')
 
 # ---- comparisons -----------------------------------------------------------------------------------------
@@ -288,6 +373,8 @@ for side in ('before', 'after'):
         if side == 'before' and setname == 'c':
             continue
         for mname, (kt, kl, kc) in models.items():
+            if LINEAR and setname in ('omega', 'c'):
+                kl, kc = kl + '_mid', kc + '_mid'                  # these draws keep theta and xi at the centre
             Cm = (LIN[kt] if setname in ('joint', 'theta') else 0) + (LIN[kl] if setname in ('joint', 'omega') else 0) \
                  + (LIN[kc] if side == 'after' and setname in ('joint', 'c') else 0)
             if setname in ('omega', 'c') and mname != 'lin_flat':
@@ -300,15 +387,26 @@ for side in ('before', 'after'):
         print(f'  {side} joint {mname}: SD ratio {np.nanmin(r):.2f} to {np.nanmax(r):.2f}; '
               + ', '.join(f'{gname} corr max diff {c[f"corr_{gname}"]["max_abs_diff"]:.2f} (eig {c[f"corr_{gname}"]["gen_eig_min"]:.2f}-'
                           f'{c[f"corr_{gname}"]["gen_eig_max"]:.2f})' for gname in GROUPS if f'corr_{gname}' in c), flush=True)
+# linear: each generator's central prediction and slopes (rows: the predictions before, then after; columns: its own
+# parameters, the learning weights, the calculated moments), E[xi_g xi_h], the learning weights and calculation of
+# every draw, and each generator's predictions at the joint draws (float32)
+extra = ({**{f'y_central_{g}': YG0[g] for g in ACTIVE}, **{f'J_theta_{g}': JG[g]['theta'][:, OWN[g]] for g in ACTIVE},
+          **{f'J_omega_{g}': JG[g]['omega'] for g in ACTIVE}, **{f'J_c_{g}': JG[g]['c'] for g in ACTIVE},
+          **{f'Y_joint_{g}': YG['joint'][g].astype(np.float32) for g in ACTIVE},
+          'xi_E': XE, 'xi_var': np.float64(XVAR), 'xi_E_mid': XE_MID, 'OM': DR['OM'], 'CS': DR['CS'], 'w_at': W_AT, 'c0': C0}
+         if LINEAR else {})
 save_npz = lambda: np.savez_compressed(
     OUT + '.npz', labels=np.array(LAB), lo=lo, hi=hi, centre=m, y_central=yc, **{f'Y_{k}': v for k, v in Y.items()},
     **{f'C_{k}': v for k, v in LIN.items()}, U=DR['U'], Z=DR['Z'], TH=DR['TH'],
     thrust_edges=np.array(res['thrust_edges']), nch_edges=NCH_EDGES, rho_edges=RHO_EDGES,
-    data_lo=x['lo'], data_hi=x['hi'], data_y=x['y'].numpy(), data_e=x['e'].numpy(), data_use=use, ext=ext)
+    data_lo=x['lo'], data_hi=x['hi'], data_y=x['y'].numpy(), data_e=x['e'].numpy(), data_use=use, ext=ext,
+    **({'data_y_raw': x['y_raw'], 'data_e_raw': x['e_raw'], 'expansion_point': m} if LINEAR else {}), mix=np.array(MIX), **extra)
 save_npz()
 if NREF:                                                            # the sampling error of NDRAW draws, against NREF more
-    DRR = draws(NREF, 'ref'); Y['ref'] = np.array([evaluate(DRR['TH'][i], DRR['OM'][i], DRR['CS'][i]) for i in range(NREF)])
+    DRR = draws(NREF, 'ref')
+    Y['ref'] = np.array([evaluate_lin(DRR['TH'][i], DRR['OM'][i], DRR['CS'][i])[1] if LINEAR else
+                         evaluate(DRR['TH'][i], DRR['OM'][i], DRR['CS'][i]) for i in range(NREF)])
     for side in ('before', 'after'):
-        res['compare'][f'{side}/draws{NDRAW}_vs_ref'] = compare(np.cov(Y['joint'], rowvar=False), Y['ref'], side)
+        res['compare'][f'{side}/draws{NEVAL}_vs_ref'] = compare(np.cov(Y['joint'], rowvar=False), Y['ref'], side)
     done('reference'); save_npz()
 print(f'ENVELOPE TEST {tag} {BOX} DONE [{time.time()-t0:.0f} s]', flush=True)

@@ -1,0 +1,12 @@
+{
+ "step": "collect",
+ "run_id": "20261107-013026-2306821",
+ "code_md5": "b0ca0841b27e6e5427846e2db0716b6c",
+ "written": "Sat Nov  7 11:55:00 2026",
+ "files": {
+  "output/rank_scan_final.json": "d8ab9c12c93730faa4c78cfac650152f",
+  "output/widebox_wb18.json": "57a5c2acd931af3429d9a671f3db1a8b",
+  "output/wb18_weights_single_0.083.npy": "050378da499a7aa12b515e52dffa52b3",
+  "output/wb18_weights_union_0.083.npy": "f565a3ef5bb5d039238a9a0452794722"
+ }
+}

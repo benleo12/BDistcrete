@@ -18,7 +18,14 @@ import numpy as np
 
 bas = sys.argv[1]
 fitf = sys.argv[2] if len(sys.argv) > 2 else bas.replace('_basis.npz', '_fit.npz')
-TAG = os.path.basename(fitf).replace('wifi_', '').replace('.npz', '')
+for _f in (bas, fitf):
+    if not os.path.exists(_f):
+        raise FileNotFoundError(f'missing input {_f}')
+# the tag of the fit: wifi_<TAG>_fit.npz -> <TAG> (the name make_numbers.py reads), any other fit file
+# by its own name (wifi_MIXGEOV3S9_fitbce.npz -> MIXGEOV3S9_fitbce)
+_b = os.path.basename(fitf)
+_b = _b[len('wifi_'):] if _b.startswith('wifi_') else _b
+TAG = _b[:-len('_fit.npz')] if _b.endswith('_fit.npz') else _b[:-len('.npz')] if _b.endswith('.npz') else _b
 B = np.load(bas); F = np.load(fitf)
 rids, theta = B['rids'], B['theta']
 xi = {int(r): float(t[-1]) for r, t in zip(rids, theta)}                 # 0 Sherpa, 1 Herwig
@@ -44,4 +51,4 @@ d = {k: out['fitted'][k] - out['published'][k] for k in ('loss', 'num', 'den_sam
 print(f'[{TAG}] gain of the fitted weights: {d["loss"]:+.4f} = numerator {d["num"]:+.4f} + own generator {d["den_same"]:+.4f} '
       f'+ other generator {d["den_other"]:+.4f}')
 out['gain'] = d
-json.dump(out, open(f'output/wifi_gensplit_{TAG}.json', 'w'), indent=1)
+json.dump(out, open(os.environ.get('GENSPLIT_OUT', f'output/wifi_gensplit_{TAG}.json'), 'w'), indent=1)

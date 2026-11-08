@@ -1,8 +1,8 @@
 {
  "W": {
-  "master": 0.9558568339890836,
-  "master_raw": 0.9833674493378655,
-  "temperature": 0.975,
+  "master": 1.0022968273054593,
+  "master_raw": 1.0264760105709636,
+  "temperature": 0.925,
   "rank_K": 48,
   "best_step": 18000,
   "stop_trajectory": [
@@ -20,59 +20,84 @@
    ]
   ],
   "per_obs": {
-   "1_minus_thrust": 0.9536595907670208,
-   "mult_total": 0.9721377597471969,
-   "B_total": 1.0212801711498363,
-   "rho_heavy": 0.8763498142922803
+   "1_minus_thrust": 1.0294815209965504,
+   "mult_total": 0.9963067673989605,
+   "B_total": 1.0907589242357365,
+   "rho_heavy": 0.8926400965905896
   },
   "width_uniform": {
-   "1_minus_thrust": 6.504263445582963,
-   "mult_total": 3.39997781236162,
-   "B_total": 6.895241791201765,
-   "rho_heavy": 6.123238401942247
+   "1_minus_thrust": 6.546076793362507,
+   "mult_total": 3.4248834913028077,
+   "B_total": 6.907396177373613,
+   "rho_heavy": 6.168399226424645
   },
   "gain_over_uniform": {
-   "1_minus_thrust": 6.82,
-   "mult_total": 3.5,
-   "B_total": 6.75,
-   "rho_heavy": 6.99
+   "1_minus_thrust": 6.36,
+   "mult_total": 3.44,
+   "B_total": 6.33,
+   "rho_heavy": 6.91
   },
   "calibration_check": {
-   "1_minus_thrust": 1.1672014001801736,
-   "mult_total": 1.0155910287192036,
-   "B_total": 1.084121247648001,
-   "rho_heavy": 1.0993001927165644
+   "1_minus_thrust": 1.1490970056931873,
+   "mult_total": 1.026982202299062,
+   "B_total": 1.064033213901396,
+   "rho_heavy": 1.0787776770298023
   },
   "calibration_spread": {
-   "1_minus_thrust": 0.11054446409736274,
-   "mult_total": 0.050918894613020765,
-   "B_total": 0.023307200849503128,
-   "rho_heavy": 0.1615184663545892
+   "1_minus_thrust": 0.09310061052580712,
+   "mult_total": 0.05839189003750928,
+   "B_total": 0.013684880251841362,
+   "rho_heavy": 0.09126409568296143
   },
   "N_eff": {
-   "(0.197,)": 58838.106696777
+   "(0.197,)": 58426.84930778017
   },
   "N_ref": 63000,
   "min_count": 5,
   "nbins_used": {
    "1_minus_thrust": 25,
-   "mult_total": 71,
+   "mult_total": 70,
    "B_total": 25,
    "rho_heavy": 25
   },
   "pull_mean": {
-   "1_minus_thrust": -0.045847932932067216,
-   "mult_total": -0.0005507708088198539,
-   "B_total": -0.018472359385954276,
-   "rho_heavy": -0.12442740294082107
+   "1_minus_thrust": -0.018469828394135045,
+   "mult_total": 0.001299036817766059,
+   "B_total": -0.030486312738290628,
+   "rho_heavy": -0.1210257415660343
   },
   "per_point": {
    "(0.197,)": {
-    "1_minus_thrust": 0.9536595907670208,
-    "mult_total": 0.9721377597471969,
-    "B_total": 1.0212801711498363,
-    "rho_heavy": 0.8763498142922803
+    "1_minus_thrust": 1.0294815209965504,
+    "mult_total": 0.9963067673989605,
+    "B_total": 1.0907589242357365,
+    "rho_heavy": 0.8926400965905896
    }
+  },
+  "scored_from": "output/models/W_P2wb18local9105fac0_trunk.pt",
+  "data": "/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_widebox",
+  "n_held_events": {
+   "9105": 80000
+  },
+  "training_record": "output/published/p2wb18local9105_W_fac_s0.json",
+  "temperature_trained": 0.975,
+  "temperature_source": "refit",
+  "stop_width": 1.0088815553196364,
+  "stop_width_at_trained_T": 0.9904469779342416,
+  "master_at_trained_T": 0.9965613129421512,
+  "beam_photons": "remove",
+  "data_realpath": "/mnt/beegfs/bassi/reweighting/gen/data_widebox_nb",
+  "model_realpath": "/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code/output/models/W_P2wb18local9105fac0_trunk.pt",
+  "lmx_fingerprint": {
+   "md5": "22d1cddffec784bd6a928ecfc4afb937",
+   "code_md5": "57b5bf3833c268b08d62763cf3acd9f0",
+   "spec": "OUT=output/p2wb18local9105_W_fac_s0.json STAGE=W NET=fac SEED=0 K=48 MODEL=output/models/W_P2wb18local9105fac0_trunk.pt DATA=/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_widebox TMODE=refit TRAINED=output/published/p2wb18local9105_W_fac_s0.json STAGEW_CSV=/mnt/beegfs/bassi/reweighting/lmx_runs/gen/designs/stageW_local_9105.csv NREF_TOTAL=63000 SUFFIX=_P2wb18local9105fac0 DUMP=1",
+   "run_id": "20261107-013026-2306821",
+   "outputs": {
+    "output/temperature/W_P2wb18local9105fac0.json": "81ae8a247b4ba51b1cf58a761c4b20b0",
+    "output/models/W_P2wb18local9105fac0_w_9105.npy": "a1e77c9248f0c0615522aeb04e966b7c"
+   },
+   "inputs": {}
   }
  }
 }

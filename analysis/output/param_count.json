@@ -183,5 +183,226 @@
  },
  "published": 82457,
  "published_matches": "K1",
- "note": "the published 82457 is the event side at K=1, the matched crosscheck configuration (equal to the energyflow PFN with output_dim=1: Phi 36456 + F 45900 + output 101); the event side with the K=24 head of an earlier draft holds 84780 (one 100->24 head layer instead of 100->1)"
+ "note": "the published 82457 is the event side at K=1, the matched crosscheck configuration (equal to the energyflow PFN with output_dim=1: Phi 36456 + F 45900 + output 101); the event side with the K=24 head of an earlier draft holds 84780 (one 100->24 head layer instead of 100->1)",
+ "trained_trunks": [
+  {
+   "file": "output/models/A_P2augfullfac0_trunk.pt",
+   "realpath": "/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code/output/models/A_P2augfullfac0_trunk.pt",
+   "members": 4,
+   "same_layers_in_every_member": true,
+   "K": 48,
+   "phi_sizes": [
+    100,
+    100,
+    256
+   ],
+   "f_sizes": [
+    100,
+    100,
+    100
+   ],
+   "layers": [
+    [
+     "phi.0.weight",
+     [
+      100,
+      4
+     ]
+    ],
+    [
+     "phi.2.weight",
+     [
+      100,
+      100
+     ]
+    ],
+    [
+     "phi.4.weight",
+     [
+      256,
+      100
+     ]
+    ],
+    [
+     "A.0.weight",
+     [
+      100,
+      256
+     ]
+    ],
+    [
+     "A.2.weight",
+     [
+      100,
+      100
+     ]
+    ],
+    [
+     "A.4.weight",
+     [
+      100,
+      100
+     ]
+    ],
+    [
+     "A.6.weight",
+     [
+      48,
+      100
+     ]
+    ]
+   ],
+   "inputs": 4,
+   "outputs": 48,
+   "event_side_trained": 87204,
+   "event_side_K1_four_inputs": 82457,
+   "other_tensors": []
+  },
+  {
+   "file": "output/models/A_P2augfullfac1_trunk.pt",
+   "realpath": "/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code/output/models/A_P2augfullfac1_trunk.pt",
+   "members": 4,
+   "same_layers_in_every_member": true,
+   "K": 48,
+   "phi_sizes": [
+    100,
+    100,
+    256
+   ],
+   "f_sizes": [
+    100,
+    100,
+    100
+   ],
+   "layers": [
+    [
+     "phi.0.weight",
+     [
+      100,
+      4
+     ]
+    ],
+    [
+     "phi.2.weight",
+     [
+      100,
+      100
+     ]
+    ],
+    [
+     "phi.4.weight",
+     [
+      256,
+      100
+     ]
+    ],
+    [
+     "A.0.weight",
+     [
+      100,
+      256
+     ]
+    ],
+    [
+     "A.2.weight",
+     [
+      100,
+      100
+     ]
+    ],
+    [
+     "A.4.weight",
+     [
+      100,
+      100
+     ]
+    ],
+    [
+     "A.6.weight",
+     [
+      48,
+      100
+     ]
+    ]
+   ],
+   "inputs": 4,
+   "outputs": 48,
+   "event_side_trained": 87204,
+   "event_side_K1_four_inputs": 82457,
+   "other_tensors": []
+  },
+  {
+   "file": "output/models/A_P2augfullfac2_trunk.pt",
+   "realpath": "/mnt/beegfs/bassi/reweighting/lmx_runs/maxent_code/output/models/A_P2augfullfac2_trunk.pt",
+   "members": 4,
+   "same_layers_in_every_member": true,
+   "K": 48,
+   "phi_sizes": [
+    100,
+    100,
+    256
+   ],
+   "f_sizes": [
+    100,
+    100,
+    100
+   ],
+   "layers": [
+    [
+     "phi.0.weight",
+     [
+      100,
+      4
+     ]
+    ],
+    [
+     "phi.2.weight",
+     [
+      100,
+      100
+     ]
+    ],
+    [
+     "phi.4.weight",
+     [
+      256,
+      100
+     ]
+    ],
+    [
+     "A.0.weight",
+     [
+      100,
+      256
+     ]
+    ],
+    [
+     "A.2.weight",
+     [
+      100,
+      100
+     ]
+    ],
+    [
+     "A.4.weight",
+     [
+      100,
+      100
+     ]
+    ],
+    [
+     "A.6.weight",
+     [
+      48,
+      100
+     ]
+    ]
+   ],
+   "inputs": 4,
+   "outputs": 48,
+   "event_side_trained": 87204,
+   "event_side_K1_four_inputs": 82457,
+   "other_tensors": []
+  }
+ ]
 }

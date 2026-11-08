@@ -11,6 +11,11 @@ Held runs and the design come from the same place the ladder and the packager us
 cannot be described here with a different box than it was trained with.
 
 Usage: python closure_vs_distance.py [<stage> ...]     (default: every stage with a closure csv)
+
+The rerun (score_obs.py): BEAM_PHOTONS=remove reads the observables without the beam photons, as
+make_stage_table.py does: the reference means through make_stage_table.reference_obs (REF_ORIG_DIR,
+POBS_DIR), and a held-out run's photon-free (_nb) shapes file, its multiplicity checked against its
+particles.
 """
 import glob, os, sys
 import numpy as np
@@ -18,6 +23,7 @@ import pandas as pd
 
 from r2_ladder import STAGES
 from mixture_cfg import register as _register_mixture
+import score_obs as SO
 
 REL = os.environ.get('RELEASE_DIR', 'release')
 ALIAS = {'C_1M': 'C'}
@@ -74,16 +80,24 @@ def main(tags):
                   f'closure {os.path.exists(cl)}, reference {os.path.exists(rp)})')
             continue
         r = np.load(rp)
-        refmean = {o: (float(r[o].astype(float).mean()) if o in r.files else
-                       float(r['mask'].sum(1).astype(float).mean()) if o == 'mult_total' else None)
-                   for o in OBS}
+        if SO.REMOVE:
+            from make_stage_table import reference_obs
+            refmean = {o: (None if v is None else float(v.mean())) for o, v in reference_obs(tag, rp, r, OBS).items()}
+        else:
+            refmean = {o: (float(r[o].astype(float).mean()) if o in r.files else
+                           float(r['mask'].sum(1).astype(float).mean()) if o == 'mult_total' else None)
+                       for o in OBS}
         C = pd.read_csv(cl)
         n = 0
         for rid in cfg['held']:
             f = f'{cfg["data"]}/shapes_run_{rid:04d}.csv'
             if not os.path.exists(f):
                 continue
-            sh = pd.read_csv(f)
+            sh = SO.read_shapes(f) if SO.REMOVE else pd.read_csv(f)
+            if SO.REMOVE:
+                d = np.load(SO.need(f'{cfg["data"]}/particles_full_{rid:04d}.npz'))
+                sh['mult_total'] = SO.mult_total(sh['mult_total'].values, d['particles'], d['mask'],
+                                                 where=f'{cfg["data"]} run {rid}')
             for o in OBS:
                 if o not in sh.columns or refmean.get(o) is None:
                     continue

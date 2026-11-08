@@ -3,8 +3,20 @@
 Compute Energy Flow Polynomials and event shapes from HepMC3 ASCII files.
 
 Parses final-state particle 4-momenta, splits events into thrust-axis
-hemispheres, and evaluates hemisphere EFPs (degree <= 3) plus standard
+hemispheres, and evaluates hemisphere EFPs (degree <= 4, 36 of them) plus standard
 event shapes (thrust, C-parameter, heavy jet mass, wide broadening).
+
+The photons radiated by the beams are left out of every shape and every EFP, and out of the
+multiplicities, as in the paper's observables. Before anything is computed, each event loses the
+photons that the paper's rule flags (gentune/beam_photons.py of the release). The rule
+reads the per-particle features that extract_particles_full_flavor.py stores for the event, the
+100 hardest particles in the frame of the single-seed thrust iteration, so the event's features
+are built here in the same way first (remove_beam_photons). mult_total is then the number of the
+other final-state particles. --beam-photons keep counts the beam photons everywhere, as the shape
+files of an earlier draft did. The paper made its photon-free values from the stored features of
+its runs, as the value with the beam photons minus the change their removal makes on momenta
+rebuilt from those features; this script removes them from the event record itself, which those
+values follow to first order in the removed momentum.
 
 Usage:
     # Single run
@@ -27,33 +39,50 @@ try:
 except ImportError:
     efp = None
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+# The particles the rule reads per event: the --max-particles of extract_particles_full_flavor.py,
+# with which every training sample was extracted.
+P_MAX = 100
+
 
 # ---------------------------------------------------------------------------
 #  HepMC3 ASCII parser
 # ---------------------------------------------------------------------------
 
 def _hepmc_flavour(filepath, opener):
-    """'hepmc2' or 'hepmc3', read off the file's own header, or None if it does not say."""
+    """'hepmc2' or 'hepmc3', read off the file's own header, or None if it does not say.
+
+    The listing line names the format and the HepMC::Version line names the library that wrote
+    it, which is not the same thing: Herwig 7.3 writes HepMC2 through HepMC3, so its files open
+    with 'HepMC::Version 3.03.01' followed by 'HepMC::IO_GenEvent-START_EVENT_LISTING'. The
+    version line decides only when there is no listing line, as in gentune/features.py."""
+    version = None
     with opener(filepath, "rt") as fh:
         for _ in range(40):
             line = fh.readline()
             if not line:
                 break
-            if "Asciiv3" in line or "HepMC::Version 3" in line:
+            if "Asciiv3" in line:
                 return "hepmc3"
-            if "IO_GenEvent" in line or "HepMC::Version 2" in line:
+            if "IO_GenEvent" in line:
                 return "hepmc2"
+            if "HepMC::Version 3" in line:
+                version = "hepmc3"
+            elif "HepMC::Version 2" in line:
+                version = "hepmc2"
             if line.startswith("E "):
                 break
-    return None
+    return version
 
 
-def parse_hepmc3(filepath, max_events=None, fmt='auto'):
+def parse_hepmc3(filepath, max_events=None, fmt='auto', with_id=False):
     """
     Parse a HepMC ASCII file (plain or gzipped) and return a list of events.
 
     Each event is an (N, 4) numpy array with columns [E, px, py, pz] for
-    every final-state particle (status == 1), excluding neutrinos.
+    every final-state particle (status == 1), excluding neutrinos. with_id=True adds the
+    particle id and the generated mass, [E, px, py, pz, pid, mass], the rows of
+    extract_particles_full_flavor.parse_hepmc, which the beam-photon rule needs.
 
     fmt='auto' reads HepMC2 against HepMC3 from the file header. It used to pick the layout by
     counting fields on the P line, taking pid at index 3 and status at 9 whenever there were ten
@@ -105,7 +134,8 @@ def parse_hepmc3(filepath, max_events=None, fmt='auto'):
                 px, py, pz, E = (float(parts[i_mom]), float(parts[i_mom + 1]),
                                  float(parts[i_mom + 2]), float(parts[i_mom + 3]))
                 if status == 1 and abs(pid) not in (12, 14, 16):
-                    particles.append([E, px, py, pz])
+                    particles.append([E, px, py, pz, pid, float(parts[i_mom + 4])] if with_id
+                                     else [E, px, py, pz])
             except (ValueError, IndexError):
                 continue
 
@@ -117,6 +147,73 @@ def parse_hepmc3(filepath, max_events=None, fmt='auto'):
     if not seen:
         raise ValueError(f"{filepath}: parsed as {fmt} and found no final-state particles. "
                          f"Either it holds no events or the layout is not what {fmt} implies.")
+    return events
+
+
+# ---------------------------------------------------------------------------
+#  The photons radiated by the beams
+# ---------------------------------------------------------------------------
+
+def remove_beam_photons(events, max_particles=P_MAX, chunk=20000):
+    """
+    (events without their beam photons, as [E, px, py, pz] arrays; the number removed per event).
+
+    events are rows [E, px, py, pz, pid, mass] (parse_hepmc3 with with_id=True). The rule is the
+    paper's, gentune/beam_photons.py of the release, and it reads the per-particle features of
+    an event, so each event's features are built first exactly as
+    extract_particles_full_flavor.py stores them: full_event_particles(), the hardest
+    max_particles particles in the thrust frame of the single-seed iteration, in float32. A
+    flagged row of the features is mapped back to its particle by the same ordering, by
+    descending energy fraction. A particle beyond the hardest max_particles is never flagged, as
+    in the paper.
+    """
+    root = os.path.dirname(HERE)                  # the release, whose gentune holds the rule
+    for d in (root, HERE):
+        if d not in sys.path:
+            sys.path.insert(0, d)
+    try:
+        from gentune.beam_photons import beam_photon_mask
+    except ImportError as e:
+        raise ImportError(f"the beam-photon rule is gentune/beam_photons.py of the release, looked "
+                          f"for in {root}: keep generators/ next to gentune/, or pass "
+                          f"--beam-photons keep to count the beam photons ({e})") from None
+    from extract_particles_full_flavor import full_event_particles
+    out, nbeam = [], np.zeros(len(events), np.int64)
+    for a in range(0, len(events), chunk):
+        part = events[a:a + chunk]
+        F = np.zeros((len(part), max_particles, 6), np.float32)
+        M = np.zeros((len(part), max_particles), bool)
+        order = []
+        for i, ev in enumerate(part):
+            F[i], M[i], _ = full_event_particles(ev, max_particles)
+            E = ev[:, 0]
+            z = E / max(E.sum(), 1e-12)
+            o = np.argsort(-z)[:min(len(z), max_particles)]
+            if not np.array_equal(F[i, :len(o), 0], z[o].astype(np.float32)):
+                raise RuntimeError(f"event {a + i}: the stored features are not in the order "
+                                   f"of descending energy fraction, so a flag cannot be mapped "
+                                   f"back to its particle")
+            order.append(o)
+        flags = beam_photon_mask(F, M)
+        for i, ev in enumerate(part):
+            drop = np.zeros(len(ev), bool)
+            drop[order[i]] = flags[i, :len(order[i])]
+            nbeam[a + i] = int(drop.sum())
+            out.append(np.ascontiguousarray(ev[~drop, :4]))
+    return out, nbeam
+
+
+def load_events(filepath, max_events=None, fmt='auto', beam_photons='remove'):
+    """parse_hepmc3, with the beam photons removed (remove_beam_photons) unless beam_photons is
+    'keep'. Returns the events as [E, px, py, pz] arrays and prints how many photons went."""
+    if beam_photons not in ('remove', 'keep'):
+        raise ValueError(f"beam_photons={beam_photons!r}: 'remove' (the paper) or 'keep'")
+    if beam_photons == 'keep':
+        return parse_hepmc3(filepath, max_events=max_events, fmt=fmt)
+    events, nbeam = remove_beam_photons(parse_hepmc3(filepath, max_events=max_events, fmt=fmt,
+                                                     with_id=True))
+    print(f"  beam photons left out: {int(nbeam.sum())} in {int((nbeam > 0).sum())} of "
+          f"{len(events)} events")
     return events
 
 
@@ -135,10 +232,10 @@ def thrust_axis(three_momenta, max_iter=50, tol=1e-12):
     sign(p_k . n0), and trying the four sign choices for i and j. The largest |sum s p| over
     these O(n^2) candidates is the exact thrust. About 0.4 ms for a 40-particle event.
 
-    This replaces the single-seed sign iteration used until 2026-09-28, which converged to a
-    local maximum in 4.2 percent of Z-pole events (biases of +1.2 percent on <1-T> and +1.5 on
-    <rho_heavy>, and events thrown into the far tail). max_iter and tol are kept for the
-    signature and ignored. Returns the unit thrust axis (3-vector) and the thrust value T.
+    This replaces the single-seed sign iteration used until 2026-09-28, which converges to a
+    local maximum in a few percent of Z-pole events, biasing <1-T> and <rho_heavy> upward and
+    throwing those events into the far tail (generators/README.md). max_iter and tol are kept
+    for the signature and ignored. Returns the unit thrust axis (3-vector) and the thrust value T.
     """
     P = np.asarray(three_momenta, dtype=np.float64)
     if P.size == 0:
@@ -537,10 +634,10 @@ def save_results(efp_array, shape_rows, output_dir, run_id, efp_columns):
 
 def run_single(input_path, output_dir, run_id, dmax=4,
                measure="hadr", normed=True,
-               hemisphere="heavy", max_events=None):
+               hemisphere="heavy", max_events=None, beam_photons="remove"):
     """Process one HepMC file end-to-end."""
     print(f"[run {run_id:04d}] parsing {input_path} ...")
-    events = parse_hepmc3(input_path, max_events=max_events)
+    events = load_events(input_path, max_events=max_events, beam_photons=beam_photons)
     if not events:
         print(f"  WARNING: no events found in {input_path}", file=sys.stderr)
         return
@@ -555,7 +652,7 @@ def run_single(input_path, output_dir, run_id, dmax=4,
 
 
 def run_batch(runs_dir, output_dir, dmax=4, measure="hadr", normed=True,
-              hemisphere="heavy", max_events=None):
+              hemisphere="heavy", max_events=None, beam_photons="remove"):
     """
     Discover all run directories under *runs_dir* and process each one.
 
@@ -599,7 +696,7 @@ def run_batch(runs_dir, output_dir, dmax=4, measure="hadr", normed=True,
             continue
 
         print(f"[run {run_id:04d}] {hepmc_file}")
-        events = parse_hepmc3(hepmc_file, max_events=max_events)
+        events = load_events(hepmc_file, max_events=max_events, beam_photons=beam_photons)
         if not events:
             print(f"  WARNING: no events found")
             continue
@@ -640,6 +737,10 @@ def main():
                         help="Which hemisphere to evaluate EFPs on (default: heavy).")
     parser.add_argument("--max-events", type=int, default=None,
                         help="Cap on number of events per file.")
+    parser.add_argument("--beam-photons", choices=["remove", "keep"], default="remove",
+                        help="remove (the paper): leave the photons radiated by the beams out of "
+                             "every shape, EFP and multiplicity; keep: count them, as the shape "
+                             "files of an earlier draft did (default: remove).")
 
     args = parser.parse_args()
 
@@ -648,6 +749,7 @@ def main():
             args.runs_dir, args.output_dir,
             measure=args.measure, normed=args.normed,
             hemisphere=args.hemisphere, max_events=args.max_events,
+            beam_photons=args.beam_photons,
         )
     else:
         if args.input is None:
@@ -656,6 +758,7 @@ def main():
             args.input, args.output_dir, args.run_id,
             measure=args.measure, normed=args.normed,
             hemisphere=args.hemisphere, max_events=args.max_events,
+            beam_photons=args.beam_photons,
         )
 
 

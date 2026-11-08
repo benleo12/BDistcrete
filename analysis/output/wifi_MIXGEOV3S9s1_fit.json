@@ -1,6 +1,7 @@
 {
  "export": "output/models/MIXGEOV3S9s1_cond.npz",
- "basis": "output/wifi_MIXGEOV3S9s1_basis.npz",
+ "basis": "output/wifi_MIXGEOV3S9s1_basis_rebuilt.npz",
+ "loss": "mlc",
  "n_weights": 17,
  "loss_published": -4.0067272863594106,
  "loss_wifi": -4.9914258118443815,
@@ -46,29 +47,33 @@
  "corr_max_offdiag": 0.9138288964921756,
  "closure": {
   "published": {
-   "master": 1.0650230202730961,
+   "master": 1.0691665267710364,
    "per_obs": {
-    "1_minus_thrust": 1.0275406339265152,
-    "mult_total": 1.0261127580431253,
-    "B_total": 1.040727770374978,
-    "rho_heavy": 1.0568958302131952,
+    "1_minus_thrust": 1.039652618589581,
+    "mult_total": 1.0368493418600697,
+    "B_total": 1.0422034965916251,
+    "rho_heavy": 1.0636938794305602,
     "nbaryon": 1.220001689945245,
-    "strange": 1.0188594391355186
+    "strange": 1.0125981342091386
    }
   },
   "wifi": {
-   "master": 3.8344327908292777,
+   "master": 3.8506095873214212,
    "per_obs": {
-    "1_minus_thrust": 2.6664936412087727,
-    "mult_total": 2.1421472118043456,
-    "B_total": 2.8214280089989736,
-    "rho_heavy": 2.50030331901334,
-    "nbaryon": 11.185164425260247,
-    "strange": 1.6910601386899877
+    "1_minus_thrust": 2.697423341888941,
+    "mult_total": 2.168366509905292,
+    "B_total": 2.8354005871320527,
+    "rho_heavy": 2.5318194080093197,
+    "nbaryon": 11.185164425253154,
+    "strange": 1.6854832517397682
    }
   }
  },
  "logw_sigma_median": 0.04238827823144773,
  "logw_sigma_p95": 0.08659278147208208,
- "fit_split": 1
+ "fit_split": 1,
+ "temperature": 1.0,
+ "beam_photons": "remove",
+ "t_dir": "output/temperature",
+ "beam_photons_md5": "ea7f82ed77c067ee727114a72d038d93"
 }

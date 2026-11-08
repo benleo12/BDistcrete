@@ -16,14 +16,22 @@ only the export (for the reference side) and the files written here.
     DM_DATA=data_stagePURE17 python wifi_embed.py MIX output/models/MIXGEO_cond.npz output/models/MIXGEO_trunk.pt
     python wifi_embed.py E output/models/E_cond.npz output/models/E_trunk.pt      (no fit split: non-reference events)
 
-Writes output/wifi_<export tag>_basis.npz.
+Writes output/wifi_<export tag>_basis.npz (WIFI_OUT overrides it).
+
+The rerun (score_obs.py): DM_DATA is required for a mixture. BEAM_PHOTONS=remove stores the held-out
+observables without the beam photons (photon-free shapes files, and the multiplicity and the kaon
+fraction without them). WIFI_HELD_ONLY=<a basis file written by this script> copies that file and
+recomputes only its held-out observables: the basis functions depend on the network inputs alone,
+which D4 leaves unchanged, so they stay bit for bit those of the published basis and nothing is
+embedded again.
 """
 import os, sys, json, time
 import numpy as np, torch, pandas as pd
 sys.path.insert(0, '.')
+import score_obs as SO
 
 tag, export, trunk = sys.argv[1], sys.argv[2], sys.argv[3]
-c = np.load(export)
+c = np.load(SO.need(export))
 kind = str(c.get('head_kind', 'cond'))
 os.environ['LADDER_HEAD_KIND'] = kind
 os.environ.setdefault('LADDER_ACT', str(c['act']))
@@ -34,10 +42,50 @@ from r2_ladder import build_feats, apply_feature_norm, strange_frac, make_model,
 
 if tag == 'MIX':
     from mixture_cfg import mixture_cfg
+    SO.need(f"{os.environ['DM_DATA']}/meta.json")
     cfg, _ = mixture_cfg(os.environ['DM_DATA'])
 else:
     cfg = R.STAGES[tag]
 DATA = cfg['data']; OBS = cfg['obs'] + cfg['flav_obs']
+
+
+def obsvals(d, sh, where=''):
+    """the held-out observables of one run (photon-free under BEAM_PHOTONS=remove)"""
+    P, M = d['particles'], d['mask']
+    nb = SO.n_beam(P, M) if SO.REMOVE else None
+    out = {}
+    for o in OBS:
+        if o in cfg['obs']:
+            v = sh[o].values.astype(np.float64)
+            out[o] = SO.mult_total(v, P, M, where=where, nb=nb).astype(np.float64) if o == 'mult_total' else v
+        elif o == 'nbaryon':
+            out[o] = d['nbaryon'].astype(np.float64)
+        else:
+            out[o] = SO.strange_frac(P, M, nb=nb).astype(np.float64)
+    return out
+
+
+if os.environ.get('WIFI_HELD_ONLY'):
+    _src = SO.need(os.environ['WIFI_HELD_ONLY'])
+    _out = os.environ['WIFI_OUT']
+    assert os.path.realpath(_out) != os.path.realpath(_src), 'WIFI_OUT must be a new file'
+    B = np.load(_src)
+    assert [str(o) for o in B['obs']] == OBS, (list(B['obs']), OBS)
+    _hr = [int(r) for r in B['held_rids']]
+    assert _hr == list(cfg['held']) and np.allclose(B['held_theta'], [cfg['held'][r] for r in _hr]), \
+        f'{_src} holds other held-out runs than {DATA}'
+    new = {k: B[k] for k in B.files}
+    for rid in _hr:
+        d = np.load(SO.need(f'{DATA}/particles_full_{rid:04d}.npz'))
+        sh = SO.read_shapes(f'{DATA}/shapes_run_{rid:04d}.csv')
+        assert len(sh) == len(d['mask']) == len(B[f'held_f_{rid}']), f'{rid}: the basis holds another number of events'
+        ov = obsvals(d, sh, where=f'{DATA} run {rid}')
+        for o in OBS:
+            new[f'held_{o}_{rid}'] = ov[o].astype(np.float32)
+    new['held_obs_from'] = np.array(os.path.realpath(DATA)); new['beam_photons'] = np.array(SO.MODE)
+    np.savez_compressed(_out, **new)
+    print(f'wrote {_out}: the basis of {_src} with the held-out observables of {DATA} (beam photons {SO.MODE})')
+    sys.exit(0)
 norm = np.asarray(c['norm'], np.float64); ENS, K, NT = int(c['ens']), int(c['K']), int(c['ntheta'])
 NFIT, NDEN = int(os.environ.get('NFIT_PER', '4000')), int(os.environ.get('NDEN_PER', '4000'))
 OUT = os.environ.get('WIFI_OUT', f'output/wifi_{os.path.basename(export).replace("_cond.npz", "")}_basis.npz')
@@ -97,12 +145,6 @@ def basis(a, B):
     return np.einsum('nik,jk->nij', a.astype(np.float64), B).reshape(len(a), ENS*ENS)
 
 
-def obsvals(d, sh):
-    return {o: (sh[o].values.astype(np.float64) if o in cfg['obs'] else
-                (d['nbaryon'].astype(np.float64) if o == 'nbaryon' else strange_frac(d['particles'], d['mask']).astype(np.float64)))
-            for o in OBS}
-
-
 t0 = time.time()
 rids = [int(r) for r in SPLIT['rids']] if SPLIT is not None else list(cfg['train'])
 num_f, num_rid, pool_a, pool_eid = [], [], [], []
@@ -132,12 +174,14 @@ print(f'[{tag}] numerator {sum(len(x) for x in num_f)} rows, denominator {sum(le
 # the held-out runs: the basis on every event, plus the observables
 held = {}
 for rid, th in cfg['held'].items():
-    d = np.load(f'{DATA}/particles_full_{rid:04d}.npz'); sh = pd.read_csv(f'{DATA}/shapes_run_{rid:04d}.csv')
-    a = avecs(d['particles'], d['mask']); ov = obsvals(d, sh)
+    d = np.load(SO.need(f'{DATA}/particles_full_{rid:04d}.npz')); sh = SO.read_shapes(f'{DATA}/shapes_run_{rid:04d}.csv')
+    a = avecs(d['particles'], d['mask']); ov = obsvals(d, sh, where=f'{DATA} run {rid}')
     held[f'held_f_{rid}'] = basis(a, btilde(np.array(th, np.float64))).astype(np.float32)
     for o in OBS:
         held[f'held_{o}_{rid}'] = ov[o].astype(np.float32)
     print(f'  held {rid}: {len(a)} events [{time.time()-t0:.0f} s]', flush=True)
+if SO.REMOVE:
+    held['beam_photons'] = np.array(SO.MODE); held['held_obs_from'] = np.array(os.path.realpath(DATA))
 np.savez_compressed(OUT, kind=kind, ens=ENS, K=K, ntheta=NT, obs=np.array(OBS), rids=np.array(rids),
                     theta=np.array([theta_of[r] for r in rids]), held_rids=np.array(list(cfg['held'])),
                     held_theta=np.array([cfg['held'][r] for r in cfg['held']], np.float64),

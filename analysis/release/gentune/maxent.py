@@ -50,6 +50,10 @@ specific to thrust.
     targets = load_targets('targets_thrust_nlo.npz')
     inwin, F = targets.functions(tau)                 # tau of the reference events
     logw, lam, info = targets.impose(logw0, inwin, F)
+
+For MIX17 the paper imposes the calculation on each generator's weights alone, the head at the
+fraction 0 for Sherpa and 1 for Herwig, and then mixes the imposed predictions with (1 - xi, xi):
+gentune.mixture.impose() does this with impose() below.
 """
 import json
 import re
@@ -62,6 +66,15 @@ THRUST_MOMENTS = ('logt', 'tau', 'tlogt', 'log2t', 'tau2', 'tlog2t', 't2logt', '
                   'tlog3t', 't3logt', 't2log2t', 'log4t', 'tau4')
 FLOOR_REL = 0.002      # the floor on the calculation's uncertainty, relative to each moment
 TAU_MIN = 1e-6         # tau is clipped here before the logarithm, as in the paper's code
+
+# The variations of the paper's calculation that its theory band combines
+# (gentune.bands.theory_band): two pairs of scale variations, each counted once with the larger of
+# its two displacements, the change of matching scheme, and the variations of the dispersive model,
+# as their mean square. The labels are those of targets_thrust_nlo.npz (scale_labels, np_labels).
+SCALE_PAIRS = (("(2.0, 1.0, 'logR', 1.0)", "(0.5, 1.0, 'logR', 1.0)"),
+               ("(1.0, 2.0, 'logR', 1.0)", "(1.0, 0.5, 'logR', 1.0)"))
+SCHEME = "(1.0, 1.0, 'modR', 1.0)"
+DISPERSIVE = ('milan_up', 'milan_dn', 'sub2')
 
 _NAME = re.compile(r'^(?:(t|tau)(\d*))?(?:log(\d*)t)?$')
 
@@ -148,7 +161,9 @@ def impose(logw0, inwin, F, c, Sigma, floor_rel=FLOOR_REL, lam0=None, tol=1e-10,
     logw is normalized, sum exp(logw) = 1 over all N events. info holds the number of Newton
     steps, the final residual and whether it is below tol, the window fraction before and after,
     the window means after the tilt and their pulls against c in units of the floored Sigma, the
-    relative entropy KL(w | w0) and the effective sample size 1/sum w^2, and the covariance used.
+    relative entropy KL(w | w0) and the effective sample size 1/sum w^2, the covariance used, c
+    and lam. The statistical error and the learning band of a prediction from these weights take
+    (inwin, F, info) as their argument imposed (gentune.bands.mean_and_error, Head.learning_band).
     """
     lw0 = np.asarray(logw0, np.float64).ravel()
     N = lw0.shape[0]
@@ -239,15 +254,17 @@ def impose(logw0, inwin, F, c, Sigma, floor_rel=FLOOR_REL, lam0=None, tol=1e-10,
     w = np.exp(logw)
     pw = float(ww.sum())
     mom = (ww @ F)/pw
+    pos = w > 0                                # an event of weight zero adds nothing to KL
     info = dict(iterations=int(its), residual=float(np.linalg.norm(g)), converged=bool(converged),
                 pwin_before=P, pwin_after=pw, moments=mom, pulls=(mom - c)/np.sqrt(np.diag(S)),
-                kl=float(w @ (logw - lw0)), n_eff=float(1.0/np.sum(w**2)), sigma_used=S)
+                kl=float(w[pos] @ (logw[pos] - lw0[pos])), n_eff=float(1.0/np.sum(w**2)), sigma_used=S,
+                c=c.copy(), lam=lam.copy())
     if abs(pw/P - 1) > 0.1:
         # The penalty of the problem is weighted by the square of the window fraction, so when no
         # tilt of the window events comes near c, moving weight out of the window is the cheaper
-        # answer, and the pulls then look small. The paper's calculation moves the fraction by 0.05
-        # percent and its variations by at most 0.15 percent, so a change of more than 10 percent
-        # flags a calculation that these events cannot reach.
+        # answer, and the pulls then look small. The paper's calculation and its variations move the
+        # window fraction of each generator by well under one percent, so a change of more than 10
+        # percent flags a calculation that these events cannot reach.
         warnings.warn(f'impose: the window held {P:.3g} of the weight before and holds {pw:.3g} '
                       f'after. No reweighting of these events comes near the calculated means '
                       f'within Sigma, and the solution moves weight across the window edge instead, '
@@ -256,6 +273,103 @@ def impose(logw0, inwin, F, c, Sigma, floor_rel=FLOOR_REL, lam0=None, tol=1e-10,
                       f'these weights are not a result.',
                       stacklevel=2)
     return logw, lam, info
+
+
+# -- an imposed calculation at linear order -----------------------------------------------------
+def _window_rows(inwin, F, N, k):
+    """The window as event indices and F as its rows (n_window, k), as impose() reads them."""
+    iw = np.asarray(inwin)
+    if iw.dtype == bool:
+        if iw.shape != (N,):
+            raise ValueError(f'the window mask has shape {iw.shape} for {N} events')
+        iw = np.flatnonzero(iw)
+    iw = iw.astype(np.int64).ravel()
+    F = np.asarray(F, np.float64)
+    if F.ndim == 1:
+        F = F[:, None]
+    if F.shape[0] == N and len(iw) != N:
+        F = F[iw]
+    if F.shape != (len(iw), k):
+        raise ValueError(f'F has shape {F.shape}, expected ({len(iw)} window events, {k} functions)')
+    return iw, F
+
+
+def _imposed_parts(imposed, N):
+    """(iw, F - c on the window events, info) from the (inwin, F, info) of an impose() call."""
+    try:
+        inwin, F, info = imposed
+    except (TypeError, ValueError):
+        raise ValueError('imposed is the tuple (inwin, F, info) of the impose() that made the '
+                         'weights') from None
+    if not isinstance(info, dict) or not {'c', 'lam', 'sigma_used', 'pwin_before'} <= set(info):
+        raise ValueError('the info of imposed=(inwin, F, info) must be the info dict impose() '
+                         'returned, with c, lam, sigma_used and pwin_before')
+    c = np.asarray(info['c'], np.float64).ravel()
+    iw, F = _window_rows(inwin, F, N, len(c))
+    return iw, F - c[None, :], info
+
+
+class _Response:
+    """How a prediction from imposed weights responds, at linear order, when the multipliers are
+    solved again: for the statistical error and the learning band of a prediction with the
+    calculation imposed, as the paper computes them.
+
+    w are the imposed weights over all N events and imposed the (inwin, F, info) of the impose()
+    that made them. With Theta the window, F the constraint functions minus c, E_w[.] the mean
+    under w, P the window fraction before the tilt and S the floored covariance, the Newton
+    matrix is J = Cov_w(Theta F) + P^2 S, and a per-event function O, centred under w, loses its
+    projection on the constraint functions,
+
+        r = O - (Theta F - E_w[Theta F]) . J^-1 Cov_w(Theta F, O) ,
+
+    as analysis/directlib.py stat_parts writes it. The weights must be the solution that info
+    describes: with other weights the residual of the calculation is checked and refused."""
+
+    def __init__(self, w, imposed):
+        w = np.asarray(w, np.float64)
+        self.w = w/w.sum()
+        self.iw, self.Fw, info = _imposed_parts(imposed, len(self.w))
+        self.P = float(info['pwin_before'])
+        self.S = np.asarray(info['sigma_used'], np.float64)
+        self.lam = np.asarray(info['lam'], np.float64).ravel()
+        ww = self.w[self.iw]
+        self.fbar = ww @ self.Fw                                   # E_w[Theta F]
+        res = self.fbar + self.P**2*(self.S @ self.lam)            # zero at the solution
+        scale = float(np.sqrt(np.sum(ww @ self.Fw**2)))
+        if not np.linalg.norm(res) <= 1e-6*scale:
+            raise ValueError(f'these weights are not the solution that imposed describes: the '
+                             f'residual of the calculation is {np.linalg.norm(res)/scale:.1e} of the '
+                             f'size of its functions. Pass the weights of the same impose() call, '
+                             f'at the same point and the same variation, as its (inwin, F, info).')
+        J = (self.Fw*ww[:, None]).T @ self.Fw - np.outer(self.fbar, self.fbar) + self.P**2*self.S
+        self._d = 1.0/np.sqrt(np.diag(J))                         # scaled, as in the Newton step
+        self._J = J*np.outer(self._d, self._d)
+
+    def solve(self, b):
+        """J^-1 b for b of shape (k,) or (k, n)."""
+        b = np.asarray(b, np.float64)
+        d = self._d if b.ndim == 1 else self._d[:, None]
+        return d*np.linalg.solve(self._J, d*b)
+
+    def remove(self, O):
+        """(r, v): r = O - (Theta F - E_w[Theta F]) . v with v = J^-1 Cov_w(Theta F, O), for the
+        per-event functions O, shape (N, n), each centred under w."""
+        O = np.asarray(O, np.float64)
+        cov = self.Fw.T @ (self.w[self.iw, None]*O[self.iw]) - np.outer(self.fbar, self.w @ O)
+        v = self.solve(cov)
+        r = O + self.fbar @ v                     # Theta F - E_w[Theta F] is -E_w[Theta F] outside
+        r[self.iw] -= self.Fw @ v
+        return r, v
+
+
+def _tilted(lw0, imposed):
+    """The imposed log weights, normalized, from log weights lw0 before the tilt and the
+    multipliers of imposed = (inwin, F, info), built as impose() builds them."""
+    lw0 = np.asarray(lw0, np.float64).ravel()
+    iw, Fw, info = _imposed_parts(imposed, len(lw0))
+    z = lw0 - logsumexp(lw0)
+    z[iw] += Fw @ np.asarray(info['lam'], np.float64).ravel()
+    return z - logsumexp(z)
 
 
 # -- targets ----------------------------------------------------------------------------------

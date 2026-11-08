@@ -1,0 +1,13 @@
+{
+ "step": "wifi_MIXGEOV3S9s1",
+ "run_id": "20261107-013026-2306821",
+ "code_md5": "b0ca0841b27e6e5427846e2db0716b6c",
+ "written": "Sat Nov  7 10:33:29 2026",
+ "files": {
+  "output/wifi_MIXGEOV3S9s1_basis_rebuilt.npz": "1266fc3ad0c0739660bc7746f1042869",
+  "output/wifi_MIXGEOV3S9s1_fit.npz": "e549b8df32e7af83e479367eea95ce7a",
+  "output/wifi_MIXGEOV3S9s1_fit.json": "c3ca17c73e4e10ba5e75663b3f7868e1",
+  "output/wifi_MIXGEOV3S9s1_diag.json": "b0e74b9284f002b0bffe32c971164890",
+  "output/wifi_coverage_MIXGEOV3S9s1.json": "419c82fd3f5892d386e22ebfe69a3b98"
+ }
+}

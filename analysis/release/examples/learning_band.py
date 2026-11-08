@@ -3,40 +3,55 @@ r"""The learning band of an observable at one point: how well the network knows 
 
     python examples/learning_band.py --stage MIX17 --reference
     python examples/learning_band.py --stage MIX17 --reference-file reference_MIX17.npz --bins paper
+    python examples/learning_band.py --stage MIX17 --reference-file reference_MIX17.npz \
+        --targets targets_thrust_nlo.npz
     python examples/learning_band.py --stage MIX17 --hepmc examples/data/herwig_default.hepmc.gz \
-        --from herwig-default --at herwig-default H:pwtdiquark=0.40
+        --from herwig-default --at herwig-default H:pwtdiquark=0.40 --xi point
 
-The last command reads the Herwig example file. Your own file goes in its place.
+The last command reads the Herwig example file; your own file goes in its place. Its point is
+Herwig alone (xi = 1), and --xi point takes the band there. Without it the band is averaged over
+xi, as in the paper, and Sherpa enters too, at the Sherpa parameters of --at.
 
 This is the learning band of the paper, from the WiFi fit of the ensemble (Benevedes and Thaler,
-arXiv:2506.00113). head.learning_band() gives sqrt(g^T C g), with C the covariance of the fitted
-coefficients in models/MIX17_wifi.npz and g the derivative of the weighted mean with respect to
-them, which is the weighted covariance of the observable with the basis functions of
-head.wifi_basis(). It is the band for the generator alone. With a calculation imposed the
-derivative also runs through the re-solved multipliers of the maximum-entropy step, which is in
-analysis/three_bands.py and is not part of this release.
+arXiv:2506.00113). For one generator, head.learning_band() gives sqrt(g^T C g), with C the
+covariance of the fitted coefficients in models/MIX17_wifi.npz and g the derivative of the
+weighted mean with respect to them, the weighted covariance of the observable with the basis
+functions of head.wifi_basis(). For MIX17 the prediction is the paper's mixture,
+(1 - xi) <O>_S + xi <O>_H, and its band is that of gentune.mixture.learning_band(): as in the
+paper, its square is averaged over xi flat on [0, 1], so both generators enter whatever the xi of
+--at. --xi point takes it at the xi of --at instead.
+
+--targets FILE imposes a calculation on each generator alone at --at, as the paper does, and gives
+the band of the prediction with it: the derivative then runs through the multipliers solved again.
+It needs --reference-file, whose 1 - T is the paper's. Without it, the band of the generators
+alone.
+
+These predictions and bands do not carry the factors that take a prediction to the way a
+measurement counts its particles, so they are not compared with data as they are.
+examples/reproduce_paper.py gives <1-T> and DELPHI's distribution with those factors, with all
+their bands.
 
 --at is the point: one number per parameter, or default, sherpa-default or herwig-default
 followed by name=value changes, as --to of reweight_own_events.py. By default it is the paper's
-central point, both generators at their own defaults and a fraction of one half. The events come
-from --reference-file, --reference or --hepmc and --from, as in generator_band.py. On the paper's
-reference sample (--reference-file reference_MIX17.npz) this gives the paper's learning band for
-the generators alone: <1-T> 0.000286, <n_ch> 0.0594, <n_baryon> 0.00954. On a sample of your own
-the band is that of the log ratio between --from and --at, so it vanishes when the two are the
-same point.
+central point, both generators at their own defaults and xi = 1/2. The events come from
+--reference-file, --reference or --hepmc and --from, as in generator_band.py. On the paper's
+reference sample (--reference-file reference_MIX17.npz) at the default point this gives the
+paper's learning band. On a sample of your own the band is that of the log ratio between --from
+and --at, so for one generator it vanishes when the two are the same point.
 
-Next to each band, "stat. error" is the statistical error of the mean, sqrt(sum_i w_i^2 (O_i -
-<O>)^2). On the 2000 reference events it is about 24 times the paper's and larger than the
-learning band. The band itself is a property of the network and does not shrink with more events,
-but its estimate from a sample is noisy: --bootstrap N recomputes it on N resamples of the events
-and prints its bootstrap sd ("boot sd of band"), and a band whose bootstrap sd is more than a
-third of it is marked as not significant.
+Next to each band, "stat. error" is the statistical error of the prediction, as in the paper
+(gentune.mixture.mean_and_error). On the 2000 reference events it is about 24 times the paper's
+and larger than the learning band. The band itself is a property of the network and does not
+shrink with more events, but its estimate from a sample is noisy: --bootstrap N recomputes it on
+N resamples of the events and prints its bootstrap sd ("boot sd of band"), and a band whose
+bootstrap sd is more than a third of it is marked as not significant. It is not taken with
+--targets.
 
---bins gives the band of every bin of a distribution, normalized over the bins given, and --bins
-paper the paper's DELPHI bins of 1 - T from 0.05. That is a mean of (in the bin)/(bin width) over
-the events in any of the bins, the mask of learning_band(). A bin of the 2000 reference events
-holds about a hundred of them, and the noise of g adds to g^T C g, so the band of a bin comes out
-several times the paper's there. It needs the full sample.
+--bins gives the band of every bin of a distribution, the fraction of all events in the bin over
+its width, and --bins paper the paper's twenty DELPHI bins of 1 - T. That is the mean of (in the
+bin)/(bin width) over all events. A bin of the 2000 reference events holds about a hundred of
+them, and the noise of g adds to g^T C g, so the band of a bin comes out larger than the paper's
+there. It needs the full sample.
 
 --out writes an npz with the point, the values, bands and errors, the bootstrap, the per-event
 observables (per_event, one column per name in observables) and the event numbers.
@@ -44,10 +59,22 @@ observables (per_event, one column per name in observables) and the event number
 import argparse, os, sys, time
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gentune import load_head, axes, bands
-from generator_band import Formatter, add_sample_args, bins_of, load_sample, point, weights_at
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, '..'))
+sys.path.insert(0, HERE)
+from gentune import load_head, axes, bands, mixture
+from gentune.maxent import load_targets
+from generator_band import Formatter, Model, add_sample_args, bins_of, load_sample, point
+
+
+def band_of(model, at, O, wifi, xi_prior, imposed=None, counts=None):
+    """The learning band of the prediction of every column of O at the point at."""
+    if model.mix:
+        return mixture.learning_band(model.head, model.s['A'], at, O, wifi,
+                                     theta_from=model.s['src'], xi_prior=xi_prior, counts=counts,
+                                     imposed=imposed)
+    return model.head.learning_band(model.s['A'], at, O, wifi, theta_from=model.s['src'],
+                                    counts=counts, imposed=imposed)
 
 
 def main():
@@ -58,6 +85,9 @@ def main():
                     help="the point: one number per parameter, or default, sherpa-default or "
                          "herwig-default followed by name=value changes. default is the paper's "
                          "central point")
+    ap.add_argument('--xi', choices=['flat', 'point'], default='flat',
+                    help='MIX17: average the band over xi flat on [0, 1], as the paper, or take it '
+                         'at the xi of --at')
     ap.add_argument('--wifi', help='the WiFi weights, by default models/<stage>_wifi.npz')
     ap.add_argument('--bootstrap', type=int, default=0, metavar='N',
                     help='resamples of the events for the bootstrap sd of the band, 0 for none')
@@ -81,12 +111,22 @@ def main():
     except ValueError as e:
         print(f'ERROR: {e}')
         return 2
-    A, src, obs = s['A'], s['src'], s['obs']
+    model = Model(head, s)
+    xi_prior = (0.0, 1.0) if a.xi == 'flat' else None
+    obs = s['obs']
     O = np.column_stack(list(obs.values()))
     N, k = O.shape
-    w = weights_at(head, s, at)
-    value, stat = bands.mean_and_error(w, O)
-    band = head.learning_band(A, at, O, wifi, theta_from=src)
+    # with the flat prior both generators enter, whatever the xi of --at: their weights depend on
+    # their own parameters alone, so they are taken at xi = 1/2 and mixed at the xi of --at
+    w = model.weights(mixture.at_fraction(at, 0.5) if model.mix and xi_prior else at)
+    neff = {g: head.n_eff(v) for g, v in w.items()}
+    imp = None
+    if a.targets:
+        calc = load_targets(a.targets)
+        inwin, F = calc.functions(obs['1-T'])
+        w, imp = model.impose(w, inwin, F, calc)
+    value, stat = model.mean_and_error(w, O, at, imposed=imp)
+    band = band_of(model, at, O, wifi, xi_prior, imp)
     nb = 0
     lo = hi = np.zeros(0)
     hval = hstat = hband = np.zeros(0)
@@ -96,39 +136,50 @@ def main():
         nb = len(width)
         b = bands.bin_index(obs[a.hist], lo, hi)
         inb = b >= 0
-        H = np.zeros((N, nb))                              # (in the bin)/(bin width)
+        H = np.zeros((N, nb))                              # (in the bin)/(bin width), all events
         H[inb, b[inb]] = 1/width[b[inb]]
-        hval, hstat = bands.histogram(b, w, width)
-        hband = head.learning_band(A, at, H, wifi, mask=inb, theta_from=src)
+        hval, hstat = model.histogram(b, w, width, at, imposed=imp)
+        hband = band_of(model, at, H, wifi, xi_prior, imp)
     B = max(a.bootstrap, 0)
+    if B and imp is not None:
+        print('--bootstrap is not taken with --targets: the calculation would have to be imposed '
+              'again on every resample')
+        B = 0
     boot = np.zeros((B, k + nb))
     if B:
         C = bands.resample_counts(N, B, seed=0)
         for r in range(B):
-            boot[r, :k] = head.learning_band(A, at, O, wifi, theta_from=src, counts=C[r])
+            boot[r, :k] = band_of(model, at, O, wifi, xi_prior, counts=C[r])
             if nb:
-                boot[r, k:] = head.learning_band(A, at, H, wifi, mask=inb, theta_from=src,
-                                                 counts=C[r])
+                boot[r, k:] = band_of(model, at, H, wifi, xi_prior, counts=C[r])
         boot_band = boot.std(0, ddof=1)
         weak = boot_band > np.r_[band, hband]/3
 
     nm = axes.names(a.stage, head.nt)
     print(f'\n{a.stage} at ' + ', '.join(f'{n}={v:g}' for n, v in zip(nm, at)) +
           f' [{time.time() - t0:.0f} s]')
-    print(f'N_eff/N = {head.n_eff(w)/N:.3f} of {N:,} events')
+    for g, v in neff.items():
+        print(f'N_eff/N{" of " + g if g else ""} = {v/N:.3f} of {N:,} events')
+    if model.mix:
+        print('the learning band ' + ('averaged over xi flat on [0, 1], as in the paper'
+                                      if xi_prior else f'at xi = {at[-1]:g}'))
+    what = ', with the calculation imposed on each generator' if imp is not None else \
+        ', the generators alone'
     bcol = f' {"boot sd of band":>16}' if B else ''
-    print(f'\n{"observable":<10} {"value":>12} {"learning band":>14} {"stat. error":>12}{bcol}')
+    print(f'\n{"observable":<10} {"value":>12} {"learning band":>14} {"stat. error":>12}{bcol}'
+          f'      ({what[2:]})')
     for j, name in enumerate(obs):
         bv = f' {boot_band[j]:>16.3g}{"  *" if weak[j] else ""}' if B else ''
         print(f'{name:<10} {value[j]:>12.6g} {band[j]:>14.3g} {stat[j]:>12.3g}{bv}')
     if nb:
-        print(f'\n{a.hist} distribution, normalized over the bins given')
+        print(f'\n{a.hist} distribution, the fraction of all events in each bin over its width')
         print(f'{"from":>8} {"to":>8} {"value":>12} {"learning band":>14} {"stat. error":>12}{bcol}')
         for i in range(nb):
             bv = f' {boot_band[k + i]:>16.3g}{"  *" if weak[k + i] else ""}' if B else ''
             print(f'{lo[i]:>8.4g} {hi[i]:>8.4g} {hval[i]:>12.5g} {hband[i]:>14.3g} '
                   f'{hstat[i]:>12.3g}{bv}')
-    print('\nstat. error is sqrt(sum w^2 (O - <O>)^2)' +
+    print('\nstat. error is the statistical error of the prediction' +
+          (', with the calculation imposed' if imp is not None else '') +
           (f', and boot sd of band the bootstrap sd of the learning band from {B} resamples of '
            f'the {N:,} events' if B else ''))
     if B and weak.any():
@@ -139,8 +190,9 @@ def main():
                            ', such as the full reference sample (--reference-file).'))
     if a.out:
         np.savez(a.out, theta=at, names=np.array(nm), observables=np.array(list(obs)),
-                 value=value, learning=band, stat=stat, n_eff=head.n_eff(w), n_events=N,
-                 event_number=np.asarray(s['event_number']), per_event=O,
+                 value=value, learning=band, stat=stat, n_eff=np.array(list(neff.values())),
+                 generators=np.array(list(neff)), xi_prior=a.xi, targets=a.targets or '',
+                 n_events=N, event_number=np.asarray(s['event_number']), per_event=O,
                  hist_observable=a.hist if nb else '', lo=lo, hi=hi, hist_value=hval,
                  hist_learning=hband, hist_stat=hstat, bootstrap=B, boot_learning=boot[:, :k],
                  boot_hist_learning=boot[:, k:])

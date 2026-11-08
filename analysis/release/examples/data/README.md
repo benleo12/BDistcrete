@@ -5,12 +5,18 @@ the outputs gentune must give for them. The second stage of `python -m gentune.s
 reads them, so the self-test now covers the HepMC parsing and the thrust frame too, which the
 first stage, working from stored features, does not.
 
-| file | generator | format | events | particles per event | gzip bytes | md5 of the uncompressed file |
+| file | generator | format | events | final-state particles per event, with the photons radiated by the beams | gzip bytes | md5 of the uncompressed file |
 |---|---|---|---|---|---|---|
 | `herwig_default.hepmc.gz` | Herwig 7.3.0, ThePEG 2.3.0 | HepMC2 (IO_GenEvent, written by HepMC 3.03.01) | 30 | 37.7 | 189,511 | `fa39f82a5c554054b2785f6660e3aeda` |
 | `sherpa_default.hepmc.gz` | Sherpa 3.0.4 | HepMC3 (Asciiv3, HepMC 3.03.01) | 40 | 43.6 | 180,255 | `c2459666a960d360e2b1277ec16e6ec1` |
 
-`expected.npz` holds the outputs, and `make_expected.py` wrote it.
+`expected.npz` holds the outputs, and `make_expected.py --write` wrote it. Without a flag,
+`make_expected.py` computes them again, says how they compare with `expected.npz`, exits 1 when one
+does not agree, and writes nothing.
+
+`convention_factors.json` is not an example output. It is a copy of the paper's
+`analysis/conventions/factors.json`: the factors that take a prediction to the hadron level of a
+measurement (the README, Comparing with a measurement).
 
 Both are e+e- -> gamma*/Z -> hadrons at sqrt(s) = 91.2 GeV, in GeV and mm (`U GEV MM`), with
 every hadron of c*tau above 10 mm left undecayed, exactly as in the training samples. Both are
@@ -123,8 +129,8 @@ baryon counts included.
 
 ## expected.npz
 
-What `gentune` makes of each file, written by `make_expected.py` and read by the self-test. For
-`s` in `samples` (`herwig`, `sherpa`):
+What `gentune` makes of each file, written by `make_expected.py --write` and read by the
+self-test. For `s` in `samples` (`herwig`, `sherpa`):
 
 | key | what it is |
 |---|---|
@@ -144,11 +150,12 @@ Each pair starts at the tune its file was generated at and moves one shower coup
 | Herwig | Sherpa default, Herwig default, fraction 1 | Herwig `alpha_fsr` 0.102337 -> 0.110 | 0.975 |
 | Sherpa | Sherpa default, Herwig default, fraction 0 | Sherpa `alphas` 0.118 -> 0.122 | 0.983 |
 
-In the geometric mixture of MIX17 the Sherpa block drops out of the logit exactly at fraction 1
-and the Herwig block at fraction 0, so the other generator's block has no effect on either pair.
-All four points pass `head.check`.
+The MIX17 head at the fraction 1 is Herwig alone and at the fraction 0 Sherpa alone, exactly: the
+other generator's block drops out of the logit, so it has no effect on either pair. These are the
+points where the paper evaluates the head (the README, Two generators at once). All four points
+pass `head.check`.
 
-The same weights from the command line:
+The same weights from the command line, as `weights` (and `weights_herwig`) of its output:
 
 ```
 python examples/reweight_own_events.py --stage MIX17 --hepmc examples/data/herwig_default.hepmc.gz \
@@ -171,5 +178,6 @@ its log weight to 1e-2, once the normalization, which a moved event shifts, is t
 of a few float32 units in the features moves a log weight here by at most 4e-4, because MIX17
 rounds its inputs to float16 and such noise can cross a rounding boundary.
 
-Rerun `make_expected.py` only when the example files or the MIX17 files change. Rerunning it to
+Write `expected.npz` again, with `make_expected.py --write`, only when the example files or the
+MIX17 files (`models/MIX17_head.npz` and `models/MIX17_trunk.npz`) change. Writing it again to
 make a failing self-test pass defeats the self-test.

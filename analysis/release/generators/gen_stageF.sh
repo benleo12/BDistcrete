@@ -48,6 +48,8 @@ Herwig read -i $HERWIGPATH --repo "$HERWIG_REPO" r$rid.in > read.log 2>&1 || { e
 Herwig run r$rid.run -N $ev --seed $seed --repo "$HERWIG_REPO" > run.log 2>&1 || { echo "RUN FAIL $rid"; exit 1; }
 [ -f events.hepmc ] || { echo "NO HEPMC $rid"; exit 1; }
 python3 "$HERE/extract_particles_full_flavor.py" --input events.hepmc --output $DATA/particles_full_${rid}.npz --fmt herwig > extract.log 2>&1 || { echo "EXTRACT FAIL $rid"; tail -5 extract.log; exit 1; }
+# the event shapes leave out the photons radiated by the beams, as in the paper (compute_efps.py;
+# the rule is ../gentune/beam_photons.py, so keep this folder next to gentune/)
 python3 "$HERE/compute_shapes_only.py" --input events.hepmc --output-dir $DATA --run-id $rid --fmt herwig > shapes.log 2>&1 || { echo "SHAPES FAIL $rid"; tail -5 shapes.log; exit 1; }
 rm -f events.hepmc r$rid.run
 echo "done $rid (af=$af pt=$pt cm=$cm cp=$cp_ ps=$ps sq=$sq dq=$dq sm=$sm)"

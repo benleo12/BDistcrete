@@ -3,66 +3,91 @@ r"""The generator band of an observable: its spread over the whole parameter box
 
     python examples/generator_band.py --stage MIX17 --reference
     python examples/generator_band.py --stage MIX17 --reference-file reference_MIX17.npz --bins paper
+    python examples/generator_band.py --stage MIX17 --reference-file reference_MIX17.npz \
+        --targets targets_thrust_nlo.npz
     python examples/generator_band.py --stage F --hepmc examples/data/herwig_default.hepmc.gz --from herwig-default
 
 The last line reads the Herwig example file. Your own file goes in its place.
 
-This is the generator band of the paper, a flat prior on the box. The prior is sampled by 200
-points of a Latin hypercube with seed 11, the fraction of MIX17 uniform on [0, 1], built as
-analysis/three_bands.py builds them, so they are the paper's points to the last digit
-(gentune.bands.lhs_nodes). The sample is reweighted to every point, and the band of an
-observable is the standard deviation of its weighted mean over the points. --bins does the same
-for every bin of a distribution, normalized over the bins given, and --bins paper gives the
-paper's DELPHI bins of 1 - T from 0.05 to 0.5 (gentune.bands.PAPER_THRUST_BINS).
+This is the generator band of the paper, a flat prior on the box. The prior is sampled by 2000
+points of a Latin hypercube over the whole box with seed 11, the fraction xi of MIX17 uniform on
+[0, 1], built as analysis/three_bands.py builds them, so they are the paper's points to the last
+digit (gentune.bands.lhs_nodes). The sample is reweighted to every point, and the band of an
+observable is the standard deviation of its prediction over the points. For MIX17 the prediction
+at a point is the paper's: (1 - xi) <O>_S + xi <O>_H, Sherpa's weights from the head at xi = 0 and
+Herwig's at xi = 1 (gentune.mixture). --bins does the same for every bin of a distribution, the
+fraction of all events in the bin over its width, and --bins paper gives the paper's twenty DELPHI
+bins of 1 - T (gentune.bands.PAPER_THRUST_BINS).
+
+--targets FILE imposes a calculation at every point, on each generator alone before the mixing, as
+the paper does, and prints the band after it next to the band before. It needs --reference-file,
+whose 1 - T is the paper's.
+
+These predictions and bands do not carry the factors that take a prediction to the way a
+measurement counts its particles, so they are not compared with data as they are.
+examples/reproduce_paper.py gives <1-T> and DELPHI's distribution with those factors, with all
+their bands.
 
 The events come from one of three places.
 
   --reference-file FILE       the paper's reference sample, the deposit reference_MIX17.npz
                               (REFERENCE.md), 1,149,840 events with the paper's own per-event
-                              observables, reweighted with weights. This gives the paper's band
-                              for the generators alone: <1-T> 0.00438, <n_ch> 0.677,
-                              <n_baryon> 0.284. Memory: 3 GB.
+                              observables. This gives the paper's band.
   --reference                 the 2000 reference events that ship in models/<stage>_selftest.npz,
                               drawn from that sample, so every statistical error is about
                               sqrt(1149840/2000) = 24 times larger for MIX17.
-  --hepmc FILE --from POINT   your own sample, generated at POINT, reweighted with ratio_weights.
+  --hepmc FILE --from POINT   your own sample, generated at POINT, reweighted with ratio weights.
                               POINT is one number per parameter, or default, sherpa-default or
-                              herwig-default followed by name=value changes.
+                              herwig-default followed by name=value changes. For MIX17 the
+                              sample of one generator sits at the fraction 0 (Sherpa) or 1 (Herwig).
 
 Which stage. --stage F (Herwig) or E (Sherpa) gives the band of one generator's own parameters.
 MIX17 also sweeps the fraction from 0 to 1, so it includes the choice between Sherpa and Herwig,
 which is the paper's band. On a sample of one generator that means reweighting its events toward
-the other generator, which costs effective sample size: on the Herwig example file the median
-N_eff/N over the points is 0.21 with MIX17 and 0.63 with F.
+the other generator, which costs effective sample size: N_eff/N, printed for each generator, says
+how much.
 
 Next to every band are the statistics that limit it. "stat. error" is the median over the points
-of the statistical error of the mean at one point, sqrt(sum_i w_i^2 (O_i - <O>)^2). --bootstrap N
-(100 by default, 0 to skip) resamples the events N times with replacement, reweights each resample
-to every point with its weights renormalized, and gives the bootstrap sd of the mean at each point
-("boot sd", the median over the points) and of the band itself ("boot sd of band"). A band is
-marked * and named in a warning, as not significant, when the statistical error at a point is as
-large as the band or the bootstrap sd of the band is more than a third of it. A second warning
-says when the median N_eff over the points is below 1000.
+of the statistical error of the prediction at one point, as in the paper
+(gentune.mixture.mean_and_error), with the calculation imposed when it is, and then over every
+tenth point, which is enough for a median and saves most of the time. --bootstrap N resamples
+the events N times with replacement, reweights each resample to every point, and gives the
+bootstrap sd of the prediction at each point ("boot sd", the median over the points) and of the
+band itself ("boot sd of band"). It runs by default, 100 resamples, for --reference and --hepmc,
+whose samples are small; not with --targets. A band is marked * and named in a warning, as not
+significant, when the statistical error at a point is as large as the band or the bootstrap sd of
+the band is more than a third of it. A second warning says when the median N_eff over the points
+is below 1000.
 
---out writes an npz: the points (nodes), the means and their statistical errors at every point,
-N_eff, the histograms, the bootstrap, the per-event observables (per_event, one column per name in
-observables) and the event numbers (event_number: the number in the HepMC file, or the index in
-the reference sample). --save-weights adds the weights, one row per point, each row in the order
-of the events and summing to one.
+--out writes an npz: the points (nodes), the predictions and their statistical errors at every
+point (with --targets at every tenth, NaN elsewhere), N_eff, the histograms, the bootstrap, the
+per-event observables (per_event, one column per name in observables) and the event numbers
+(event_number: the number in the HepMC file, or the index in the reference sample).
+--save-weights adds the weights, one row per point, each row in the order of the events and
+summing to one; for MIX17 they are (1 - xi) w_S + xi w_H, whose weighted mean of any observable
+is the mixed one.
 
 The observables of --hepmc and --reference are made from the per-particle features by
 gentune.bands.observables: 1 - T, the charged and the total multiplicity, and the number of
-baryons and antibaryons. 1 - T there is read off the iterative axis the features are built on,
-which puts its mean about 1.2 percent above the exact axis of the paper (generators/README.md).
+baryons and antibaryons, with the photons radiated by the beams left out of 1 - T and the total
+multiplicity, as in the paper. 1 - T there takes its axis from the iteration the features are
+built on, which puts its mean above that of the exact axis of the paper (generators/README.md).
 --reference-file has the paper's own: 1 - T on the exact axis, B_T, rho_H, n_ch, n, n_baryon.
 """
 import argparse, os, sys, time
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from gentune import load_head, Trunk, features, axes, bands
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+from gentune import load_head, Trunk, features, axes, bands, mixture
+from gentune.head import MIXTURE_KINDS
+from gentune.maxent import load_targets
 
 HIST_CHOICES = tuple(bands.REFERENCE_KEYS)       # 1-T B_T rho_H n_ch n n_baryon
+POINTS, SEED = 2000, 11                          # the paper's points, bands.lhs_nodes(head)
+# With a calculation imposed, the statistical error is taken at every STAT_EVERY-th point only:
+# its projection on the constraint functions costs more than the rest of a point, and the error
+# enters only through its median over the points.
+STAT_EVERY = 10
 
 
 class Formatter(argparse.RawDescriptionHelpFormatter):
@@ -79,9 +104,9 @@ def add_sample_args(ap):
     """The options that say where the events come from, shared with learning_band.py."""
     ap.add_argument('--stage', default='MIX17',
                     help='the released stage: MIX17 (both generators and the fraction), E '
-                         '(Sherpa), F (Herwig) or C_1M')
+                         '(Sherpa) or F (Herwig)')
     ap.add_argument('--models', default=os.path.relpath(
-        os.path.join(os.path.dirname(__file__), '..', 'models')),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'models')),
         help='the folder with <stage>_head.npz, _trunk.npz and _selftest.npz')
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument('--reference-file', metavar='FILE',
@@ -103,9 +128,12 @@ def add_sample_args(ap):
                     help='with --hepmc, read at most this many events')
     ap.add_argument('--bins', nargs='+', metavar='EDGE',
                     help="bin edges for the distribution of --hist, or 'paper' for the paper's "
-                         "DELPHI bins of 1-T from 0.05 to 0.5")
+                         "twenty DELPHI bins of 1-T")
     ap.add_argument('--hist', default='1-T', choices=HIST_CHOICES,
                     help='the observable --bins applies to; B_T and rho_H need --reference-file')
+    ap.add_argument('--targets', metavar='FILE',
+                    help='a calculation to impose, such as targets_thrust_nlo.npz; needs '
+                         '--reference-file')
 
 
 def point(a, head, tokens, flag):
@@ -136,23 +164,22 @@ def bins_of(a):
 def load_sample(a, head):
     """The events the options ask for, as a dict: A (the event vectors), obs (the per-event
     observables), event_number, and src, the point of --from, which is None for reference events
-    because weights() reweights them directly."""
+    because they are reweighted directly."""
     if a.src and not a.hepmc:
         raise ValueError('--from goes with --hepmc: reference events need no starting point')
+    if a.targets and not a.reference_file:
+        raise ValueError('--targets needs --reference-file: the calculation constrains 1 - T on the '
+                         'exact thrust axis, which only the reference file holds')
     if a.reference_file:
         r = np.load(a.reference_file)
         got = [str(x) for x in r['theta_names']]
         if got != list(axes.names(a.stage, head.nt)):
             raise ValueError(f'{a.reference_file} is the reference sample of a head with the '
                              f'parameters {", ".join(got)}, not of {a.stage}. Pass --stage MIX17')
-        AE = r['AE']
-        n = AE.shape[1]
         # float64 once, here, so that every point is a plain float64 product, as in
         # examples/reproduce_paper.py; the values are those of the float32 file, exactly
-        A = np.empty((n, head.ENS*head.K))
-        for m in range(head.ENS):
-            A[:, m*head.K:(m + 1)*head.K] = AE[m]
-        del AE
+        A = head.pack(r['AE'], np.float64)
+        n = len(A)
         print(f'{n:,} events of the reference sample {a.reference_file}, with the paper\'s '
               f'per-event observables')
         return dict(A=A, obs=bands.reference_observables(r), event_number=np.arange(n), src=None)
@@ -166,6 +193,9 @@ def load_sample(a, head):
     if not a.src:
         raise ValueError('--hepmc needs --from, the point the sample was generated at')
     src = point(a, head, a.src, 'from')
+    if getattr(head, 'kind', None) in MIXTURE_KINDS and src[-1] not in (0.0, 1.0):
+        raise ValueError(f'--from puts the fraction at {src[-1]:g}. A sample made by one generator '
+                         f'sits at 0 (Sherpa) or 1 (Herwig): use sherpa-default or herwig-default')
     events = features.parse_hepmc(a.hepmc, a.max_events, a.fmt, a.units)
     F, M, _ = features.features_from_events(events)
     trunk = Trunk(f'{a.models}/{a.stage}_trunk.npz')
@@ -175,22 +205,98 @@ def load_sample(a, head):
                 event_number=events.numbers, src=src)
 
 
-def weights_at(head, s, theta):
-    """The weights of the sample s at theta, normalized to one."""
-    return head.weights(s['A'], theta) if s['src'] is None else \
-        head.ratio_weights(s['A'], theta, s['src'])
+class Model:
+    """The prediction of a released stage at a point, for the examples. For MIX17 it is the
+    paper's mixture of the two generators, each with its own weights (gentune.mixture), and for E
+    or F the head's weights, under the generator name ''. Weights are dicts {generator: weights},
+    each summing to one over the events."""
+
+    def __init__(self, head, sample):
+        self.head, self.s = head, sample
+        self.mix = getattr(head, 'kind', None) in MIXTURE_KINDS
+
+    def weights(self, theta):
+        A, src = self.s['A'], self.s['src']
+        if self.mix:
+            return mixture.weights(self.head, A, theta, theta_from=src)
+        return {'': self.head.weights(A, theta) if src is None else
+                self.head.ratio_weights(A, theta, src)}
+
+    def coefficients(self, theta):
+        return mixture.coefficients(theta) if self.mix else {'': 1.0}
+
+    def impose(self, w, inwin, F, calc):
+        """(the weights with the calculation imposed on each generator alone, imposed), with
+        imposed = (inwin, F, info) for the errors and the learning band of those weights."""
+        if self.mix:
+            wc, info = mixture.impose(w, inwin, F, calc)
+            return wc, (inwin, F, info)
+        lw, _, info = calc.impose(np.log(w['']), inwin, F)
+        return {'': np.exp(lw)}, (inwin, F, info)
+
+    def mean(self, w, O, theta):
+        return mixture.mean(w, O, theta) if self.mix else w[''] @ np.asarray(O, np.float64)
+
+    def mean_and_error(self, w, O, theta, mask=None, imposed=None):
+        if self.mix:
+            return mixture.mean_and_error(w, O, theta, mask=mask, imposed=imposed)
+        return bands.mean_and_error(w[''], O, mask=mask, imposed=imposed)
+
+    def histogram(self, b, w, width, theta, imposed=None):
+        if self.mix:
+            return mixture.histogram(b, w, width, theta, imposed=imposed)
+        return bands.histogram(b, w[''], width, imposed=imposed)
+
+    def event_weights(self, w, theta):
+        """One weight per event whose weighted mean of any observable is the prediction."""
+        return mixture.event_weights(w, theta) if self.mix else w['']
+
+    def supported(self, theta):
+        """Whether the training design came near theta (head.support). For MIX17 each generator
+        is asked at its own fraction, with the other generator's parameters at the centre of the
+        box, where every training run of the mixture had them."""
+        if not self.mix:
+            q = self.head.support(theta)
+            return q is None or q['ok']
+        ok = True
+        h = self.head
+        for g, sl in (('sherpa', slice(h.nS, h.nS + h.nH)), ('herwig', slice(0, h.nS))):
+            t = mixture.at_fraction(theta, mixture.XI[g])
+            t[sl] = h.centre[sl]
+            q = h.support(t)
+            ok &= q is None or q['ok']
+        return ok
+
+
+def resampled(C, w, O, b, width, coef):
+    """The bootstrap of the predictions at one point: (resamples, k + nb) for the counts C of
+    bands.resample_counts, each generator's weights w renormalized on every resample, and the
+    generators mixed with coef. The histogram is the fraction of all events in each bin over its
+    width, as everywhere."""
+    k, nb = O.shape[1], len(width)
+    inb = np.flatnonzero(b >= 0)
+    out = 0.0
+    for g, wg in w.items():
+        X = np.zeros((len(wg), 1 + k + nb))
+        X[:, 0], X[:, 1:1 + k] = wg, wg[:, None]*O
+        X[inb, 1 + k + b[inb]] = wg[inb]
+        S = bands.resampled_sums(C, X)
+        out = out + coef[g]*np.concatenate([S[:, 1:1 + k]/S[:, :1],
+                                            S[:, 1 + k:]/(width*S[:, :1])], 1)
+    return out
 
 
 def main():
     head_line, rest = __doc__.split('\n', 1)
     ap = argparse.ArgumentParser(description=head_line, epilog=rest, formatter_class=Formatter)
     add_sample_args(ap)
-    ap.add_argument('--nodes', type=int, default=200, help='points of the Latin hypercube')
-    ap.add_argument('--seed', type=int, default=11, help='seed of the Latin hypercube')
-    ap.add_argument('--bootstrap', type=int, default=100, metavar='N',
-                    help='resamples of the events for the bootstrap sd of the means and of the '
-                         'band, 0 for none')
-    ap.add_argument('--out', help='npz for the points, the means and their errors, N_eff, the '
+    ap.add_argument('--nodes', type=int, default=POINTS, help='points of the Latin hypercube')
+    ap.add_argument('--seed', type=int, default=SEED, help='seed of the Latin hypercube')
+    ap.add_argument('--bootstrap', type=int, default=None, metavar='N',
+                    help='resamples of the events for the bootstrap sd of the predictions and of '
+                         'the band, 0 for none (default: 100 for --reference and --hepmc, 0 for '
+                         '--reference-file and with --targets)')
+    ap.add_argument('--out', help='npz for the points, the predictions and their errors, N_eff, the '
                                   'histograms, the bootstrap, the per-event observables and the '
                                   'event numbers')
     ap.add_argument('--save-weights', action='store_true',
@@ -208,51 +314,60 @@ def main():
     except ValueError as e:
         print(f'ERROR: {e}')
         return 2
+    model = Model(head, s)
     obs = s['obs']
     O = np.column_stack(list(obs.values()))
     N, k = O.shape
+    calc = None
+    if a.targets:
+        calc = load_targets(a.targets)
+        inwin, F = calc.functions(obs['1-T'])
     nodes = bands.lhs_nodes(head, a.nodes, a.seed)
-    ok = np.array([q is None or q['ok'] for q in map(head.support, nodes)])
-    lo = hi = np.zeros(0)
-    nb = 0
+    ok = np.array([model.supported(t) for t in nodes])
+    lo = hi = width = np.zeros(0)
+    b = np.zeros(N, int) - 1
     if bins is not None:
         lo, hi = bins
         width = hi - lo
-        nb = len(width)
         b = bands.bin_index(obs[a.hist], lo, hi)
-        inb = np.flatnonzero(b >= 0)
-    B = max(a.bootstrap, 0)
+    nb = len(width)
+    B = a.bootstrap if a.bootstrap is not None else (0 if a.reference_file or a.targets else 100)
+    if B and a.targets:
+        print('--bootstrap is not taken with --targets: the calculation would have to be imposed '
+              'again on every resample. The statistical error with it imposed is printed instead.')
+        B = 0
     C = bands.resample_counts(N, B, seed=0) if B else None
-    means, stat, neff, hists, hstat, W = [], [], [], [], [], []
+    vals, stat, before, neff, W = [], [], [], [], []
     boot = np.zeros((B, a.nodes, k + nb))
     for p, th in enumerate(nodes):
-        w = weights_at(head, s, th)
-        m, e = bands.mean_and_error(w, O)
-        means.append(m)
-        stat.append(e)
-        neff.append(head.n_eff(w))
-        if nb:
-            h, he = bands.histogram(b, w, width)
-            hists.append(h)
-            hstat.append(he)
+        w = model.weights(th)
+        if p == 0:
+            gens = list(w)                                # the generators, '' for E and F
+        neff.append([head.n_eff(w[g]) for g in gens])
+        imp = None
+        if calc is not None:
+            h0 = model.histogram(b, w, width, th)[0] if nb else np.zeros(0)
+            before.append(np.r_[model.mean(w, O, th), h0])
+            w, imp = model.impose(w, inwin, F, calc)
+        if imp is None or p % STAT_EVERY == 0:
+            m, e = model.mean_and_error(w, O, th, imposed=imp)
+            h, he = model.histogram(b, w, width, th, imposed=imp) if nb else (np.zeros(0), np.zeros(0))
+            stat.append(np.r_[e, he])
+        else:
+            m = model.mean(w, O, th)
+            h = model.histogram(b, w, width, th)[0] if nb else np.zeros(0)
+            stat.append(np.full(k + nb, np.nan))
+        vals.append(np.r_[m, h])
         if B:
-            # the sums of every resample at once: the weight, weight x observable, and the weight
-            # in each bin, so that a resample's mean is its sum over its total weight
-            X = np.zeros((N, 1 + k + nb))
-            X[:, 0], X[:, 1:1 + k] = w, w[:, None]*O
-            if nb:
-                X[inb, 1 + k + b[inb]] = w[inb]
-            S = bands.resampled_sums(C, X)
-            boot[:, p, :k] = S[:, 1:1 + k]/S[:, :1]
-            if nb:
-                boot[:, p, k:] = S[:, 1 + k:]/(width*S[:, 1 + k:].sum(1, keepdims=True))
+            boot[:, p] = resampled(C, w, O, b, width, model.coefficients(th))
         if a.save_weights:
-            W.append(w.astype(np.float32))
-    means, stat, neff = np.array(means), np.array(stat), np.array(neff)
-    hists, hstat = np.array(hists).reshape(a.nodes, nb), np.array(hstat).reshape(a.nodes, nb)
-    vals = np.concatenate([means, hists], 1)              # every prediction, one column each
+            W.append(model.event_weights(w, th).astype(np.float32))
+        if a.nodes >= 500 and (p + 1) % 500 == 0:
+            print(f'  point {p + 1}/{a.nodes} [{time.time() - t0:.0f} s]', flush=True)
+    vals, stat, neff = np.array(vals), np.array(stat), np.array(neff)
     band = vals.std(0, ddof=1)
-    med_err = np.median(np.concatenate([stat, hstat], 1), 0)
+    band0 = np.array(before).std(0, ddof=1) if before else None
+    med_err = np.nanmedian(stat, 0)
     weak = med_err >= band
     if B:
         boot_point = np.median(boot.std(0, ddof=1), 0)    # the median over the points
@@ -261,36 +376,46 @@ def main():
 
     print(f'\n{a.stage}: generator band over {a.nodes} points of a Latin hypercube, seed {a.seed} '
           f'[{time.time() - t0:.0f} s]')
+    if (a.nodes, a.seed) != (POINTS, SEED):
+        print(f"these are not the paper's points ({POINTS} with seed {SEED})")
     print(f'{ok.sum()} of {a.nodes} points lie where the training design reached (head.support)')
-    print(f'N_eff/N over the points: median {np.median(neff)/N:.3f}, 5th percentile '
-          f'{np.percentile(neff, 5)/N:.3f}, smallest {neff.min()/N:.3f}, of {N:,} events')
+    for j, g in enumerate(gens):
+        print(f'N_eff/N{" of " + g if g else ""} over the points: median {np.median(neff[:, j])/N:.3f}, '
+              f'5th percentile {np.percentile(neff[:, j], 5)/N:.3f}, smallest '
+              f'{neff[:, j].min()/N:.3f}, of {N:,} events')
+    after = ' after the calculation' if calc is not None else ''
     bcols = f' {"boot sd":>10} {"boot sd of band":>16}' if B else ''
-    print(f'\n{"observable":<10} {"mean over points":>16} {"band (sd)":>10} {"p16":>10} '
-          f'{"p84":>10} {"stat. error":>11}{bcols}')
+    b0col = f' {"band before":>11}' if calc is not None else ''
+    print(f'\n{"observable":<10} {"mean over points":>16} {"band (sd)":>10}{b0col} {"p16":>10} '
+          f'{"p84":>10} {"stat. error":>11}{bcols}' + (f'      (the predictions{after})' if after else ''))
     for j, name in enumerate(obs):
-        x = means[:, j]
+        x = vals[:, j]
         bv = f' {boot_point[j]:>10.3g} {boot_band[j]:>16.3g}' if B else ''
-        print(f'{name:<10} {x.mean():>16.6g} {band[j]:>10.4g} {np.percentile(x, 16):>10.5g} '
+        b0 = f' {band0[j]:>11.4g}' if calc is not None else ''
+        print(f'{name:<10} {x.mean():>16.6g} {band[j]:>10.4g}{b0} {np.percentile(x, 16):>10.5g} '
               f'{np.percentile(x, 84):>10.5g} {med_err[j]:>11.3g}{bv}{"  *" if weak[j] else ""}')
     if nb:
-        print(f'\n{a.hist} distribution, normalized over the bins given')
-        print(f'{"from":>8} {"to":>8} {"mean over points":>16} {"band (sd)":>10} '
+        print(f'\n{a.hist} distribution, the fraction of all events in each bin over its width{after}')
+        print(f'{"from":>8} {"to":>8} {"mean over points":>16} {"band (sd)":>10}{b0col} '
               f'{"stat. error":>11}{bcols}')
         for i in range(nb):
             j = k + i
             bv = f' {boot_point[j]:>10.3g} {boot_band[j]:>16.3g}' if B else ''
-            print(f'{lo[i]:>8.4g} {hi[i]:>8.4g} {hists[:, i].mean():>16.5g} {band[j]:>10.4g} '
+            b0 = f' {band0[j]:>11.4g}' if calc is not None else ''
+            print(f'{lo[i]:>8.4g} {hi[i]:>8.4g} {vals[:, j].mean():>16.5g} {band[j]:>10.4g}{b0} '
                   f'{med_err[j]:>11.3g}{bv}{"  *" if weak[j] else ""}')
-    print('\nstat. error is the median over the points of sqrt(sum w^2 (O - <O>)^2)' +
-          (f'. boot sd is the median over the points of the bootstrap sd of the mean, and boot '
-           f'sd of band the bootstrap sd of the band, from {B} resamples of the {N:,} events'
+    print('\nstat. error is the median over the points of the statistical error of the prediction'
+          + (f', with the calculation imposed, over every {STAT_EVERY}th point' if calc is not None
+             else '') +
+          (f'. boot sd is the median over the points of the bootstrap sd of the prediction, and '
+           f'boot sd of band the bootstrap sd of the band, from {B} resamples of the {N:,} events'
            if B else ''))
-    if np.median(neff) < 1000:
-        print(f'WARNING the median N_eff over the points is {np.median(neff):.0f}, below 1000, so '
-              f'every number here is dominated by the statistics of the sample.')
+    if np.median(neff.min(1)) < 1000:
+        print(f'WARNING the median N_eff over the points is {np.median(neff.min(1)):.0f}, below '
+              f'1000, so every number here is dominated by the statistics of the sample.')
     if weak.any():
-        labels = np.array(list(obs) + [f'bin {lo[i]:.4g}-{hi[i]:.4g}' for i in range(nb)])
-        print(f'WARNING the band is not significant for {", ".join(labels[weak])} (marked *): '
+        names = np.array(list(obs) + [f'bin {lo[i]:.4g}-{hi[i]:.4g}' for i in range(nb)])
+        print(f'WARNING the band is not significant for {", ".join(names[weak])} (marked *): '
               f'the statistical error at a point is as large as the band'
               + (', or the bootstrap sd of the band is more than a third of it' if B else '')
               + '. Quoting it needs a larger sample'
@@ -298,11 +423,15 @@ def main():
                  if a.stage == 'MIX17' and not a.reference_file else '.'))
     if a.out:
         out = dict(nodes=nodes, names=np.array(axes.names(a.stage, head.nt)),
-                   observables=np.array(list(obs)), means=means, stat=stat, n_eff=neff,
-                   n_events=N, support_ok=ok, event_number=np.asarray(s['event_number']),
-                   per_event=O, hist_observable=a.hist if nb else '', lo=lo, hi=hi,
-                   hists=hists, hist_stat=hstat, bootstrap=B, boot_means=boot[..., :k],
-                   boot_hists=boot[..., k:])
+                   observables=np.array(list(obs)), generators=np.array(gens),
+                   means=vals[:, :k], stat=stat[:, :k], n_eff=neff, n_events=N, support_ok=ok,
+                   event_number=np.asarray(s['event_number']), per_event=O,
+                   hist_observable=a.hist if nb else '', lo=lo, hi=hi, hists=vals[:, k:],
+                   hist_stat=stat[:, k:], bootstrap=B, boot_means=boot[..., :k],
+                   boot_hists=boot[..., k:], targets=a.targets or '')
+        if before:
+            before = np.array(before)
+            out.update(means_before=before[:, :k], hists_before=before[:, k:])
         if a.save_weights:
             out['weights'] = np.array(W)
         np.savez(a.out, **out)

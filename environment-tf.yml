@@ -1,5 +1,9 @@
-# Only for crosscheck_ef.py (App. A.2): the energyflow PFN is a Keras model and needs TensorFlow.
-# run_crosscheck.sh calls it with ${EF_PYTHON:-python}.
+# Only for the PFN cross-check of App. A.2 (crosscheck_ef.py): the energyflow PFN is a Keras model and needs
+# TensorFlow. symmetry/pfn_lmx.sbatch runs it with the Python of a venv with these pins (EF_VENV), and
+# run_crosscheck_seeds.sh with ${EF_PYTHON:-python}, both with TF_USE_LEGACY_KERAS=1. The pins are the versions of
+# the environments the paper's runs used, on Python 3.13. energyflow 1.4.0 imports tf_keras, which neither
+# tensorflow nor energyflow requires, so it is listed here. PyPI has no Python 3.13 wheel of wasserstein 1.1.0,
+# which energyflow requires, so pip builds it from its source, and that needs a C++ compiler.
 name: bdistcrete-tf
 channels:
   - conda-forge
@@ -8,6 +12,10 @@ dependencies:
   - pip
   - pip:
       - tensorflow==2.21.0
+      - tf-keras==2.21.0
+      - keras==3.15.0
+      - h5py==3.14.0
       - energyflow==1.4.0
-      - numpy
-      - scikit-learn
+      - wasserstein==1.1.0
+      - numpy==2.5.1
+      - scikit-learn==1.9.0

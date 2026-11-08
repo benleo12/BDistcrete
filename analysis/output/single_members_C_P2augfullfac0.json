@@ -1,22 +1,32 @@
 {
  "mean_of_members": {
-  "T": 1.025,
-  "width": 0.9712334727718741
+  "T": 1.0,
+  "width": 0.9725390222047029
  },
  "member_0": {
   "T": 0.975,
-  "width": 1.0285872230010062
+  "width": 1.0291496304306222
  },
  "member_1": {
   "T": 1.05,
-  "width": 1.0350347777408118
+  "width": 1.0398377298213175
  },
  "member_2": {
   "T": 1.1,
-  "width": 1.014276561984647
+  "width": 1.01940282405328
  },
  "member_3": {
   "T": 0.925,
-  "width": 1.0364656161158563
+  "width": 1.0369354277203766
+ },
+ "provenance": {
+  "beam_photons": "remove",
+  "t_dir": "output/temperature",
+  "beam_photons_md5": "ea7f82ed77c067ee727114a72d038d93",
+  "ref": "output/models/C_P2augfullfac0_ref.npz",
+  "ref_particles": "output/published/models/C_P2augfullfac0_ref.npz",
+  "ref_orig": "output/published/models/C_P2augfullfac0_ref.npz",
+  "data": "/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_abc",
+  "data_realpath": "/mnt/beegfs/bassi/reweighting/gen/data_abc_nb"
  }
 }

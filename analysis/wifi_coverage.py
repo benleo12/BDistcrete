@@ -13,26 +13,42 @@ the rms of z over the held-out points is near one with it and above one without 
 
     python wifi_coverage.py MIX output/models/<TAG>_cond.npz output/models/<TAG>_ref_v2_slim.npz \\
         output/wifi_<TAG>_fit.npz <held data dir> <theory point file>
-Writes output/wifi_coverage_<TAG>.json (COVERAGE_OUT overrides it)."""
+Writes output/wifi_coverage_<TAG>.json (COVERAGE_OUT overrides it).
+
+The rerun (score_obs.py): every input must exist. BEAM_PHOTONS=remove reads only photon-free shapes
+files and checks the reference shapes against the old bundle REF_ORIG (the charged multiplicity and
+the baryon count do not see the beam photons). With T_DIR set, the export must carry the refitted
+temperature, and the published weights of the fit must be the ones of that temperature."""
 import os, sys, json, time
 import numpy as np, pandas as pd, torch
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from directlib import Model
+import score_obs as SO
 
 tag, export, ref, wfit, data, grid = sys.argv[1:7]
+SO.need(export, ref, wfit, f'{data}/meta.json', grid)
 TAG = os.path.basename(export).replace('_cond.npz', '')
 torch.set_num_threads(int(os.environ.get('TORCH_THREADS', '8')))
 t0 = time.time()
+T_used = SO.check_export_T(export, float(np.load(export)['temperature']))
+if SO.REMOVE:
+    _r = np.load(ref)
+    SO.check_ref_shapes(ref, {k: np.asarray(_r[k], np.float64) for k in SO.SHAPES}, os.environ.get('REF_ORIG', ''))
+    del _r
 M = Model(tag, export=export, ref=ref, exps=(), ae_dtype='float32', grid=grid)
 W = np.load(wfit); C = W['C']; w_pub = W['w_published']
+if SO.T_DIR:
+    _E = int(round(np.sqrt(len(w_pub) - 1)))
+    assert np.allclose(np.asarray(w_pub)[1:], np.eye(_E).ravel()/(_E*T_used), rtol=1e-12, atol=0), \
+        f'{wfit} was fitted with another temperature than {T_used}'
 OBS = {'thrust': '1_minus_thrust', 'B_total': 'B_total', 'rho_heavy': 'rho_heavy', 'nch': None, 'nbaryon': None}
 meta = json.load(open(f'{data}/meta.json'))
 ref_x = {k: (M.THRT.numpy() if k == 'thrust' else M.NCHT.numpy() if k == 'nch' else M.extra[k]) for k in OBS}
 rows = []
 for h in meta['held']:
     rid, theta = h['rid'], np.array(h['theta'], np.float64)
-    sh = pd.read_csv(f'{data}/shapes_run_{rid:04d}.csv')
-    z = np.load(f'{data}/particles_full_{rid:04d}.npz')
+    sh = SO.read_shapes(f'{data}/shapes_run_{rid:04d}.csv')
+    z = np.load(SO.need(f'{data}/particles_full_{rid:04d}.npz'))
     truth_x = {'thrust': sh['1_minus_thrust'].values, 'B_total': sh['B_total'].values, 'rho_heavy': sh['rho_heavy'].values,
                'nch': ((z['particles'][..., 5] != 0) & z['mask'].astype(bool)).sum(1).astype(np.float64),
                'nbaryon': z['nbaryon'].astype(np.float64)}
@@ -62,5 +78,6 @@ summary = {k: dict(rms_z_without=float(np.sqrt(np.mean([r[k]['z_without']**2 for
 for k, s in summary.items():
     print(f'[{TAG}] {k:9s} rms z {s["rms_z_without"]:.2f} without the learning band, {s["rms_z_with"]:.2f} with it; '
           f'band/stat {s["median_learn_over_stat"]:.2f}; rms relative error {100*s["rms_rel_error"]:.3f}%')
-json.dump(dict(tag=TAG, data=data, wifi_fit=wfit, n_points=len(rows), summary=summary, points=rows),
+extra = dict(SO.describe(), temperature=T_used, ref=ref, data_realpath=os.path.realpath(data)) if (SO.REMOVE or SO.T_DIR) else {}
+json.dump(dict(tag=TAG, data=data, wifi_fit=wfit, n_points=len(rows), summary=summary, points=rows, **extra),
           open(os.environ.get('COVERAGE_OUT', f'output/wifi_coverage_{TAG}.json'), 'w'), indent=1)

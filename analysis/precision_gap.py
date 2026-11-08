@@ -6,11 +6,15 @@ per-particle features as float16, so the reference vectors a(Phi) of the trainin
 rounding. This embeds a uniform subset of the reference sample both ways with the shipped numpy
 trunk, in float32 and rounded to float16, and at every held-out point of the stage compares the
 reweighted means of the closure observables with the statistical error of those means on the
-full reference sample. The answer is why the trunk file records feature_precision and the
-reader rounds a user's features to it: for MIX17 the float32 path moves a mean by up to 0.17
-percent, the size of its accuracy floor.
+full reference sample. The answer, worst_mean_shift_relative of each stage in
+output/precision_gap_r8.json, is why the trunk file records feature_precision and the reader
+rounds a user's features to it.
 
 Usage: python precision_gap.py EXPORT=PUBLIC ...   (RELEASE_DIR holds the packaged models)
+
+The rerun (score_obs.py): BEAM_PHOTONS=remove reads the reference observables without the beam
+photons, as make_stage_table.py does (REF_ORIG_DIR, POBS_DIR). With T_DIR set the export must carry
+the refitted temperature of its model, and the packaged head the export's.
 """
 import json, os, sys
 import numpy as np
@@ -18,7 +22,8 @@ import numpy as np
 sys.path.insert(0, "release")
 from r2_ladder import STAGES
 from mixture_cfg import register as _register_mixture
-from make_stage_table import design_key, ALIAS
+from make_stage_table import design_key, ALIAS, reference_obs
+import score_obs as SO
 from gentune.head import Head, MixtureHead
 from gentune.trunk import Trunk
 from gentune.features import trunk_features
@@ -35,6 +40,10 @@ def gap(tag, pub):
     hp = f"{REL}/models/{pub}_head.npz"
     kind = str(np.load(hp).get("head_kind", "cond"))
     h = (MixtureHead if kind in ("mixture", "geometric") else Head)(hp)
+    cp = f"output/models/{tag}_cond.npz"
+    T_exp = SO.check_export_T(cp, float(np.load(cp)["temperature"]))
+    if SO.T_DIR:
+        assert abs(h.T - T_exp) < 1e-12, f"{hp} carries T={h.T}, its export {cp} T={T_exp}: package it again"
     tr = Trunk(f"{REL}/models/{pub}_trunk.npz", feature_precision="float32")   # rounding by hand below
     r = np.load(f"output/models/{tag}_ref.npz")
     mask = r["mask"]
@@ -53,6 +62,9 @@ def gap(tag, pub):
     for o in cfg["obs"] + cfg["flav_obs"]:
         ref[o] = (r[o][sel].astype(float) if o in r.files
                   else (M.sum(1).astype(float) if o == "mult_total" else None))
+    if SO.REMOVE:
+        ref = {o: (None if v is None else v[sel])
+               for o, v in reference_obs(tag, f"output/models/{tag}_ref.npz", r, list(ref)).items()}
     worst_pull = worst_rel = 0.0
     lg_rms, lg_max = [], []
     for rid, th in cfg["held"].items():

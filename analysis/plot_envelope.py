@@ -214,49 +214,58 @@ def ratios(boxes, key='thrust'):
     F.save(fig, 'env_ratios')
 
 
+def paper_panels(ax, bx, Y, yc, sl, e, sb, mask=None):
+    """One distribution of the paper figures (Figs. 8 and 10, redrawn Nov 9 for legibility): in the upper panel the
+    spread of the variations, their mean -+ one SD as an orange band, against the linear band, the prediction at the center
+    -+ its linear SD as blue lines, both relative to that prediction; in the lower panel the ratio of the two SDs, with
+    the bootstrap uncertainty of the variations' SD in light gray. The individual draws and the slopes in z are left out
+    (the text quotes the latter); env() and env_cases still draw both."""
+    se = Y.std(0, ddof=1); mu = Y.mean(0)/yc; sr = se/yc; band = sl/yc
+    ax.stairs(mu + sr, e, baseline=mu - sr, fill=True, color=F.GEN, alpha=0.3, lw=0, zorder=2)
+    for sg in (1, -1):
+        ax.stairs(1 + sg*band, e, baseline=None, color=F.METHOD, lw=1.3, zorder=4)
+    F.unit_line(ax)
+    (lo, hi), ticks = F.nice_range([mu - sr, mu + sr, 1 - band, 1 + band], pad=0.08)
+    ax.set_ylim(lo, hi); ax.set_yticks(ticks)
+    rel = sb/se; r = sl/se
+    if mask is not None:
+        r = np.where(mask, np.nan, r)
+    bx.stairs(1 + rel, e, baseline=1 - rel, fill=True, color=F.BASE, alpha=0.25, lw=0, zorder=1)
+    bx.axhline(1, color=F.REF, lw=0.6, zorder=2)
+    bx.stairs(r, e, baseline=None, color=F.METHOD, lw=1.3, zorder=3)
+    bx.set_ylim(*F.widen(0.4, 1.6, [r, 1 + rel, 1 - rel])); bx.set_xlim(e[0], e[-1])
+
+
+def paper_legend(fig, n, window=False, ncol=3):
+    h = [plt.Rectangle((0, 0), 1, 1, color=F.GEN, alpha=0.3, lw=0), plt.Line2D([], [], color=F.METHOD, lw=1.3),
+         plt.Rectangle((0, 0), 1, 1, color=F.BASE, alpha=0.25, lw=0)]
+    lb = [f'{n} variations, mean $\\pm1\\sigma$', r'linear covariance, $\pm1\sigma$', r'bootstrap uncertainty of $\sigma_{\rm variations}$']
+    if window:
+        h.append(plt.Line2D([], [], color=F.THEORY, lw=0.9, ls=(0, (3, 2)))); lb.append('edges of the window')
+    fig.legend(h, lb, loc='upper center', ncol=ncol, fontsize=7.2, bbox_to_anchor=(0.54, 1.0), handlelength=1.8)
+
+
 def env_pair(boxes=('tune', 'full'), keys=('thrust', 'nch'), save_as='envelope', short=BOX_SHORT, mask_thin=False):
-    """The paper figure: env() for several boxes stacked, prior only."""
-    H = 3.15*len(boxes); fig = plt.figure(figsize=(F.TW, H))
-    outer = GridSpec(len(boxes), 1, figure=fig, hspace=0.3, left=0.09, right=0.99, top=1 - 0.441/H, bottom=0.441/H)
+    """The paper figure (Fig. 8): paper_panels() for several boxes stacked, prior only."""
+    H = 2.75*len(boxes); fig = plt.figure(figsize=(F.TW, H))
+    outer = GridSpec(len(boxes), 1, figure=fig, hspace=0.32, left=0.09, right=0.99, top=1 - 0.36/H, bottom=0.36/H)
     rng = np.random.default_rng(1)
     for r, box in enumerate(boxes):
         d, lab, no, idx = load(box)
-        Y = d['Y_joint'][:, :no]; yc = d['y_central'][:no]; se = Y.std(0, ddof=1); sb = boot_sd(Y, rng)
-        gs = outer[r].subgridspec(2, len(keys), height_ratios=[1.3, 1], hspace=0.08, wspace=0.22)
+        Y = d['Y_joint'][:, :no]; yc = d['y_central'][:no]; sb = boot_sd(Y, rng)
+        sl = np.sqrt(np.maximum(np.diag(model_cov(d, 'lin_flat', 'before', no)), 0))
+        gs = outer[r].subgridspec(2, len(keys), height_ratios=[1.25, 0.75], hspace=0.07, wspace=0.2)
         for c, key in enumerate(keys):
             ii = idx[key]; e, xl = edges_of(d, key)
             ax = fig.add_subplot(gs[0, c]); bx = fig.add_subplot(gs[1, c], sharex=ax)
-            for k in range(len(Y)):
-                ax.stairs(Y[k, ii]/yc[ii], e, baseline=None, color=F.BASE, lw=0.35, alpha=0.12, zorder=1)
-            mu = Y[:, ii].mean(0)/yc[ii]; sr = se[ii]/yc[ii]
-            ax.stairs(mu + sr, e, baseline=mu - sr, fill=True, color=F.GEN, alpha=F.BAND_ALPHA, lw=0, zorder=2)
-            ax.stairs(mu, e, baseline=None, color=F.GEN, lw=1.0, zorder=3)
-            sl = np.sqrt(np.maximum(np.diag(model_cov(d, 'lin_flat', 'before', no)), 0))[ii]/yc[ii]
-            for sg in (1, -1):
-                ax.stairs(1 + sg*sl, e, baseline=None, color=F.METHOD, lw=1.1, zorder=4)
-            F.unit_line(ax)
-            dev = np.nanpercentile(np.abs(Y[:, ii]/yc[ii] - 1), 97.5, axis=0)
-            set_upper(ax, dev, sl, (mu - sr, mu + sr))
+            mask = np.array([lab[i] in THIN for i in ii]) if mask_thin else None
+            paper_panels(ax, bx, Y[:, ii], yc[ii], sl[ii], e, sb[ii], mask)
             ax.set_ylabel('ratio to center' if c == 0 else ''); plt.setp(ax.get_xticklabels(), visible=False)
             F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity'}[key] + ', ' + short.get(box, box))
-            bx.axhline(1, color=F.REF, lw=0.6)
-            rse = sb[ii]/se[ii]; drawn = [1 + rse, 1 - rse]
-            bx.stairs(1 + rse, e, baseline=1 - rse, fill=True, color=F.BASE, alpha=0.28, lw=0)
-            for name, nm, ls in MODELS:
-                Cm = model_cov(d, name, 'before', no)
-                if Cm is not None:
-                    v = np.sqrt(np.maximum(np.diag(Cm), 0))[ii]/se[ii]
-                    if mask_thin:
-                        v[[lab[i] in THIN for i in ii]] = np.nan
-                    bx.stairs(v, e, baseline=None, color=F.METHOD, lw=1.0, ls=ls); drawn.append(v)
-            bx.set_ylim(*F.widen(0.3, 1.7, drawn)); bx.set_xlim(e[0], e[-1]); bx.set_xlabel(xl, labelpad=1.5)
-            bx.set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm variations}$' if c == 0 else '')
+            bx.set_xlabel(xl, labelpad=1.5); bx.set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm variations}$' if c == 0 else '')
             for a in (ax, bx):
                 F.trim(a)
-    h = [plt.Line2D([], [], color=F.BASE, lw=0.6), plt.Rectangle((0, 0), 1, 1, color=F.GEN, alpha=F.BAND_ALPHA),
-         plt.Line2D([], [], color=F.METHOD, lw=1.1)] + [plt.Line2D([], [], color=F.METHOD, lw=1.0, ls=ls) for _, _, ls in MODELS[1:]]
-    lb = [f'{len(Y)} variations', r'variations, $\pm1\sigma$', r'linear, $\pm1\sigma$'] + [nm for _, nm, _ in MODELS[1:]]
-    fig.legend(h, lb, loc='upper center', ncol=len(h), fontsize=7.2, bbox_to_anchor=(0.54, 1.0), handlelength=1.8)
+    paper_legend(fig, len(Y))
     F.save(fig, save_as)
 
 
@@ -348,46 +357,26 @@ def coverage_summary(boxes=('tune', 'tune_herwig', 'tune_sherpa', 'tune_xifull',
 
 
 def env_after_pair(boxes=('tune', 'full')):
-    """The application figure: thrust with the calculation imposed in the window, variations against linear."""
-    fig = plt.figure(figsize=(F.TW, 3.3))
-    gs = GridSpec(2, len(boxes), figure=fig, height_ratios=[1.3, 1], hspace=0.08, wspace=0.22, left=0.09, right=0.99, top=0.86, bottom=0.13)
+    """The application figure (Fig. 10): thrust with the calculation imposed in the window, drawn as Fig. 8."""
+    fig = plt.figure(figsize=(F.TW, 2.75))
+    gs = GridSpec(2, len(boxes), figure=fig, height_ratios=[1.25, 0.75], hspace=0.07, wspace=0.2, left=0.09, right=0.99, top=0.83, bottom=0.14)
     rng = np.random.default_rng(1)
     for c, box in enumerate(boxes):
         d, lab, no, idx = load(box); s = slice(no, 2*no)
-        Y = d['Y_joint'][:, s]; yc = d['y_central'][s]; se = Y.std(0, ddof=1); sb = boot_sd(Y, rng)
+        Y = d['Y_joint'][:, s]; yc = d['y_central'][s]; sb = boot_sd(Y, rng)
+        sl = np.sqrt(np.maximum(np.diag(model_cov(d, 'lin_flat', 'after', no)), 0))
         ii = idx['thrust']; e, xl = edges_of(d, 'thrust')
         ax = fig.add_subplot(gs[0, c]); bx = fig.add_subplot(gs[1, c], sharex=ax)
-        for a in (ax, bx):
-            a.axvspan(1/20, 1/3, color=F.THEORY, alpha=F.WINDOW_ALPHA, lw=0, zorder=0)
-        for k in range(len(Y)):
-            ax.stairs(Y[k, ii]/yc[ii], e, baseline=None, color=F.BASE, lw=0.35, alpha=0.12, zorder=1)
-        mu = Y[:, ii].mean(0)/yc[ii]; sr = se[ii]/yc[ii]
-        ax.stairs(mu + sr, e, baseline=mu - sr, fill=True, color=F.GEN, alpha=F.BAND_ALPHA, lw=0, zorder=2)
-        ax.stairs(mu, e, baseline=None, color=F.GEN, lw=1.0, zorder=3)
-        sl = np.sqrt(np.maximum(np.diag(model_cov(d, 'lin_flat', 'after', no)), 0))[ii]/yc[ii]
-        for sg in (1, -1):
-            ax.stairs(1 + sg*sl, e, baseline=None, color=F.METHOD, lw=1.1, zorder=4)
-        F.unit_line(ax)
-        dev = np.nanpercentile(np.abs(Y[:, ii]/yc[ii] - 1), 97.5, axis=0)
-        set_upper(ax, dev, sl, (mu - sr, mu + sr))
+        for a in (ax, bx):                                            # the window as two edges, not a fill under the band
+            for x in (1/20, 1/3):
+                a.axvline(x, color=F.THEORY, lw=0.9, ls=(0, (3, 2)), zorder=5)
+        paper_panels(ax, bx, Y[:, ii], yc[ii], sl[ii], e, sb[ii])
         ax.set_ylabel('ratio to center' if c == 0 else ''); plt.setp(ax.get_xticklabels(), visible=False)
         F.title(ax, 'thrust with the calculation, ' + {'tune': 'tune-sized ranges', 'full': 'full box'}.get(box, box))
-        bx.axhline(1, color=F.REF, lw=0.6); rse = sb[ii]/se[ii]; drawn = [1 + rse, 1 - rse]
-        bx.stairs(1 + rse, e, baseline=1 - rse, fill=True, color=F.BASE, alpha=0.28, lw=0)
-        for name, nm, ls in MODELS:
-            Cm = model_cov(d, name, 'after', no)
-            if Cm is not None:
-                v = np.sqrt(np.maximum(np.diag(Cm), 0))[ii]/se[ii]; drawn.append(v)
-                bx.stairs(v, e, baseline=None, color=F.METHOD, lw=1.0, ls=ls)
-        bx.set_ylim(*F.widen(0.3, 1.7, drawn)); bx.set_xlim(e[0], e[-1]); bx.set_xlabel(xl, labelpad=1.5)
-        bx.set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm variations}$' if c == 0 else '')
+        bx.set_xlabel(xl, labelpad=1.5); bx.set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm variations}$' if c == 0 else '')
         for a in (ax, bx):
             F.trim(a)
-    h = [plt.Line2D([], [], color=F.BASE, lw=0.6), plt.Rectangle((0, 0), 1, 1, color=F.GEN, alpha=F.BAND_ALPHA),
-         plt.Line2D([], [], color=F.METHOD, lw=1.1)] + [plt.Line2D([], [], color=F.METHOD, lw=1.0, ls=ls) for _, _, ls in MODELS[1:]] \
-        + [plt.Rectangle((0, 0), 1, 1, color=F.THEORY, alpha=0.2)]
-    lb = [f'{len(Y)} variations', r'variations, $\pm1\sigma$', r'linear, $\pm1\sigma$'] + [nm for _, nm, _ in MODELS[1:]] + ['window']
-    fig.legend(h, lb, loc='upper center', ncol=3, fontsize=7.2, bbox_to_anchor=(0.54, 1.0), handlelength=1.8)
+    paper_legend(fig, len(Y), window=True, ncol=2)
     F.save(fig, 'envelope_after')
 
 

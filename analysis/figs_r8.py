@@ -7,11 +7,11 @@ fraction of it), so the fonts are the printed fonts: 9 pt axis labels and panel 
 labels, 7.5 pt legends and annotations. Each color keeps one meaning across the paper, as set out
 in the block of constants below.
 
-    python figs_r8.py               # the nine data figures of the paper, output/r8_<name>.pdf
+    python figs_r8.py               # the ten data figures of the paper, output/r8_<name>.pdf
     python figs_r8.py bands obs     # only the figures named
 
-The nine, in the order of the paper: closure_mix (Fig. 3), map (Fig. 4), coverage (Fig. 5), kscan
-(Fig. 6), cost (Fig. 7), bands (Fig. 11), obs (Fig. 12), toy (Fig. 13) and aleph (Fig. 14). widebox
+The ten, in the order of the paper: closure_mix (Fig. 3), map (Fig. 4), coverage (Fig. 5), kscan
+(Fig. 6), cost (Fig. 7), bands (Fig. 11), window (Fig. 12, added Nov 10), obs (Fig. 13), toy (Fig. 14) and aleph (Fig. 15). widebox
 (the wide coupling scan, whose numbers the paper quotes without a figure) and closure (Stage C
 reweighted to a held-out point) are not in the paper and are drawn only when named. R8_OUT sets the output folder (default output). XP_NULL sets the dotted tick of
 Fig. 4 (default the mean of output/xp_null.json).
@@ -26,12 +26,12 @@ takes its vertical range from what it draws.
 Ranges (rounds B10, B11 and B21): every axis keeps the published range when what it draws fits in it, and otherwise
 widens only as far as needed (widen()), so that no value of the rerun is hidden: Figs. 3 (the reweighted ratio and its
 band, and since B21 the dashed unweighted reference, each side alone), 5, 6 (points and error bars; since B21 none
-ends on the axis), 7, 11, 12 (every bar but the two bands of <tau>_win that the calculation removes, its learning band,
+ends on the axis), 7, 11, 13 (every bar but the two bands of <tau>_win that the calculation removes, its learning band,
 which the caption puts below the axis, and its generator band with the calculation imposed, which the text says
-disappears; neither lowers the axis, and the job log says where both lie) and 14 (the data points with their error bars
+disappears; neither lowers the axis, and the job log says where both lie) and 15 (the data points with their error bars
 and the calculation inside the window, with ticks for any span of the ratio panel; since B21 also every data point below
 tau = 0.5 in the upper panel and the theory band in the ratio panel; a data point outside the window and beyond the
-range of a panel is drawn as an arrow at its edge). Fig. 13 shows the central 99.4 percent of the events, as published,
+range of a panel is drawn as an arrow at its edge). Fig. 14 shows the central 99.4 percent of the events, as published,
 with the axes half a hexagon wider (B21), so that the hexagons on its edge are whole.
 """
 import os, sys, json
@@ -555,6 +555,155 @@ def bands():
     save(fig, 'bands' + ('_lin' if lin else ''))
 
 
+# ---- Fig. window: the shape inside the window and the fraction of events there --------------------
+def window_split():
+    r"""The thrust window split into its two factors (Sec. 5.4): every bin wholly inside the window is the fraction of
+    events there times the shape there. (a) and (b) the shape, the twelve bins from 0.05 to 0.30 normalized over
+    them, as a ratio to the calculation normalized the same way, on our definition of the final state, where the
+    calculation is imposed: (a) the generators alone, the mixture with its generator band and each generator at its
+    default tune; (b) with the calculation imposed, the mixture with its theory band and its generator band, and, as
+    thin gray lines around it, the generator band of (a) for comparison. (c) the fraction of all events from 0.05 to
+    0.30 at the hadron level of DELPHI, for the generators alone (open) and with the calculation imposed (filled),
+    the mixture with its generator band and learning band, the calculation normalized over all tau with its theory
+    band, and DELPHI.
+    The ratio in (a) and (b) is to the calculation rather than to DELPHI because the calculation is what is imposed,
+    on our final state; the shape against the data is Fig. aleph. Every value reproduces a macro of make_numbers.py:
+    the imposed shape against the calculation (\TbShapeVsCalcMax), Sherpa's and Herwig's imposed shapes apart
+    (\TbShapeApartWin, there in percent of DELPHI's shape), the generator bands of the shape (\TbShapeGen*WinM*),
+    its theory band (Eq. (thband) on the normalized mixture averaged over xi, as make_numbers.py does), the fractions
+    against DELPHI (\TbWinFracBelow*, \TbWinFracCalcApart), the generator band of the fraction (its spread over the
+    \TbNodes draws, H_after_conv; \TbPwinGenAfterPercent for P_win) and its learning band (\TbPwinLearnPercent, the
+    same in percent). DELPHI's error on the fraction adds the statistical errors of the twelve bins in quadrature and
+    takes the systematic error as fully correlated between them (lepcov/lepdata_cov.py, model corr), the larger of
+    the two simple models; without the HEPData split it falls back to the total errors fully correlated."""
+    fn, fv = (os.environ.get(k, d) for k, d in (('BANDS_NPZ', 'output/three_bands_MIXGEOV3S9.npz'),
+                                                ('VARS_JSON', 'output/theory_variations_MIX.json')))
+    fc = os.environ.get('CALC_BINS', 'output/calc_bins_nlo_point.json')
+    z, V, CB = np.load(fn), json.load(open(fv)), json.load(open(fc))
+    lin = linear_inputs((fn, z), (fv, V))
+    lo, hi = z['lo'], z['hi']; wd = hi - lo; w12 = (lo >= 0.05 - 1e-9) & (hi <= 1/3 + 1e-9)
+    nrm = lambda h: np.asarray(h, float)[..., w12]/np.sum(np.asarray(h, float)[..., w12]*wd[w12], axis=-1, keepdims=True)
+    cb = CB['delphi']; off = len(cb['lo']) - len(lo)                   # the calculation also has the bins below 0.05
+    assert np.allclose(np.asarray(cb['lo'])[off:], lo), 'the calculation and the bands have different bins'
+    calc = {k: np.asarray(v, float)[off:] for k, v in cb['calc'].items()}
+    cs = nrm(calc['central'])
+    # the shapes: the mixture from the npz, each generator from theory_variations
+    mixA, mixI = z['h_central_before_win'], z['h_central_win']
+    gS = {k: nrm(V[f'xi{x}'][k]) for x, k in ((0, 'h_gen_only'), (0, 'h_imposed'))}
+    gH = {k: nrm(V[f'xi{x}'][k]) for x, k in ((1, 'h_gen_only'), (1, 'h_imposed'))}
+    # the theory band of the imposed shape, Eq. (thband) on the displacement of the normalized mixture, averaged over xi
+    PAIRS = [("(2.0, 1.0, 'logR', 1.0)", "(0.5, 1.0, 'logR', 1.0)"), ("(1.0, 2.0, 'logR', 1.0)", "(1.0, 0.5, 'logR', 1.0)")]
+    SCHEME, npl = "(1.0, 1.0, 'modR', 1.0)", [str(l) for l in z['np_labels']]
+    vl = [str(l) for l in z['theory_var_labels']]
+    dg = {g: dict(zip(vl + npl, np.vstack([z[f'theory_var_hist_{g}'], z[f'np_hist_{g}']]))) for g in ('sherpa', 'herwig')}
+
+    def thb(dd, up, axis=None):
+        f = (lambda v: np.maximum(v, 0.0)) if up else (lambda v: np.maximum(-v, 0.0))
+        t = sum(np.maximum(f(dd[a]), f(dd[b]))**2 for a, b in PAIRS) + f(dd[SCHEME])**2 + sum(f(dd[l])**2 for l in npl)/len(npl)
+        return np.sqrt(np.mean(t, axis=0)) if axis == 'xi' else np.sqrt(t)
+    xg = ((np.arange(4000) + 0.5)/4000)[:, None]; hS, hH = z['h_central_sherpa'], z['h_central_herwig']
+    m0 = nrm((1 - xg)*hS + xg*hH)
+    dshp = {l: nrm((1 - xg)*(hS + dg['sherpa'][l]) + xg*(hH + dg['herwig'][l])) - m0 for l in dg['sherpa']}
+    th_up, th_dn = thb(dshp, True, 'xi'), thb(dshp, False, 'xi')
+    gb0, gb1 = z['gen_hist_before_win'], z['gen_hist_win']
+    # the fraction of all events from 0.05 to 0.30, at DELPHI's hadron level
+    fr = lambda h: float(np.sum((np.asarray(h, float)*wd)[w12]))
+    dat = z['data']; fD = fr(dat)
+    F = dict(mixA=fr(z['h_central_before_conv']), mixI=fr(z['h_central_conv']),
+             SA=fr(V['xi0']['h_gen_only_conv']), SI=fr(V['xi0']['h_imposed_conv']),
+             HA=fr(V['xi1']['h_gen_only_conv']), HI=fr(V['xi1']['h_imposed_conv']), calc=fr(calc['central']))
+    Hd = z['H_after_conv'][:, :len(lo)]; f_gen = float(np.std(np.sum((Hd*wd)[:, w12], axis=1), ddof=1))
+    cvl = [str(l) for l in z['cov_labels']]; ix = [cvl.index(f'thr_{a:.3f}_{b:.3f}') for a, b in zip(lo[w12], hi[w12])]
+    gv = np.zeros(len(cvl)); gv[ix] = wd[w12]
+    f_learn = float(np.sqrt(gv @ z['C_learn'] @ gv))/fr(z['h_central'])*F['mixI']       # in percent as on our final state
+    dc = {k: fr(v) - F['calc'] for k, v in calc.items() if k != 'central'}
+    c_up, c_dn = float(thb(dc, True)), float(thb(dc, False))
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lepcov'))
+        from lepdata_cov import lepdata_split
+        llo, lhi, yy, st, sy = lepdata_split('delphi'); sel = (llo >= 0.05 - 1e-9) & (lhi <= 0.30 + 1e-9)
+        assert np.allclose(yy[sel], dat[w12])
+        wsel = (lhi - llo)[sel]; f_err = float(np.hypot(np.sqrt(np.sum((wsel*st[sel])**2)), np.sum(wsel*sy[sel]))); how = 'stat in quadrature, sys fully correlated'
+    except Exception as ex:
+        f_err = float(np.sum((z['err']*wd)[w12])); how = f'total errors fully correlated ({ex.__class__.__name__})'
+    below = {k: 100*(1 - v/fD) for k, v in F.items()}
+    print('window_split: shape/calc imposed max dev %.2f%%; S-H imposed apart (of DELPHI shape) %.2f%%; gen band of the shape %.2f-%.2f%% before, '
+          '%.3f-%.2f%% after; theory band up to %.1f%% above and %.1f%% below, wider than the generator band of (a) in %d of %d bins' % (
+              100*np.max(np.abs(mixI/cs - 1)), 100*np.max(np.abs(gS['h_imposed'] - gH['h_imposed'])/nrm(dat)),
+              100*np.min(gb0/mixA), 100*np.max(gb0/mixA), 100*np.min(gb1/mixI), 100*np.max(gb1/mixI),
+              100*np.max(th_up/mixI), 100*np.max(th_dn/mixI), int(np.sum(np.maximum(th_up, th_dn)/mixI > gb0/mixA)), int(w12.sum())))
+    print('window_split: fraction 0.05-0.30 below DELPHI (%): ' + ', '.join(f'{k} {v:.2f}' for k, v in below.items())
+          + f'; generator band {100*f_gen/F["mixI"]:.1f}%, learning band {100*f_learn/F["mixI"]:.2f}%, calculation +{100*c_up/F["calc"]:.1f}/-{100*c_dn/F["calc"]:.1f}%, '
+          f'DELPHI error {100*f_err/fD:.2f}% ({how})')
+
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+    edges = np.r_[lo[w12], hi[w12][-1]]
+    fig = plt.figure(figsize=(TW, 4.15))
+    gs = GridSpec(2, 2, figure=fig, height_ratios=[1.5, 0.95], hspace=0.5, wspace=0.1, left=0.085, right=0.99, top=0.94, bottom=0.1)
+    ax0 = fig.add_subplot(gs[0, 0]); ax1 = fig.add_subplot(gs[0, 1], sharey=ax0)
+    r = lambda h: np.asarray(h)/cs
+    YL, YT = nice_range([r(mixA + gb0), r(mixA - gb0), r(mixI + th_up), r(mixI - th_dn), r(gS['h_gen_only']), r(gH['h_gen_only'])])
+    YL = (YL[0] - 0.4*(YL[1] - YL[0])/(len(YT) - 1), YL[1])            # room below the curves for the legends
+    # (a) the generators alone
+    ax0.stairs(r(mixA + gb0), edges, baseline=r(mixA - gb0), fill=True, color=BASE, alpha=0.3, lw=0)
+    ax0.stairs(r(mixA), edges, baseline=None, color=BASE_DARK, lw=1.3)
+    ax0.stairs(r(gS['h_gen_only']), edges, baseline=None, color=BASE_DARK, lw=1.0, ls=(0, (4, 2)))
+    ax0.stairs(r(gH['h_gen_only']), edges, baseline=None, color=BASE_DARK, lw=1.2, ls=(0, (1, 1)))
+    # (b) the calculation imposed
+    ax1.stairs(r(mixI + th_up), edges, baseline=r(mixI - th_dn), fill=True, color=THEORY, alpha=BAND_ALPHA, lw=0)
+    ax1.stairs(r(mixI + gb1), edges, baseline=r(mixI - gb1), fill=True, color=GEN, alpha=0.55, lw=0)
+    for sg in (1, -1):
+        ax1.stairs(r(mixI*(1 + sg*gb0/mixA)), edges, baseline=None, color=BASE, lw=0.8)
+    ax1.stairs(r(mixI), edges, baseline=None, color=METHOD, lw=1.3)
+    ax1.stairs(r(gS['h_imposed']), edges, baseline=None, color=METHOD, lw=1.0, ls=(0, (4, 2)))
+    ax1.stairs(r(gH['h_imposed']), edges, baseline=None, color=METHOD, lw=1.2, ls=(0, (1, 1)))
+    for ax, ttl in ((ax0, '(a) shape, generators alone'), (ax1, '(b) shape, calculation imposed')):
+        ax.axhline(1, color=THEORY, lw=0.9, zorder=1)
+        ax.set_xlim(edges[0], edges[-1]); ax.set_ylim(*YL); ax.set_yticks(YT)
+        ax.set_xticks([0.05, 0.1, 0.15, 0.2, 0.25] + ([0.3] if ax is ax1 else []))          # no 0.30 next to 0.05 where the panels meet
+        ax.set_xlabel(r'$\tau=1-T$', labelpad=1.5); title(ax, ttl); trim(ax)
+    plt.setp(ax1.get_yticklabels(), visible=False)
+    ax0.set_ylabel('ratio to the calculation')
+    ax0.legend([(Patch(color=BASE, alpha=0.3, lw=0), Line2D([], [], color=BASE_DARK, lw=1.3)),
+                Line2D([], [], color=BASE_DARK, lw=1.0, ls=(0, (4, 2))), Line2D([], [], color=BASE_DARK, lw=1.2, ls=(0, (1, 1))),
+                Line2D([], [], color=THEORY, lw=0.9)],
+               [r'mixture, generator band', 'Sherpa', 'Herwig', 'calculation'], loc='lower right', fontsize=7, ncol=2,
+               handlelength=1.9, columnspacing=1.0)
+    ax1.legend([(Patch(color=THEORY, alpha=BAND_ALPHA, lw=0), Line2D([], [], color=METHOD, lw=1.3)), Patch(color=GEN, alpha=0.55, lw=0),
+                Line2D([], [], color=BASE, lw=0.8), Line2D([], [], color=METHOD, lw=1.0, ls=(0, (4, 2))),
+                Line2D([], [], color=METHOD, lw=1.2, ls=(0, (1, 1)))],
+               ['mixture, theory band', 'generator band', 'generator band of (a)', 'Sherpa', 'Herwig'], loc='lower left',
+               fontsize=7, ncol=2, handlelength=1.9, columnspacing=1.0)
+    # (c) the fraction of events in the window, one row per prediction
+    bx = fig.add_subplot(gs[1, :])
+    rows = [('DELPHI', None), ('calculation', None), (r'mixture, $\xi=\frac12$', ('mixA', 'mixI')), ('Sherpa', ('SA', 'SI')), ('Herwig', ('HA', 'HI'))]
+    yv = np.arange(len(rows))[::-1].astype(float)
+    bx.axvspan(fD - f_err, fD + f_err, color=DATA, alpha=0.06, lw=0)
+    bx.axvline(fD, color=DATA, lw=0.6, ls=(0, (4, 3)))
+    bx.errorbar([fD], [yv[0]], xerr=[[f_err], [f_err]], fmt='o', ms=3.4, color=DATA, lw=0.9, zorder=5)
+    bx.errorbar([F['calc']], [yv[1]], xerr=[[c_dn], [c_up]], fmt='s', ms=3.2, color=THEORY, lw=2.2, alpha=0.9, zorder=5)
+    bx.plot([F['mixI'] - f_gen, F['mixI'] + f_gen], [yv[2] - 0.13]*2, color=GEN, lw=4.5, alpha=0.45, solid_capstyle='butt', zorder=3)
+    bx.plot([F['mixI'] - f_learn, F['mixI'] + f_learn], [yv[2] - 0.13]*2, color=LEARN, lw=1.6, solid_capstyle='butt', zorder=4)
+    for (lab, ks), y_ in zip(rows, yv):
+        if ks:
+            bx.plot([F[ks[0]]], [y_ + 0.13], 'o', ms=3.6, mfc='white', mec=BASE_DARK, mew=0.9, zorder=5)
+            bx.plot([F[ks[1]]], [y_ - 0.13], 'o', ms=3.6, color=METHOD, zorder=6)
+    bx.set_yticks(yv); bx.set_yticklabels([l for l, _ in rows]); bx.tick_params(axis='y', length=0)
+    bx.set_ylim(yv[-1] - 0.6, yv[0] + 0.6)
+    xs = [fD - f_err, fD + f_err, F['calc'] - c_dn, F['calc'] + c_up, F['mixI'] - f_gen, F['mixI'] + f_gen] + [F[k] for k in F]
+    span = max(xs) - min(xs); bx.set_xlim(min(xs) - 0.06*span, max(xs) + 0.06*span)
+    bx.set_xlabel('fraction of all events', labelpad=1.5)
+    title(bx, r'(c) fraction of events with $0.05\le\tau<0.30$'); trim(bx)
+    bx.spines['left'].set_visible(False)
+    bx.legend([Line2D([], [], ls='', marker='o', ms=3.6, mfc='white', mec=BASE_DARK, mew=0.9),
+               Line2D([], [], ls='', marker='o', ms=3.6, color=METHOD), Line2D([], [], color=GEN, lw=4.5, alpha=0.45),
+               Line2D([], [], color=LEARN, lw=1.6), Line2D([], [], color=THEORY, lw=2.2)],
+              ['generators alone', 'calculation imposed', 'generator band', 'learning band', 'theory band'],
+              loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=7, handlelength=1.6, frameon=False)
+    save(fig, 'window' + ('_lin' if lin else ''))
+
+
 # ---- Fig. three bands of the means -------------------------------------------------------------------
 def obs():
     """The bands of seven means in percent of the prediction with the calculation imposed. The theory band
@@ -571,7 +720,7 @@ def obs():
     gen = 100*np.array([g['after'][k]['sd'] for k in keys])/np.abs(pred)
     thu, thd, learn = pct(c['theory_up']), pct(c['theory_down']), pct(c['learning_band'])
     # the published axis from 0.001 to 300 percent. Below it may lie only the two bands of tau_win that the calculation
-    # removes: its learning band (the caption of Fig. 12, main.tex 1758) and its generator band with the calculation
+    # removes: its learning band (the caption of Fig. 13) and its generator band with the calculation
     # imposed (main.tex 1706: "its generator band disappears"). Rounds B10 and B11: any other bar or tick below 0.001, or
     # above 300, widens the axis; these two never lower its floor, and the log says where both lie
     FLOOR, TOP = 1e-3, 300.0
@@ -583,7 +732,7 @@ def obs():
         FLOOR = 10.0**np.floor(np.log10(lo_))
     tw = float(np.nan_to_num(learn[keys.index('tau_win')]))
     print(f'obs: the learning band of tau_win is {tw:.2g} percent of the prediction: ' +
-          ('below the axis, as the caption of Fig. 12 says' if tw < FLOOR else f'inside the axis (from {FLOOR:g}): the caption sentence must go'))
+          ('below the axis, as the caption of Fig. 13 says' if tw < FLOOR else f'inside the axis (from {FLOOR:g}): the caption sentence must go'))
     tg = float(np.nan_to_num(gen[keys.index('tau_win')]))
     print(f'obs: the generator band of tau_win with the calculation imposed is {tg:.2g} percent of the prediction: ' +
           (f'below the axis (from {FLOOR:g})' if tg < FLOOR else f'a bar inside the axis (from {FLOOR:g}); main.tex 1706 '
@@ -784,12 +933,12 @@ def toy():
 
 
 # the data figures of the paper, Figs. 3 to 7 and 11 to 14 in order: what runs without arguments
-PAPER = ['closure_mix', 'map', 'coverage', 'kscan', 'cost', 'bands', 'obs', 'toy', 'aleph']
+PAPER = ['closure_mix', 'map', 'coverage', 'kscan', 'cost', 'bands', 'window', 'obs', 'toy', 'aleph']
 
 
 if __name__ == '__main__':
     funcs = {'closure': closure, 'map': map_, 'widebox': widebox, 'kscan': kscan, 'cost': cost, 'bands': bands, 'obs': obs, 'coverage': coverage, 'closure_mix': closure_mix,
-             'toy': toy, 'aleph': aleph}
+             'toy': toy, 'aleph': aleph, 'window': window_split}
     if {'-h', '--help'} & set(sys.argv[1:]):
         print(__doc__); sys.exit(0)
     names = sys.argv[1:] or PAPER

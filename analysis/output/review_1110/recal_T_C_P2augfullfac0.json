@@ -1,0 +1,313 @@
+{
+ "tag": "C_P2augfullfac0",
+ "shipped_T": 1.0,
+ "T": 1.0,
+ "changed": false,
+ "objective": "|master width - 1| on the stop half, the training objective (r2_ladder.fit_temperature)",
+ "grid": "r2_ladder.T_GRID",
+ "best_fine": {
+  "T": 1.0,
+  "width_stop": 1.0008430579502552,
+  "width_report": 0.9725390222046914,
+  "chi2_stop": 1.1932762227248694,
+  "chi2_report": 0.878497461394781
+ },
+ "best_coarse": {
+  "T": 1.0,
+  "width_stop": 1.0008430579502552,
+  "width_report": 0.9725390222046914,
+  "chi2_stop": 1.1932762227248694,
+  "chi2_report": 0.878497461394781
+ },
+ "at_shipped": {
+  "T": 1.0,
+  "width_stop": 1.0008430579502552,
+  "width_report": 0.9725390222046914,
+  "chi2_stop": 1.1932762227248694,
+  "chi2_report": 0.878497461394781
+ },
+ "scan": [
+  {
+   "T": 0.5,
+   "width_stop": 3.608180632045137,
+   "width_report": 3.632801504293353,
+   "chi2_stop": 152.72866546395184,
+   "chi2_report": 142.06899249101306
+  },
+  {
+   "T": 0.6,
+   "width_stop": 2.5474455039556787,
+   "width_report": 2.5677716064979847,
+   "chi2_stop": 71.49517411080384,
+   "chi2_report": 64.76032139610622
+  },
+  {
+   "T": 0.7,
+   "width_stop": 1.8399126005857838,
+   "width_report": 1.8547038306036376,
+   "chi2_stop": 31.679446734849375,
+   "chi2_report": 27.468381437723774
+  },
+  {
+   "T": 0.8,
+   "width_stop": 1.3695462118338466,
+   "width_report": 1.3761647220757325,
+   "chi2_stop": 12.350675564276013,
+   "chi2_report": 9.867931826266098
+  },
+  {
+   "T": 0.85,
+   "width_stop": 1.2069726235840565,
+   "width_report": 1.207867469960882,
+   "chi2_stop": 7.109461124471428,
+   "chi2_report": 5.295518187662428
+  },
+  {
+   "T": 0.875,
+   "width_stop": 1.142566173599902,
+   "width_report": 1.1401145162633082,
+   "chi2_stop": 5.252076977766494,
+   "chi2_report": 3.7353303944808687
+  },
+  {
+   "T": 0.9,
+   "width_stop": 1.0892272129225433,
+   "width_report": 1.0831331722119253,
+   "chi2_stop": 3.811151701127379,
+   "chi2_report": 2.57010926120567
+  },
+  {
+   "T": 0.925,
+   "width_stop": 1.0470216600545166,
+   "width_report": 1.0370546724544998,
+   "chi2_stop": 2.730026406636141,
+   "chi2_report": 1.7452941060717921
+  },
+  {
+   "T": 0.95,
+   "width_stop": 1.016814352058891,
+   "width_report": 1.0025584851048799,
+   "chi2_stop": 1.9601709167380874,
+   "chi2_report": 1.2141992042968286
+  },
+  {
+   "T": 0.975,
+   "width_stop": 1.0016022912946212,
+   "width_report": 0.9810553661046306,
+   "chi2_stop": 1.459893314567886,
+   "chi2_report": 0.936759554096966
+  },
+  {
+   "T": 1.0,
+   "width_stop": 1.0008430579502552,
+   "width_report": 0.9725390222046914,
+   "chi2_stop": 1.1932762227248694,
+   "chi2_report": 0.878497461394781
+  },
+  {
+   "T": 1.025,
+   "width_stop": 1.0094237108700157,
+   "width_report": 0.9742916669552066,
+   "chi2_stop": 1.1292960918383588,
+   "chi2_report": 1.0096673027562937
+  },
+  {
+   "T": 1.05,
+   "width_stop": 1.0246449303999898,
+   "width_report": 0.9836350153350848,
+   "chi2_stop": 1.2410909449230672,
+   "chi2_report": 1.3045447744883572
+  },
+  {
+   "T": 1.075,
+   "width_stop": 1.0449941741102369,
+   "width_report": 0.998721274265265,
+   "chi2_stop": 1.5053491177873757,
+   "chi2_report": 1.740833860893747
+  },
+  {
+   "T": 1.1,
+   "width_stop": 1.0692762266469606,
+   "width_report": 1.018229636225681,
+   "chi2_stop": 1.9017970598125384,
+   "chi2_report": 2.29917014561776
+  },
+  {
+   "T": 1.125,
+   "width_stop": 1.0964875759542296,
+   "width_report": 1.0411826389650904,
+   "chi2_stop": 2.412768585108734,
+   "chi2_report": 2.962703310381344
+  },
+  {
+   "T": 1.15,
+   "width_stop": 1.1258109499910058,
+   "width_report": 1.0668265678010322,
+   "chi2_stop": 3.0228413695754663,
+   "chi2_report": 3.716744987161749
+  },
+  {
+   "T": 1.175,
+   "width_stop": 1.156602127539222,
+   "width_report": 1.0945505655957755,
+   "chi2_stop": 3.718529184363341,
+   "chi2_report": 4.548470757885273
+  },
+  {
+   "T": 1.2,
+   "width_stop": 1.188362411635819,
+   "width_report": 1.123841001395721,
+   "chi2_stop": 4.488020499367731,
+   "chi2_report": 5.446667185100227
+  },
+  {
+   "T": 1.225,
+   "width_stop": 1.2207082762458474,
+   "width_report": 1.154260148044269,
+   "chi2_stop": 5.320955802817916,
+   "chi2_report": 6.401516426073874
+  },
+  {
+   "T": 1.25,
+   "width_stop": 1.2533449625282933,
+   "width_report": 1.185437369041828,
+   "chi2_stop": 6.208237357426374,
+   "chi2_report": 7.404412322044088
+  },
+  {
+   "T": 1.275,
+   "width_stop": 1.2860456845727772,
+   "width_report": 1.2170642889961132,
+   "chi2_stop": 7.1418662215315845,
+   "chi2_report": 8.44780293365682
+  },
+  {
+   "T": 1.3,
+   "width_stop": 1.3186358676691996,
+   "width_report": 1.2488896192737304,
+   "chi2_stop": 8.114802260522195,
+   "chi2_report": 9.525055367076645
+  },
+  {
+   "T": 1.325,
+   "width_stop": 1.3509813116524128,
+   "width_report": 1.2807125769826253,
+   "chi2_stop": 9.120843602700017,
+   "chi2_report": 10.630339444917528
+  },
+  {
+   "T": 1.35,
+   "width_stop": 1.3829792672441221,
+   "width_report": 1.3123754515849677,
+   "chi2_stop": 10.154522588479233,
+   "chi2_report": 11.75852735505578
+  },
+  {
+   "T": 1.375,
+   "width_stop": 1.41455164731289,
+   "width_report": 1.3437562027530547,
+   "chi2_stop": 11.211015748698841,
+   "chi2_report": 12.905106884172918
+  },
+  {
+   "T": 1.4,
+   "width_stop": 1.4456398088655145,
+   "width_report": 1.3747617231156775,
+   "chi2_stop": 12.286065748062544,
+   "chi2_report": 14.066106232243948
+  },
+  {
+   "T": 1.425,
+   "width_stop": 1.4762005029786998,
+   "width_report": 1.4053220574067757,
+   "chi2_stop": 13.37591355967982,
+   "chi2_report": 15.238028725121207
+  },
+  {
+   "T": 1.45,
+   "width_stop": 1.5062027041222001,
+   "width_report": 1.4353856233377373,
+   "chi2_stop": 14.477239409703113,
+   "chi2_report": 16.417796007799286
+  },
+  {
+   "T": 1.475,
+   "width_stop": 1.535625109758571,
+   "width_report": 1.4649153487022768,
+   "chi2_stop": 15.587111257624315,
+   "chi2_report": 17.602698521199777
+  },
+  {
+   "T": 1.5,
+   "width_stop": 1.564454156481268,
+   "width_report": 1.493885589121072,
+   "chi2_stop": 16.70293976652739,
+   "chi2_report": 18.790352248713457
+  },
+  {
+   "T": 1.525,
+   "width_stop": 1.5926824380205449,
+   "width_report": 1.5222796850445208,
+   "chi2_stop": 17.822438874929087,
+   "chi2_report": 19.978660871569147
+  },
+  {
+   "T": 1.55,
+   "width_stop": 1.6203074384467555,
+   "width_report": 1.550088030709461,
+   "chi2_stop": 18.9435912139321,
+   "chi2_report": 21.165782600409358
+  },
+  {
+   "T": 1.575,
+   "width_stop": 1.6473305142960613,
+   "width_report": 1.5773065482232973,
+   "chi2_stop": 20.064617724074164,
+   "chi2_report": 22.35010105787787
+  },
+  {
+   "T": 1.6,
+   "width_stop": 1.6737560744299471,
+   "width_report": 1.6039354804297907,
+   "chi2_stop": 21.183950919467588,
+   "chi2_report": 23.530199677490536
+  },
+  {
+   "T": 1.75,
+   "width_stop": 1.8202500361740046,
+   "width_report": 1.7516814097413849,
+   "chi2_stop": 27.79787290388034,
+   "chi2_report": 30.462863257871266
+  },
+  {
+   "T": 2.0,
+   "width_stop": 2.023947537685951,
+   "width_report": 1.9572008502654576,
+   "chi2_stop": 38.12377608708946,
+   "chi2_report": 41.18880196975931
+  },
+  {
+   "T": 2.5,
+   "width_stop": 2.321480862039249,
+   "width_report": 2.257215994873934,
+   "chi2_stop": 55.513544038721854,
+   "chi2_report": 59.08972303448629
+  },
+  {
+   "T": 3.0,
+   "width_stop": 2.526137307126225,
+   "width_report": 2.4634060028864866,
+   "chi2_stop": 69.03497165494328,
+   "chi2_report": 72.91952687873774
+  }
+ ],
+ "export": "output/models/C_P2augfullfac0_cond.npz",
+ "ref": "output/models/C_P2augfullfac0_ref.npz",
+ "ref_particles": "/mnt/beegfs/bassi/reweighting/maxent_code/output/models/C_P2augfullfac0_ref.npz",
+ "ref_orig": "/mnt/beegfs/bassi/reweighting/maxent_code/output/models/C_P2augfullfac0_ref.npz",
+ "data": "/mnt/beegfs/bassi/reweighting/lmx_runs/gen/data_abc",
+ "data_realpath": "/mnt/beegfs/bassi/reweighting/gen/data_abc_nb",
+ "beam_photons": "remove",
+ "t_dir": null,
+ "beam_photons_md5": "ea7f82ed77c067ee727114a72d038d93"
+}

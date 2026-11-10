@@ -81,7 +81,7 @@ particles (`score_obs.py`). The scripts of this step are in `analysis/photon_fre
 
 ## Figures
 
-The propagation's figures (Figs. 8 to 12 and 14) come from the job `lmx_figs_prop`, those of the
+The propagation's figures (Figs. 8 to 13 and 15) come from the job `lmx_figs_prop`, those of the
 scoring side (Figs. 3 to 6 and 13) from `lmx_figs_score`, and Fig. 7 from `lmx_figs_cost`, all
 written to `output/figs/` (commands under "The macros and the figures" below). The paper's
 `figs/r8_<name>.pdf` are copies of `output/figs/r8_<name>_lin.pdf`, or of `r8_<name>.pdf` where the
@@ -100,9 +100,10 @@ figure has no `_lin` version.
 | 9 | the correlations between the bins of Fig. 8 | as Fig. 8 | as Fig. 8 | as Fig. 8 |
 | 10 | thrust over the same variations with the calculation imposed | as Fig. 8 | as Fig. 8 | as Fig. 8 |
 | 11 | the thrust distribution and its three bands | `three_bands_MIXGEOV3S9_lin.npz`, `three_bands_MIXGEOV3S9_lin.json`, `theory_variations_MIX_lin.json` | `symmetry/three_bands.sbatch` with `TAG=MIXGEOV3S9 BOX=full`, and `symmetry/theory_variations.sbatch` **(data)** | `figs_r8.py bands` |
-| 12 | the bands of the seven means | `three_bands_MIXGEOV3S9_lin.json` | as Fig. 11 | `figs_r8.py obs` |
-| 13 | the toy model | `toy_final_K48_s0.npz`, `toy_final_K48_s0.json` | `symmetry/rerun/toy_final_lmx.sbatch` (`toy_final.py`, which generates its own events), nine trainings on one H200 **(GPU)** | `figs_r8.py toy` |
-| 14 | the calculation against ALEPH and DELPHI | `calc_bins_nlo_point.json` | `calc_bins.py` (`lmx_calc_bins`) | `figs_r8.py aleph` |
+| 12 | the two factors of the thrust bins in the window: the shape the moments constrain and the fraction of events the generators set | `three_bands_MIXGEOV3S9_lin.npz`, `theory_variations_MIX_lin.json`, `calc_bins_nlo_point.json` | as Fig. 11, and `calc_bins.py` (`lmx_calc_bins`) | `figs_r8.py window` |
+| 13 | the bands of the seven means | `three_bands_MIXGEOV3S9_lin.json` | as Fig. 11 | `figs_r8.py obs` |
+| 14 | the toy model | `toy_final_K48_s0.npz`, `toy_final_K48_s0.json` | `symmetry/rerun/toy_final_lmx.sbatch` (`toy_final.py`, which generates its own events), nine trainings on one H200 **(GPU)** | `figs_r8.py toy` |
+| 15 | the calculation against ALEPH and DELPHI | `calc_bins_nlo_point.json` | `calc_bins.py` (`lmx_calc_bins`) | `figs_r8.py aleph` |
 
 ## Tables
 
@@ -386,7 +387,7 @@ env $FIGENV CONV_FACTORS=$CONV_FACTORS NPZ=$RUN/output/three_bands_MIXGEOV3S9_li
 ```
 
 The first wrote `output/thrust_targets_nlo_point.npz` before the run, which takes it as a fixed
-input. The second, the job `lmx_calc_bins`, writes `output/calc_bins_nlo_point.json` for Fig. 14,
+input. The second, the job `lmx_calc_bins`, writes `output/calc_bins_nlo_point.json` for Figs. 12 and 15,
 with the power correction `\CalcShift`; the third, `lmx_calc_vs_delphi`, waits for the three bands
 of `MIXGEOV3S9` and writes `output/calc_vs_delphi_MIXGEOV3S9_lin.json`.
 
@@ -471,6 +472,13 @@ density, in 25 bins, with the paper's own estimator (the functions of `r2_ladder
 pairs of samples with fixed seeds, and again with their means apart by five percent of the
 standard deviation. It writes `output/gauss_ref_lin.json` and ends with `GAUSS REF DONE`.
 
+A note on the null of this estimator. The docstring of `width_of()` in `r2_ladder.py` says that
+the null value is 1. It is not exactly: each pull is divided by its own multinomial standard
+deviation, so with B bins the sum of the squared pulls has expectation B and the square of the
+closure width B/(B−1). The width itself lies near 1.01 for 25 bins and near 1.05 for the five
+bins of the baryon count. The paper (Sec. 3.2 and App. A.2) states this. `r2_ladder.py` is left
+byte for byte as it was, since its checksum identifies the code that produced the stored results.
+
 ### The macros and the figures
 
 After all of the above, and after the scoring side's `lmx_collect`:
@@ -482,9 +490,9 @@ $SB --parsable -p preq -J lmx_figs_prop -c 2 --mem=8G -t 1:00:00 -o logs/lmx_fig
   --wrap 'cd $RUN && export $FIGENV R8_OUT=$RUN/output/figs BANDS_NPZ=output/three_bands_MIXGEOV3S9_lin.npz \
     BANDS_JSON=output/three_bands_MIXGEOV3S9_lin.json VARS_JSON=output/theory_variations_MIX_lin.json \
     CALC_BINS=output/calc_bins_nlo_point.json && bad= &&
-  for n in bands obs aleph; do $PY -B -u figs_r8.py $n || bad="$bad $n"; done;
+  for n in bands window obs aleph; do $PY -B -u figs_r8.py $n || bad="$bad $n"; done;
   SUFFIX=_lin $PY -B -u plot_envelope.py output/envelope_test_MIXGEOV3S9 || bad="$bad envelope";
-  if [ -n "$bad" ]; then echo "FIGURES FAILED:$bad"; exit 1; fi; echo "FIGURES DONE: bands obs aleph envelope"'
+  if [ -n "$bad" ]; then echo "FIGURES FAILED:$bad"; exit 1; fi; echo "FIGURES DONE: bands window obs aleph envelope"'
 $SB --parsable -p preq -J lmx_figs_score -c 2 --mem=8G -t 1:00:00 -o logs/lmx_figs_score_%j.out --dependency=afterok:<...> \
   --wrap 'cd $RUN && export $FIGENV R8_OUT=$RUN/output/figs && bad= &&
   for n in closure_mix map coverage kscan toy; do $PY -B -u figs_r8.py $n || bad="$bad $n"; done;

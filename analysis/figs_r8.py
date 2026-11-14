@@ -556,8 +556,8 @@ def window_split(return_data=False):
     The shape uses the twelve complete bins from 0.05 to 0.30, normalized
     inside that interval, on the final-state definition where the calculation
     is imposed. Fractions are integrated after the fixed DELPHI conversion.
-    All three generator rows have post-imposition generator and learning
-    intervals. The former use parameter draws; the latter contract the full
+    All three generator rows have post-imposition generator, theory and learning
+    intervals. Generator intervals use parameter draws; learning intervals contract the full
     covariance after applying each generator's binwise conversion factors,
     retaining their shared coefficient covariance and averaging over uniform xi.
     The plot JSON records inputs and values; the old combined plot is also kept.
@@ -609,7 +609,7 @@ def window_split(return_data=False):
     # cached P_win observable, whose interval extends to 1/3. Apply each generator's
     # fixed DELPHI factors before integrating draws or propagating the bin covariance.
     assert int(w12.sum()) == 12 and np.isclose(hi[w12][-1], .30)
-    fraction_bands = {}
+    fraction_bands, fraction_theory_displacements, theory_cache_checks = {}, {}, {}
     source_stem = os.path.splitext(os.path.basename(fn))[0].replace('three_bands_', '', 1)
     source_tag = source_stem[:-4] if lin and source_stem.endswith('_lin') else source_stem
     source_suffix = '_lin' if lin else ''
@@ -652,8 +652,23 @@ def window_split(return_data=False):
         learning_slopes.append(weights @ jacobian)
         raw_learning_slopes.append(wd[w12] @ jacobian)
         learning_weights.append(learning['w_at'].copy())
+        # Integrate each signed, correlated variation before combining its error.
+        # Summing per-bin theory errors would discard cancellations between bins.
+        fraction_displacements = {lab: float(delta[w12] @ weights) for lab, delta in dg[generator].items()}
+        fraction_theory_displacements[generator] = fraction_displacements
+        histogram_differences, fraction_differences = [], []
+        for lab, delta in dg[generator].items():
+            variation_key = ('scale:' if lab in vl else 'np:') + lab
+            independent = np.asarray(V['variations'][variation_key][f'dh_{generator}'], float)
+            assert np.allclose(delta, independent, rtol=1e-9, atol=1e-11)
+            histogram_differences.append(float(np.max(np.abs(delta-independent))))
+            fraction_differences.append(abs(fraction_displacements[lab]-float(independent[w12] @ weights)))
+        theory_cache_checks[generator] = dict(
+            maximum_absolute_histogram_difference=max(histogram_differences),
+            maximum_absolute_fraction_difference=max(fraction_differences))
         fraction_bands[generator] = dict(
             nominal=F[nominal_key], generator_sd=generator_sd, learning_sd=learning_sd,
+            theory_up=float(thb(fraction_displacements, True)), theory_down=float(thb(fraction_displacements, False)),
             number_of_generator_variations=len(integrated), source_files=paths,
             prior_lo=draws['lo'][own].tolist(), prior_hi=draws['hi'][own].tolist(),
             conversion_factors=factors[w12].tolist(), learning_parameters=learning['centre'].tolist(),
@@ -676,6 +691,36 @@ def window_split(return_data=False):
         generator_covariance=[[float(a @ coefficient_covariance @ b) for b in learning_slopes] for a in learning_slopes],
         previous_nominal_ratio_rescaling_sd=previous_f_learn,
         change_in_sd=f_learn-previous_f_learn, relative_change_in_sd=f_learn/previous_f_learn-1)
+    # The signed theory prescription is piecewise quadratic in xi. Split at
+    # sign changes and pair crossings, as in directlib.thband_mix, so Simpson's
+    # rule is exact without importing the fitting code or its dependencies.
+    theory_labels = list(dict.fromkeys([lab for pair in PAIRS for lab in pair] + [SCHEME] + npl))
+    ds, dh = fraction_theory_displacements['sherpa'], fraction_theory_displacements['herwig']
+    crossings = [(ds[lab], dh[lab]) for lab in theory_labels]
+    crossings.extend((ds[a]-ds[b], dh[a]-dh[b]) for a, b in PAIRS)
+    xi_breakpoints = {0.0, 1.0}
+    for value_s, value_h in crossings:
+        if value_s != value_h:
+            crossing = value_s/(value_s-value_h)
+            if 0 < crossing < 1:
+                xi_breakpoints.add(crossing)
+    xi_breakpoints = sorted(xi_breakpoints)
+
+    def mixed_fraction_theory(up):
+        variance = lambda xi: float(thb({lab: (1-xi)*ds[lab]+xi*dh[lab] for lab in theory_labels}, up))**2
+        integral = sum((b-a)/6*(variance(a)+4*variance((a+b)/2)+variance(b))
+                       for a, b in zip(xi_breakpoints[:-1], xi_breakpoints[1:]))
+        return float(np.sqrt(max(integral, 0.0)))
+
+    imposed_theory_up, imposed_theory_down = mixed_fraction_theory(True), mixed_fraction_theory(False)
+    fraction_theory_method = dict(
+        definition='Signed histogram displacements after imposing each varied calculation, multiplied by each generator\'s DELPHI factors and integrated before applying Eq. (thband).',
+        interval=[.05, .30], number_of_bins=int(w12.sum()), units='fraction of all events',
+        source_files=dict(displacements=fn, independent_crosscheck=fv),
+        displacements=fraction_theory_displacements, scale_pairs=PAIRS, scheme=SCHEME, dispersive_variations=npl,
+        mixture_definition='Eq. (thband) applied to (1-xi)*delta_S+xi*delta_H, then its variance averaged over uniform xi on [0,1].',
+        mixture_integration='Exact Simpson integration between sign changes and scale-pair crossings.',
+        xi_breakpoints=xi_breakpoints, npz_vs_json_crosscheck=theory_cache_checks)
     dc = {k: fr(v) - F['calc'] for k, v in calc.items() if k != 'central'}
     c_up, c_dn = float(thb(dc, True)), float(thb(dc, False))
     try:
@@ -708,6 +753,8 @@ def window_split(return_data=False):
                 fraction_generator=f_gen, fraction_learning=f_learn,
                 fraction_generator_bands=fraction_bands,
                 fraction_learning_method=fraction_learning_method,
+                fraction_imposed_theory_up=imposed_theory_up, fraction_imposed_theory_down=imposed_theory_down,
+                fraction_theory_method=fraction_theory_method,
                 fraction_theory_up=c_up, fraction_theory_down=c_dn,
                 data_fraction=fD, data_error=f_err, data_error_model=how)
     if return_data:

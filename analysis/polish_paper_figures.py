@@ -148,38 +148,41 @@ def draw_window(data=None):
         "old_relative_width_outline_removed": True})
 
     fractions = d["fractions"]
-    rows = [("Sherpa", "SA", "SI"), ("Herwig", "HA", "HI"),
-            ("Mixture", "mixA", "mixI")]
+    rows = [("Sherpa", "SI"), ("Herwig", "HI"), ("Mixture", "mixI")]
     fig, ax = plt.subplots(figsize=(F.TW, 2.65))
-    fig.subplots_adjust(left=.19, right=.96, bottom=.30, top=.96)
-    y = np.arange(5)[::-1]
+    fig.subplots_adjust(left=.195, right=.96, bottom=.30, top=.96)
+    y = np.array([4.25, 3.25, 2.25, .9, 0.])
     ax.axvspan(d["data_fraction"]-d["data_error"], d["data_fraction"]+d["data_error"],
                color=F.BASE, alpha=.12, lw=0, zorder=0)
     ax.axvline(d["data_fraction"], color=F.REF, lw=.7, ls=(0, (3, 3)), zorder=1)
+    ax.axhline(1.6, color=F.BASE, alpha=.25, lw=.55, zorder=0)
     bands = {"SI": d["fraction_generator_bands"]["sherpa"],
              "HI": d["fraction_generator_bands"]["herwig"],
-             "mixI": {"generator_sd": d["fraction_generator"], "learning_sd": d["fraction_learning"]}}
-    for (label, key0, key1), yi in zip(rows, y[:3]):
-        center, band = fractions[key1], bands[key1]
+             "mixI": {"generator_sd": d["fraction_generator"], "learning_sd": d["fraction_learning"],
+                      "theory_up": d["fraction_imposed_theory_up"],
+                      "theory_down": d["fraction_imposed_theory_down"]}}
+    for (label, key), yi in zip(rows, y[:3]):
+        center, band = fractions[key], bands[key]
         ax.plot([center-band["generator_sd"], center+band["generator_sd"]],
-                [yi-.11, yi-.11], color=F.GEN, alpha=.27, lw=7, solid_capstyle="butt", zorder=2)
+                [yi, yi], color=F.GEN, alpha=.27, lw=7, solid_capstyle="butt", zorder=2)
         ax.plot([center-band["learning_sd"], center+band["learning_sd"]],
-                [yi-.11, yi-.11], color=F.LEARN, lw=2.2, solid_capstyle="butt", zorder=4)
-        ax.plot([fractions[key0], fractions[key1]], [yi+.11, yi-.11], color=F.BASE, lw=.65, zorder=2)
-        ax.plot(fractions[key0], yi+.11, "o", ms=4, mfc="white", mec=F.BASE_DARK, mew=.9, zorder=5)
-        ax.plot(fractions[key1], yi-.11, "o", ms=4, color=F.METHOD, zorder=6)
+                [yi, yi], color=F.LEARN, lw=2.2, solid_capstyle="butt", zorder=3)
+        ax.errorbar(center, yi, xerr=[[band["theory_down"]], [band["theory_up"]]],
+                    fmt="none", ecolor=F.THEORY, lw=1.3, capsize=3, capthick=1.1, zorder=4)
+        ax.plot(center, yi, "o", ms=3.5, color=F.METHOD, zorder=5)
     ax.errorbar(fractions["calc"], y[3],
                 xerr=[[d["fraction_theory_down"]], [d["fraction_theory_up"]]],
                 fmt="s", ms=4, color=F.THEORY, lw=1.6, capsize=2, zorder=5)
     ax.errorbar(d["data_fraction"], y[4], xerr=d["data_error"],
                 fmt="o", ms=4, color=F.DATA, lw=1.1, capsize=2, zorder=5)
-    ax.set_yticks(y, [r[0] for r in rows]+["Calculation", "DELPHI"])
+    ax.set_yticks(y, [r[0] for r in rows]+["Calculation alone", "DELPHI"])
     ax.tick_params(axis="y", length=0)
-    ax.set_ylim(-.5, 4.5)
+    ax.set_ylim(-.5, 4.75)
     endpoints = [fractions[k] for k in fractions]
     for key, band in bands.items():
         for component in ("generator_sd", "learning_sd"):
             endpoints.extend([fractions[key]-band[component], fractions[key]+band[component]])
+        endpoints.extend([fractions[key]-band["theory_down"], fractions[key]+band["theory_up"]])
     endpoints.extend([fractions["calc"]-d["fraction_theory_down"], fractions["calc"]+d["fraction_theory_up"],
                       d["data_fraction"]-d["data_error"], d["data_fraction"]+d["data_error"]])
     span = max(endpoints)-min(endpoints)
@@ -189,21 +192,25 @@ def draw_window(data=None):
     ax.xaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
     ax.spines["left"].set_visible(False); F.trim(ax)
     fig.legend(handles=[
-        Line2D([], [], ls="", marker="o", mfc="white", mec=F.BASE_DARK, label="Before"),
-        Line2D([], [], ls="", marker="o", color=F.METHOD, label="After"),
         Line2D([], [], color=F.GEN, alpha=.5, lw=4, label="Generator"),
+        Line2D([], [], color=F.THEORY, lw=1.5, marker="|", label="Theory"),
         Line2D([], [], color=F.LEARN, lw=2, label="Learning"),
-    ], loc="lower center", bbox_to_anchor=(.55, .015), ncol=4, fontsize=10, columnspacing=1.1)
+    ], loc="lower center", bbox_to_anchor=(.55, .015), ncol=3, fontsize=10, columnspacing=1.3)
     export(fig, "window_fraction"+suffix, {
         "interval": [.05, .30], "final_state": "Converted to the DELPHI definition.",
         "nominal_predictions": fractions, "generator_sd_of_mixture": d["fraction_generator"],
         "learning_sd_of_mixture": d["fraction_learning"],
+        "induced_theory_up_of_mixture": d["fraction_imposed_theory_up"],
+        "induced_theory_down_of_mixture": d["fraction_imposed_theory_down"],
         "individual_generator_bands": d["fraction_generator_bands"],
         "learning_covariance_method": d["fraction_learning_method"],
+        "induced_theory_method": d["fraction_theory_method"],
         "theory_up_of_calculation": d["fraction_theory_up"], "theory_down_of_calculation": d["fraction_theory_down"],
         "data_fraction": d["data_fraction"], "data_uncertainty": d["data_error"],
         "data_error_model": d["data_error_model"],
-        "individual_generator_markers": "Nominal predictions, with post-imposition generator and learning bands."})
+        "individual_generator_markers": "After imposing the normalized moments, with generator, theory and learning intervals on a common baseline.",
+        "before_markers_removed": True,
+        "calculation_alone": "Fraction of the separately normalized calculated spectrum; this fraction is not imposed on the generator events."})
 
 
 def draw_budget():

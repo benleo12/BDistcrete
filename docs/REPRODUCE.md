@@ -81,11 +81,13 @@ particles (`score_obs.py`). The scripts of this step are in `analysis/photon_fre
 
 ## Figures
 
-The propagation's figures (Figs. 8 to 13 and 15) come from the job `lmx_figs_prop`, those of the
-scoring side (Figs. 3 to 6 and 13) from `lmx_figs_score`, and Fig. 7 from `lmx_figs_cost`, all
-written to `output/figs/` (commands under "The macros and the figures" below). The paper's
-`figs/r8_<name>.pdf` are copies of `output/figs/r8_<name>_lin.pdf`, or of `r8_<name>.pdf` where the
-figure has no `_lin` version.
+Figure numbers below follow the November 13 manuscript reorganization. The existing
+propagation plots (Figs. 9, 10 and 12 to 16) come from `lmx_figs_prop`, the scoring
+plots (Figs. 3 to 6 and 11) from `lmx_figs_score`, and Fig. 7 from `lmx_figs_cost`.
+Figure 8 is drawn directly from those existing outputs with the command below.
+The paper's `figs/r8_<name>.pdf` are copies of `output/figs/r8_<name>_lin.pdf`,
+or of `r8_<name>.pdf` where the figure has no `_lin` version. Figure 8 uses
+`before_after_distributions.pdf`.
 
 | figure | what it shows | drawn from (`output/`) | inputs made by | drawn by |
 |---|---|---|---|---|
@@ -93,17 +95,60 @@ figure has no `_lin` version.
 | 2 | the factorized network | | TikZ in `main.tex` | |
 | 3 | the mixture at a held-out Sherpa and a held-out Herwig point | `fig_closure_mix.npz` | `symmetry/rerun/closure_mix_lmx.sbatch` (`lmx_closmix`), which runs `fig_closure_mix.py` on `MIXGEOV3S9` at the held-out point of median closure width of each generator in the run's standard test **(data)** | `figs_r8.py closure_mix` |
 | 4 | Stage C across its box | `valid_map_C_P2augfullfac0_report.json`, `xp_null.json` | `symmetry/rerun/stagec_lmx.sbatch` (`eval_valid.py`, `xp_null.py`) **(data)** | `figs_r8.py map`, which reads the `mean` of `xp_null.json` for the dotted tick |
-| 5 | coverage of the learning band | `wifi_coverage_MIXGEOV3S9.json`, `..._MIXGEOV3S9s1.json`, `..._MIXGEOV3S9s2.json` | `symmetry/rerun/wifi_cov_lmx.sbatch` with `TAG` each of the three **(data)** | `figs_r8.py coverage` |
+| 5 | the same residuals with statistical and statistical-plus-learning denominators, separately for Sherpa and Herwig | `wifi_coverage_MIXGEOV3S9.json`, `..._MIXGEOV3S9s1.json`, `..._MIXGEOV3S9s2.json` | `symmetry/rerun/wifi_cov_lmx.sbatch` with `TAG` each of the three **(data)** | `figs_r8.py coverage` |
 | 6 | the number of terms | `rank_scan_final.json` | the K-scan scorings of the scoring side, then `symmetry/rerun/collect_lmx.sbatch` (`kscan_collect.py`) **(data)** | `figs_r8.py kscan` |
 | 7 | the cost at one parameter point | `bench_final_cpu_4_lin.json`, `bench_final_cuda_12_lin.json` | `symmetry/bench_final_cpu.sbatch` on a whole CPU node and `symmetry/bench_final_gpu.sbatch` on one H200 (`bench_cost_final.py`, `BENCH_MIX=linear`) **(data, GPU)** | `figs_r8.py cost` with `COST_SUFFIX=_lin` |
-| 8 | thrust and charged multiplicity over 2000 variations, against the linear covariance, without the calculation | `envelope_test_MIXGEOV3S9_tune_lin.npz`, `envelope_test_MIXGEOV3S9_full_lin.npz` | `symmetry/envelope_test.sbatch`, as in "The comparison with 2000 variations" below **(data)** | `plot_envelope.py output/envelope_test_MIXGEOV3S9` with `SUFFIX=_lin` |
-| 9 | the correlations between the bins of Fig. 8 | as Fig. 8 | as Fig. 8 | as Fig. 8 |
-| 10 | thrust over the same variations with the calculation imposed | as Fig. 8 | as Fig. 8 | as Fig. 8 |
-| 11 | the thrust distribution and its three bands | `three_bands_MIXGEOV3S9_lin.npz`, `three_bands_MIXGEOV3S9_lin.json`, `theory_variations_MIX_lin.json` | `symmetry/three_bands.sbatch` with `TAG=MIXGEOV3S9 BOX=full`, and `symmetry/theory_variations.sbatch` **(data)** | `figs_r8.py bands` |
-| 12 | the two factors of the thrust bins in the window: the shape the moments constrain and the fraction of events the generators set | `three_bands_MIXGEOV3S9_lin.npz`, `theory_variations_MIX_lin.json`, `calc_bins_nlo_point.json` | as Fig. 11, and `calc_bins.py` (`lmx_calc_bins`) | `figs_r8.py window` |
-| 13 | the bands of the seven means | `three_bands_MIXGEOV3S9_lin.json` | as Fig. 11 | `figs_r8.py obs` |
-| 14 | the toy model | `toy_final_K48_s0.npz`, `toy_final_K48_s0.json` | `symmetry/rerun/toy_final_lmx.sbatch` (`toy_final.py`, which generates its own events), nine trainings on one H200 **(GPU)** | `figs_r8.py toy` |
-| 15 | the calculation against ALEPH and DELPHI | `calc_bins_nlo_point.json` | `calc_bins.py` (`lmx_calc_bins`) | `figs_r8.py aleph` |
+| 8 | thrust and charged multiplicity before and after imposing the calculation, with the same generator uncertainty prescription | `envelope_test_MIXGEOV3S9_full_lin.npz`, `envelope_test_MIXGEOV3S9_tune_lin.npz`, `three_bands_MIXGEOV3S9_lin.npz` | existing propagation outputs, no new runs | `plot_before_after_distributions.py`, command below |
+| 9 | conditional thrust shape, before and after imposing the moments | `three_bands_MIXGEOV3S9_lin.npz`, `theory_variations_MIX_lin.json`, `calc_bins_nlo_point.json` | as Fig. 16, and `calc_bins.py` (`lmx_calc_bins`) | `figs_r8.py window` (`r8_window_shape_lin.pdf`) |
+| 10 | event fraction in the same interval, compared with the calculation and DELPHI | as Fig. 9 | as Fig. 9 | `figs_r8.py window` (`r8_window_fraction_lin.pdf`) |
+| 11 | the toy model (App. B) | `toy_final_K48_s0.npz`, `toy_final_K48_s0.json` | `symmetry/rerun/toy_final_lmx.sbatch` (`toy_final.py`, which generates its own events), nine trainings on one H200 **(GPU)** | `figs_r8.py toy` |
+| 12 | the calculation against ALEPH and DELPHI (App. D) | `calc_bins_nlo_point.json` | `calc_bins.py` (`lmx_calc_bins`) | `figs_r8.py aleph` |
+| 13 | thrust and charged multiplicity over 2000 variations, compared with linear propagation (App. F) | `envelope_test_MIXGEOV3S9_tune_lin.npz`, `envelope_test_MIXGEOV3S9_full_lin.npz` | `symmetry/envelope_test.sbatch`, as in "The comparison with 2000 variations" below **(data)** | `plot_envelope.py output/envelope_test_MIXGEOV3S9` with `SUFFIX=_lin` |
+| 14 | bin correlations compared with linear propagation (App. F) | as Fig. 13 | as Fig. 13 | as Fig. 13 |
+| 15 | thrust propagation with the calculation imposed (App. F) | as Fig. 13 | as Fig. 13 | as Fig. 13 |
+| 16 | full-range DELPHI comparison and uncertainty components (App. F) | `three_bands_MIXGEOV3S9_lin.npz`, `three_bands_MIXGEOV3S9_lin.json`, `theory_variations_MIX_lin.json` | `symmetry/three_bands.sbatch` with `TAG=MIXGEOV3S9 BOX=full`, and `symmetry/theory_variations.sbatch` **(data)** | `figs_r8.py bands` |
+| 17 | uncertainty components of the seven integrated quantities (App. F.4) | `three_bands_MIXGEOV3S9_lin.json` | as Fig. 16 | `figs_r8.py obs` |
+
+The November 13 presentation changes use the existing result files. The helpers in
+`polish_paper_figures.py` separate the learning checks by generator, split the shape
+and event-fraction comparisons, and draw the full uncertainty budget with every
+positive component visible. No network, event sample or fitted moment is changed.
+To reproduce these plots from `analysis/`:
+
+```bash
+R8_OUT=output/figs \
+BANDS_NPZ=output/three_bands_MIXGEOV3S9_lin.npz \
+BANDS_JSON=output/three_bands_MIXGEOV3S9_lin.json \
+VARS_JSON=output/theory_variations_MIX_lin.json \
+CALC_BINS=output/calc_bins_nlo_point.json \
+python figs_r8.py coverage window obs
+```
+
+The `window` command also retains the old combined `r8_window_lin.pdf` for
+compatibility. The two new figures state their distinct particle definitions.
+The DELPHI event-fraction error uses the statistical and systematic components
+cached in `calc_bins_nlo_point.json`: statistics in quadrature, systematics fully
+correlated. This avoids dependence on a local YAML reader or a fallback to total
+bin errors. The plot JSON records the error prescription and plotted values.
+
+For Figure 8, run from `analysis/`:
+
+```bash
+python plot_before_after_distributions.py \
+  --variations output/envelope_test_MIXGEOV3S9_full_lin.npz \
+  --nominal output/envelope_test_MIXGEOV3S9_tune_lin.npz \
+  --published-check output/three_bands_MIXGEOV3S9_lin.npz \
+  --output output/figs/before_after_distributions.pdf \
+  --record output/figs/before_after_distributions.json
+```
+
+Both rows use the generator standard deviation from the same 2000 `Y_theta`
+variations in the full-range file. The `tune` archive supplies only the
+already-evaluated nominal predictions at the default settings, which the
+script checks against `three_bands`; its narrower parameter ranges are not
+used for these bands. The script also checks the thrust generator bands
+against the published arrays and writes its checks beside the figure.
+No event generation, training or new moment fit is needed.
 
 ## Tables
 
@@ -149,10 +194,10 @@ into `output/published_copies`, and any macro of its list that it did not write.
 | `\TruncMaxPercent` | App. A.2 | `truncation_fraction.json`, counted on the shapes files of the published run, which count every particle as the network input does | `symmetry/rerun/trunc_lmx.sbatch` **(data)** |
 | `\PfnParams*`, `\PfnAuc*` | App. A.2 | `crosscheck_seeds_summary.json`: the parameter counts of the energyflow PFN and of our event network with one output, and the AUCs | `symmetry/pfn_lmx.sbatch` (`lmx_pfn`) **(data)** |
 | `\Cost*` | Secs. 1, 3.6, 4.2 and 6, Fig. 7 | `bench_final_cpu_4_lin.json`, `bench_final_cuda_12_lin.json` | as Fig. 7. Fig. 7 and `\Cost{Fac,Late,Cat}{Cpu,Gpu}` time both generators' weights and one backward pass (the derivatives of one prediction), `\CostW*` the weights alone, and `\CostVar*` the weights alone at the variations of Sec. 4.3. `\CostRestCpu` is the rest of a step of `bench_cost_final.py`, mostly the maximum-entropy weights of both generators and their derivatives |
-| `\CalcAlphas`, `\CalcAlphaZero` | Sec. 5.2, Eq. (C.9) | `three_bands_MIXGEOV3S9_lin.json` | as Fig. 11, from the fixed point of the calculation below |
-| `\CalcShift` | App. C | `calc_bins_nlo_point.json`, `power_correction`: the shift a_tau P of the distribution at the fixed point and central scales | `calc_bins.py` (`lmx_calc_bins`) |
-| `\Tb*` | Secs. 1, 2.3, 5.2 to 5.5 and 6, Apps. C.2 and D.2 | `three_bands_MIXGEOV3S9{,s1,s2}_lin.{json,npz}`, `theory_variations_MIX_lin.json`, `calc_vs_delphi_MIXGEOV3S9_lin.json`, `band_checks_MIXGEOV3S9_lin.json` | the three bands of Sec. 5 below **(data)** |
-| `\Env*` | Secs. 1, 4.3, 5.3 and 6 | `envelope_test_MIXGEOV3S9_<box>_lin.{json,npz}` for the boxes `full`, `tune`, `tune_sherpa`, `tune_herwig`, `full_sherpa` and `full_herwig`; `\EnvNdraw` and `\EnvNref` are the draws of every box and the further draws of the full box | "The comparison with 2000 variations" below **(data)** |
+| `\CalcAlphas`, `\CalcAlphaZero` | Sec. 5.2, App. D.2 | `three_bands_MIXGEOV3S9_lin.json` | as Fig. 16, from the fixed point of the calculation below |
+| `\CalcShift` | App. D | `calc_bins_nlo_point.json`, `power_correction`: the shift a_tau P of the distribution at the fixed point and central scales | `calc_bins.py` (`lmx_calc_bins`) |
+| `\Tb*` | Secs. 1, 2.3, 5.2 to 5.5 and 6, Apps. D.2, E.2 and F.3 | `three_bands_MIXGEOV3S9{,s1,s2}_lin.{json,npz}`, `theory_variations_MIX_lin.json`, `calc_vs_delphi_MIXGEOV3S9_lin.json`, `band_checks_MIXGEOV3S9_lin.json` | the three bands of Sec. 5 below **(data)** |
+| `\Env*` | Secs. 4.3 and 6, Apps. E and F | `envelope_test_MIXGEOV3S9_<box>_lin.{json,npz}` for the boxes `full`, `tune`, `tune_sherpa`, `tune_herwig`, `full_sherpa` and `full_herwig`; `\EnvNdraw` and `\EnvNref` are the draws of every box and the further draws of the full box | "The comparison with 2000 variations" below **(data)** |
 
 Two statements rest on result files without a macro. The explanation of Table 5 by the reference
 events of the other generator rests on `output/wifi_gensplit_MIXGEOV3S9.json`, which

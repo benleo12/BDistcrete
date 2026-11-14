@@ -3,16 +3,19 @@
 
     python figs_r8.py coverage window obs   # replot existing result files
 
-Current manuscript mapping: closure_mix (Fig. 3), map (4), coverage (5), kscan (6),
-cost (7), window (normalized shape, 9, and event fraction, 10), toy (11, App. B),
-aleph (12, App. D), bands (16, App. F) and obs (17, App. F). The window command
+Current manuscript mapping: map (Fig. 3), coverage (4), kscan (5), cost (6),
+window (normalized shape, 8, and event fraction, 9), toy (10, App. B),
+aleph (11, App. D), bands (15, App. F) and obs (16, App. F). The window command
 also retains the legacy combined plot. Coverage, window and obs use the rendering
-helpers in polish_paper_figures.py. Figure 8 is made by
-plot_before_after_distributions.py; Figures 13--15 by plot_envelope.py.
+helpers in polish_paper_figures.py. Figure 7 is made by
+plot_before_after_distributions.py; Figures 12--14 by plot_envelope.py.
+The kscan panel uses scan_strict, with 200,000 comparison events per parameter
+point. The map uses its distinct 40,000-event off-grid tests, and coverage uses
+all 400,000 events per held-out point for observable means.
 
 TW = 5.95 inches is the JHEP text width. Labels, ticks and legends are set at
 their printed size. R8_OUT sets the destination (default output). XP_NULL sets
-the reference tick of Fig. 4 (default the mean of output/xp_null.json).
+the reference tick of Fig. 3 (default the mean of output/xp_null.json).
 
 For the arithmetic mixture, set BANDS_NPZ, BANDS_JSON and VARS_JSON to the _lin
 result files; COST_SUFFIX=_lin selects the benchmark in BENCH_DIR (default
@@ -26,8 +29,9 @@ fully correlated; no YAML reader is needed when those components are cached.
 The full-range DELPHI plot uses converted predictions when available
 (FIG_CONV=0 selects unconverted predictions). Ranges expand to include the
 stored predictions and bands. The toy scatter retains the published central
-99.4 percent of events. widebox and closure are extra diagnostics, drawn only
-when named.
+99.4 percent of events. closure_mix is the archived 40,000-event illustration,
+no longer a paper figure. It remains available by name, as do the additional
+widebox and closure diagnostics.
 """
 import os, sys, json
 import numpy as np
@@ -375,40 +379,43 @@ def widebox():
     save(fig, 'widebox')
 
 
-# ---- Fig. rank: closure width against the number of terms -------------------------------------------
+# ---- Fig. rank: 200,000-event closure against the number of terms per member ------------------------
 def kscan():
+    """One panel using the saved high-statistics scan, with spread across held-out points."""
     rs = json.load(open(os.environ.get('RANK_IN', 'output/rank_scan_final.json')))
     R4 = ramp(4)
-    SERIES = [('A', R4[0], 'o', 1, 'Stage A, $d=1$'), ('B', R4[1], 'o', 2, 'Stage B, $d=2$'),
-              ('C', R4[2], 'o', 3, 'Stage C, $d=3$'), ('E', R4[3], 'o', 8, 'Stage D (Sherpa), $d=8$')]
-    fig = plt.figure(figsize=(TW, 2.45))
-    gs = GridSpec(1, 2, figure=fig, wspace=0.2, left=0.08, right=0.99, top=0.9, bottom=0.17)
-    for i, (key, ttl, ticks, top) in enumerate((('scan', '(a) standard test', [1, 1.5, 2, 3, 4], 5.0),
-                                                ('scan_strict', '(b) strict test', [1, 1.5, 2, 3, 5, 8], 9.0))):
-        ax = fig.add_subplot(gs[0, i]); ends = []
-        for st, col, mk, dd, lab in SERIES:
-            sc = rs[st][key]; KK = sorted(int(k) for k in sc)
-            yy = [sc[str(k)]['width'] for k in KK]; ee = [sc[str(k)].get('spread', 0) for k in KK]
-            ax.errorbar(KK, yy, yerr=ee, marker=mk, ms=3.0, color=col, lw=1.0, elinewidth=0.6, label=lab)
-            ends += [np.add(yy, ee), np.subtract(yy, ee), yy]
-            K2 = 1 + dd + dd*(dd + 1)//2
-            ax.axvline(K2, color=col, ls=(0, (4, 3)), lw=0.7, alpha=0.55, ymax=0.5, zorder=1)
-        unit_line(ax)
-        # the published range (0.85, 5 or 9), widened only as far as every point and error bar needs (round B10), and
-        # so that no error bar ends on the axis (round B21: one within 3 percent of the height of an edge widens it)
-        y0, y1 = widen(0.85, top, ends, log=True, clear=0.03)
-        ticks = sorted(set(ticks + [t for t in (0.5, 0.6, 0.7) if y0 <= t <= 0.85/1.15]
-                           + [t for t in (12, 20, 30, 50, 80, 120, 200) if 1.5*max(ticks) <= t <= y1]))
-        ax.set_xscale('log', base=2); ax.set_yscale('log'); ax.set_ylim(y0, y1)
-        ax.yaxis.set_major_locator(FixedLocator(ticks)); ax.yaxis.set_minor_locator(NullLocator())
-        ax.yaxis.set_major_formatter(FixedFormatter([f'{v:g}' for v in ticks]))
-        tk = [1, 2, 3, 4, 8, 16, 32, 48]
-        ax.xaxis.set_major_locator(FixedLocator(tk)); ax.xaxis.set_minor_locator(NullLocator())
-        ax.xaxis.set_major_formatter(FixedFormatter([str(t) for t in tk]))
-        ax.set_xlabel(r'number of terms $K$')
-        if i == 0:
-            ax.set_ylabel('closure width'); ax.legend(loc='upper right', fontsize=7.5)
-        title(ax, ttl); trim(ax)
+    SERIES = [('A', R4[0], 'o', 1, 'Stage A, $d=1$'), ('B', R4[1], 's', 2, 'Stage B, $d=2$'),
+              ('C', R4[2], '^', 3, 'Stage C, $d=3$'), ('E', R4[3], 'D', 8, 'Stage D (Sherpa), $d=8$')]
+    fig, ax = plt.subplots(figsize=(TW, 2.75))
+    fig.subplots_adjust(left=0.08, right=0.99, top=0.88, bottom=0.16)
+    ends = []
+    for st, col, mk, dd, lab in SERIES:
+        sc = rs[st]['scan_strict']; KK = sorted(int(k) for k in sc)
+        yy = np.array([sc[str(k)]['width'] for k in KK])
+        ee = np.array([sc[str(k)]['spread'] for k in KK])
+        if not len(KK) or not np.all(np.isfinite(yy) & np.isfinite(ee) & (yy > 0) & (ee >= 0)):
+            raise ValueError(f'{st}: incomplete high-statistics rank scan')
+        ax.errorbar(KK, yy, yerr=ee, marker=mk, ms=3.2, color=col, lw=1.0, elinewidth=0.6, label=lab)
+        ends += [yy + ee, yy - ee, yy]
+        K2 = 1 + dd + dd*(dd + 1)//2
+        ax.axvline(K2, color=col, ls=(0, (4, 3)), lw=0.7, alpha=0.6, ymax=0.42, zorder=1)
+    unit_line(ax)
+    # Include every saved point and its full error bar, with space at the axis edges.
+    y0, y1 = widen(0.85, 9.0, ends, log=True, clear=0.03)
+    ticks = [t for t in (0.5, 0.6, 0.7, 1, 1.5, 2, 3, 5, 8, 10, 12, 20, 30, 50, 80, 120, 200)
+             if y0 <= t <= y1]
+    ax.set_xscale('log', base=2); ax.set_yscale('log'); ax.set_ylim(y0, y1)
+    ax.yaxis.set_major_locator(FixedLocator(ticks)); ax.yaxis.set_minor_locator(NullLocator())
+    ax.yaxis.set_major_formatter(FixedFormatter([f'{v:g}' for v in ticks]))
+    tk = [1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48]
+    ax.xaxis.set_major_locator(FixedLocator(tk)); ax.xaxis.set_minor_locator(NullLocator())
+    ax.xaxis.set_major_formatter(FixedFormatter([str(t) for t in tk]))
+    ax.set_xlabel(r'number of terms per member $K$'); ax.set_ylabel('closure width')
+    ax.legend(loc='upper right', fontsize=7.5)
+    ax.text(0.98, 0.57, 'Bars: standard deviation across held-out points\n'
+            r'Dashed vertical lines: $K_2=1+d+d(d+1)/2$', transform=ax.transAxes,
+            ha='right', va='top', fontsize=7.5, color=REF, linespacing=1.35)
+    trim(ax)
     save(fig, 'kscan')
 
 
@@ -453,7 +460,7 @@ def cost():
     ax.tick_params(which='both', top=False)
     ax.set_xlabel('Log weights and one gradient evaluation [s]')
     from matplotlib.lines import Line2D
-    # above the axes in one row, as in Fig. 5 (round B21: at the lower left the dashed line crossed "threads")
+    # Above the axes, clear of the vertical line marking the remaining fit work.
     ax.legend(handles=[Line2D([0], [0], marker='o', lw=0, ms=5, color=REF, label='one CPU process, 4 threads'),
                        Line2D([0], [0], marker='o', lw=0, ms=5, mfc='white', mec=REF, mew=1.2, label=f'one {gpu}')],
               loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=2, fontsize=7.5)
@@ -855,8 +862,8 @@ def toy():
     save(fig, 'toy')
 
 
-# the data figures of the paper, Figs. 3 to 7 and 11 to 14 in order: what runs without arguments
-PAPER = ['closure_mix', 'map', 'coverage', 'kscan', 'cost', 'bands', 'window', 'obs', 'toy', 'aleph']
+# Current paper figures made here, in figure order. Archived illustrations require their command.
+PAPER = ['map', 'coverage', 'kscan', 'cost', 'window', 'toy', 'aleph', 'bands', 'obs']
 
 
 if __name__ == '__main__':

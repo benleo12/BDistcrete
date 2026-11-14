@@ -79,37 +79,63 @@ the stored particles and the x_p spectrum are counted without the photons when a
 particles (`score_obs.py`). The scripts of this step are in `analysis/photon_free_data/`, whose
 `README.md` gives their order, inputs and outputs.
 
+## Validation samples
+
+The main closure results in Tables 1 and 2 and the rank scan in Figure 5 use
+**200,000 comparison events per held-out parameter point**, the comparison half
+of the extended 400,000-event runs. Their existing filenames and macro names
+retain `strict` or `Strict`, and the rank scan reads `scan_strict`.
+The split is redrawn after pooling the original run and four independent-seed
+extensions, so it includes some original selection/calibration events. The
+selected checkpoint and calibration factor are held fixed for this comparison.
+
+Other checks answer different questions and retain their original samples:
+
+- Checkpoint selection and calibration use the selection half of the original
+  80,000-event runs. Their historical `standard` results use the other 40,000 events.
+- The additional Stage C points in Figure 3, the wide-coupling comparison, the
+  DCTR singular-value truncation check and the WiFi fitted-combination comparison
+  use 40,000 comparison events per point. They are distinct diagnostics, not a
+  second set of the main closure results.
+- The learning-band mean comparisons in Figure 4 use all 400,000 events at each
+  held-out point, including the 40,000 events used for selection and calibration.
+  They do not use the 200,000-event histogram-comparison half.
+
+The numerical results, filenames, JSON keys and macro names are unchanged. The
+November 14 cleanup removes the duplicated 40,000-event main tables and rank-scan
+panel, and drops the old illustrative closure figure from the paper. Its cache
+and command remain available below.
+
 ## Figures
 
-Figure numbers below follow the November 13 manuscript reorganization. The existing
-propagation plots (Figs. 9, 10 and 12 to 16) come from `lmx_figs_prop`, the scoring
-plots (Figs. 3 to 6 and 11) from `lmx_figs_score`, and Fig. 7 from `lmx_figs_cost`.
-Figure 8 is drawn directly from those existing outputs with the command below.
+Figure numbers below follow the November 14 manuscript. The existing propagation
+plots (Figs. 8, 9 and 11 to 16) come from `lmx_figs_prop`, the scoring plots
+(Figs. 3 to 5 and 10) from `lmx_figs_score`, and Fig. 6 from `lmx_figs_cost`.
+Figure 7 is drawn directly from those existing outputs with the command below.
 The paper's `figs/r8_<name>.pdf` are copies of `output/figs/r8_<name>_lin.pdf`,
-or of `r8_<name>.pdf` where the figure has no `_lin` version. Figure 8 uses
+or of `r8_<name>.pdf` where the figure has no `_lin` version. Figure 7 uses
 `before_after_distributions.pdf`.
 
 | figure | what it shows | drawn from (`output/`) | inputs made by | drawn by |
 |---|---|---|---|---|
 | 1 | overview of the method | | TikZ in `main.tex` | |
 | 2 | the factorized network | | TikZ in `main.tex` | |
-| 3 | the mixture at a held-out Sherpa and a held-out Herwig point | `fig_closure_mix.npz` | `symmetry/rerun/closure_mix_lmx.sbatch` (`lmx_closmix`), which runs `fig_closure_mix.py` on `MIXGEOV3S9` at the held-out point of median closure width of each generator in the run's standard test **(data)** | `figs_r8.py closure_mix` |
-| 4 | Stage C across its box | `valid_map_C_P2augfullfac0_report.json`, `xp_null.json` | `symmetry/rerun/stagec_lmx.sbatch` (`eval_valid.py`, `xp_null.py`) **(data)** | `figs_r8.py map`, which reads the `mean` of `xp_null.json` for the dotted tick |
-| 5 | the same residuals with statistical and statistical-plus-learning denominators, separately for Sherpa and Herwig | `wifi_coverage_MIXGEOV3S9.json`, `..._MIXGEOV3S9s1.json`, `..._MIXGEOV3S9s2.json` | `symmetry/rerun/wifi_cov_lmx.sbatch` with `TAG` each of the three **(data)** | `figs_r8.py coverage` |
-| 6 | the number of terms | `rank_scan_final.json` | the K-scan scorings of the scoring side, then `symmetry/rerun/collect_lmx.sbatch` (`kscan_collect.py`) **(data)** | `figs_r8.py kscan` |
-| 7 | the cost at one parameter point | `bench_final_cpu_4_lin.json`, `bench_final_cuda_12_lin.json` | `symmetry/bench_final_cpu.sbatch` on a whole CPU node and `symmetry/bench_final_gpu.sbatch` on one H200 (`bench_cost_final.py`, `BENCH_MIX=linear`) **(data, GPU)** | `figs_r8.py cost` with `COST_SUFFIX=_lin` |
-| 8 | thrust and charged multiplicity before and after imposing the calculation, with the same generator uncertainty prescription | `envelope_test_MIXGEOV3S9_full_lin.npz`, `envelope_test_MIXGEOV3S9_tune_lin.npz`, `three_bands_MIXGEOV3S9_lin.npz` | existing propagation outputs, no new runs | `plot_before_after_distributions.py`, command below |
-| 9 | conditional thrust shape, before and after imposing the moments | `three_bands_MIXGEOV3S9_lin.npz`, `theory_variations_MIX_lin.json`, `calc_bins_nlo_point.json` | as Fig. 16, and `calc_bins.py` (`lmx_calc_bins`) | `figs_r8.py window` (`r8_window_shape_lin.pdf`) |
-| 10 | event fraction in the same interval, compared with the calculation and DELPHI | as Fig. 9 | as Fig. 9 | `figs_r8.py window` (`r8_window_fraction_lin.pdf`) |
-| 11 | the toy model (App. B) | `toy_final_K48_s0.npz`, `toy_final_K48_s0.json` | `symmetry/rerun/toy_final_lmx.sbatch` (`toy_final.py`, which generates its own events), nine trainings on one H200 **(GPU)** | `figs_r8.py toy` |
-| 12 | the calculation against ALEPH and DELPHI (App. D) | `calc_bins_nlo_point.json` | `calc_bins.py` (`lmx_calc_bins`) | `figs_r8.py aleph` |
-| 13 | thrust and charged multiplicity over 2000 variations, compared with linear propagation (App. F) | `envelope_test_MIXGEOV3S9_tune_lin.npz`, `envelope_test_MIXGEOV3S9_full_lin.npz` | `symmetry/envelope_test.sbatch`, as in "The comparison with 2000 variations" below **(data)** | `plot_envelope.py output/envelope_test_MIXGEOV3S9` with `SUFFIX=_lin` |
-| 14 | bin correlations compared with linear propagation (App. F) | as Fig. 13 | as Fig. 13 | as Fig. 13 |
-| 15 | thrust propagation with the calculation imposed (App. F) | as Fig. 13 | as Fig. 13 | as Fig. 13 |
-| 16 | full-range DELPHI comparison and uncertainty components (App. F) | `three_bands_MIXGEOV3S9_lin.npz`, `three_bands_MIXGEOV3S9_lin.json`, `theory_variations_MIX_lin.json` | `symmetry/three_bands.sbatch` with `TAG=MIXGEOV3S9 BOX=full`, and `symmetry/theory_variations.sbatch` **(data)** | `figs_r8.py bands` |
-| 17 | uncertainty components of the seven integrated quantities (App. F.4) | `three_bands_MIXGEOV3S9_lin.json` | as Fig. 16 | `figs_r8.py obs` |
+| 3 | Stage C across its box, with 40,000 comparison events per point | `valid_map_C_P2augfullfac0_report.json`, `xp_null.json` | `symmetry/rerun/stagec_lmx.sbatch` (`eval_valid.py`, `xp_null.py`) **(data)** | `figs_r8.py map`, which reads the `mean` of `xp_null.json` for the dotted tick |
+| 4 | mean residuals with statistical and statistical-plus-learning denominators, separately for Sherpa and Herwig, using 400,000 events per point | `wifi_coverage_MIXGEOV3S9.json`, `..._MIXGEOV3S9s1.json`, `..._MIXGEOV3S9s2.json` | `symmetry/rerun/wifi_cov_lmx.sbatch` with `TAG` each of the three **(data)** | `figs_r8.py coverage` |
+| 5 | closure against the number of terms per member, using 200,000 comparison events per point | `rank_scan_final.json`, `scan_strict` only | the K-scan scorings of the scoring side, then `symmetry/rerun/collect_lmx.sbatch` (`kscan_collect.py`) **(data)** | `figs_r8.py kscan`, one panel for Stages A to D |
+| 6 | the cost at one parameter point | `bench_final_cpu_4_lin.json`, `bench_final_cuda_12_lin.json` | `symmetry/bench_final_cpu.sbatch` on a whole CPU node and `symmetry/bench_final_gpu.sbatch` on one H200 (`bench_cost_final.py`, `BENCH_MIX=linear`) **(data, GPU)** | `figs_r8.py cost` with `COST_SUFFIX=_lin` |
+| 7 | thrust and charged multiplicity before and after imposing the calculation, with the same generator uncertainty prescription | `envelope_test_MIXGEOV3S9_full_lin.npz`, `envelope_test_MIXGEOV3S9_tune_lin.npz`, `three_bands_MIXGEOV3S9_lin.npz` | existing propagation outputs, no new runs | `plot_before_after_distributions.py`, command below |
+| 8 | conditional thrust shape, before and after imposing the moments | `three_bands_MIXGEOV3S9_lin.npz`, `theory_variations_MIX_lin.json`, `calc_bins_nlo_point.json` | as Fig. 15, and `calc_bins.py` (`lmx_calc_bins`) | `figs_r8.py window` (`r8_window_shape_lin.pdf`) |
+| 9 | event fraction in the same interval, compared with the calculation and DELPHI | as Fig. 8 | as Fig. 8 | `figs_r8.py window` (`r8_window_fraction_lin.pdf`) |
+| 10 | the toy model (App. B) | `toy_final_K48_s0.npz`, `toy_final_K48_s0.json` | `symmetry/rerun/toy_final_lmx.sbatch` (`toy_final.py`, which generates its own events), nine trainings on one H200 **(GPU)** | `figs_r8.py toy` |
+| 11 | the calculation against ALEPH and DELPHI (App. D) | `calc_bins_nlo_point.json` | `calc_bins.py` (`lmx_calc_bins`) | `figs_r8.py aleph` |
+| 12 | thrust and charged multiplicity over 2000 variations, compared with linear propagation (App. F) | `envelope_test_MIXGEOV3S9_tune_lin.npz`, `envelope_test_MIXGEOV3S9_full_lin.npz` | `symmetry/envelope_test.sbatch`, as in "The comparison with 2000 variations" below **(data)** | `plot_envelope.py output/envelope_test_MIXGEOV3S9` with `SUFFIX=_lin` |
+| 13 | bin correlations compared with linear propagation (App. F) | as Fig. 12 | as Fig. 12 | as Fig. 12 |
+| 14 | thrust propagation with the calculation imposed (App. F) | as Fig. 12 | as Fig. 12 | as Fig. 12 |
+| 15 | full-range DELPHI comparison and uncertainty components (App. F) | `three_bands_MIXGEOV3S9_lin.npz`, `three_bands_MIXGEOV3S9_lin.json`, `theory_variations_MIX_lin.json` | `symmetry/three_bands.sbatch` with `TAG=MIXGEOV3S9 BOX=full`, and `symmetry/theory_variations.sbatch` **(data)** | `figs_r8.py bands` |
+| 16 | uncertainty components of the seven integrated quantities (App. F.4) | `three_bands_MIXGEOV3S9_lin.json` | as Fig. 15 | `figs_r8.py obs` |
 
-The November 13 presentation changes use the existing result files. The helpers in
+The November 13 and 14 presentation changes use the existing result files. The helpers in
 `polish_paper_figures.py` separate the learning checks by generator, split the shape
 and event-fraction comparisons, and draw the full uncertainty budget with every
 positive component visible. No network, event sample or fitted moment is changed.
@@ -121,7 +147,7 @@ BANDS_NPZ=output/three_bands_MIXGEOV3S9_lin.npz \
 BANDS_JSON=output/three_bands_MIXGEOV3S9_lin.json \
 VARS_JSON=output/theory_variations_MIX_lin.json \
 CALC_BINS=output/calc_bins_nlo_point.json \
-python figs_r8.py coverage window obs
+python figs_r8.py coverage kscan window obs
 ```
 
 The `window` command also retains the old combined `r8_window_lin.pdf` for
@@ -131,7 +157,7 @@ cached in `calc_bins_nlo_point.json`: statistics in quadrature, systematics full
 correlated. This avoids dependence on a local YAML reader or a fallback to total
 bin errors. The plot JSON records the error prescription and plotted values.
 
-For Figure 8, run from `analysis/`:
+For Figure 7, run from `analysis/`:
 
 ```bash
 python plot_before_after_distributions.py \
@@ -150,15 +176,26 @@ used for these bands. The script also checks the thrust generator bands
 against the published arrays and writes its checks beside the figure.
 No event generation, training or new moment fit is needed.
 
+The archived `fig_closure_mix.npz` was made by
+`symmetry/rerun/closure_mix_lmx.sbatch` (`lmx_closmix`, **data**) at the point of
+median 40,000-event closure width for each generator. `figs_r8.py closure_mix`
+still draws it as `r8_closure_mix.pdf`, but it is neither a paper figure nor part
+of the default `figs_r8.py` command list.
+
 ## Tables
 
 | table | what it shows | from (`output/` unless stated) | made by |
 |---|---|---|---|
-| 1 | closure widths of every model, both networks, three ensembles | Stages A to C: `p2augfull_<S>_<net>_s<k>.json` and `p2augfullstrict_<S>_<net>_s<k>.json`, with the `p2aug` files where the scoring side scores a training under that name. Stages D and E: `p2v3full{,strict}_{E,F}_<net>_s<k>.json`. Mixture: `stage_mixture_MIXGEOV3S9{,s1,s2}.json` and `p2v3fullstrict_MIX_fac_s<k>.json` (factorized), `p2v3full{,strict}_MIX_cat_s<k>.json` (DCTR network, the paper's baseline, which appends the parameters to every particle; `cat` in the file names). The Gaussian reference of its caption: `gauss_ref_lin.json` | the scoring side (below) **(data, GPU)** and `gauss_ref.py` (`lmx_gauss`), then `make_numbers.py` (`\Acc{Aug,Dense}*`, `\Gauss*`) |
-| 2 | closure widths per observable, Stages D and E and the mixture | as Table 1 | `make_numbers.py` (`\ObsDense*`) |
+| 1 | closure widths of every model, both networks, three ensembles, using 200,000 comparison events per point | Stages A to C: `p2augfullstrict_<S>_<net>_s<k>.json`, with `p2augstrict_<S>_<net>_s<k>.json` where the training uses that prefix. Stages D and E: `p2v3fullstrict_{E,F}_<net>_s<k>.json`. Mixture: `p2v3fullstrict_MIX_{fac,cat}_s<k>.json`. Here `fac` is factorized and `cat` is conventional DCTR | the scoring side (below) **(data, GPU)**, then `make_numbers.py` (`\Acc{Aug,Dense}*Strict*`) |
+| 2 | closure widths per observable, Stages D and E and the mixture, using 200,000 comparison events per point | as Table 1 | `make_numbers.py` (`\ObsDense*Strict`) |
 | 3 | parameters of Stages A to C | the designs `gen/designs/stage{A,B,C}_design_aug.csv` (App. A.1) | typed in `main.tex` |
 | 4 | parameters of Stages D and E | the designs `analysis/release/generators/stage{E,F}_design_v3all.csv` and the boxes in `analysis/release/STAGES.md` | typed in `main.tex` |
-| 5 | loss and closure width of the ensemble average and of the fitted combination | `wifi_MIXGEOV3S9{,s1,s2}_diag.json`, `wifi_MIXGEOV3S9{,s1,s2}_fit.json` | `symmetry/rerun/wifi_cov_lmx.sbatch` **(data)**, then `make_numbers.py` (`\Wifi{Loss,Width}*`, `\WifiNewton*`) |
+| 5 | loss and closure width of the ensemble average and of the fitted combination, using 40,000 comparison events per point | `wifi_MIXGEOV3S9{,s1,s2}_diag.json`, `wifi_MIXGEOV3S9{,s1,s2}_fit.json` | `symmetry/rerun/wifi_cov_lmx.sbatch` **(data)**, then `make_numbers.py` (`\Wifi{Loss,Width}*`) |
+
+The macro generator still reads both historical sample sizes and writes both
+`Std` and `Strict` families. Only the `Strict` closure results appear in Tables 1
+and 2. Its stored 40,000-event Gaussian null reference is retained as a diagnostic,
+without the former example in Table 1's caption.
 
 ## Quoted numbers
 
@@ -181,30 +218,31 @@ into `output/published_copies`, and any macro of its list that it did not write.
 
 | macros | where in the paper | read from (`output/`) | made by |
 |---|---|---|---|
-| `\Acc{Aug,Dense}*`, `\AccFinal*`, `\ObsDense*`, `\Mix{Sherpa,Herwig}Points*` | Tables 1 and 2, Secs. 3.3, 3.5 and 3.6 | the files of Table 1 | the scoring side |
-| `\Gauss*` | the caption of Table 1 | `gauss_ref_lin.json`, the closure width of two Gaussian samples with the paper's estimator | `gauss_ref.py` (`lmx_gauss`) |
-| `\Kappa*` | Sec. 3.2 | the refitted calibration constant of every training of Table 1 | the scoring side |
-| `\LcRunsThreeStrictAll`, `\LcMembersStrictAll` | Sec. 3.1 | `p2v3fullstrict_MIX_fac_s<k>.json`, `widths_v2_MIXGEOV3M8S9h400.json`, and for the sentence on more runs, events or steps the other `widths_v2_<tag>{,h400}{,r415}.json` | the scoring side (`strict_closure_lmx.sbatch`, `rescore_v4_lmx.sbatch`) |
-| `\Calib*` | Sec. 3.2, two halves of one fresh run | `p2augfull_{A,C}_fac_s0.json`, `p2aug_B_fac_s0.json` | the scoring side |
+| `\Acc{Aug,Dense}*Strict*`, `\AccFinal*Strict*`, `\ObsDense*Strict`, `\Mix{Sherpa,Herwig}PointsStrict` | Tables 1 and 2, Secs. 3.3 and 3.6 | the files of Table 1 | the scoring side |
+| `\Gauss*` | retained null-reference diagnostic, no longer in Table 1's caption | `gauss_ref_lin.json`, the closure width of two 40,000-event Gaussian samples with the paper's estimator | `gauss_ref.py` (`lmx_gauss`) |
+| `\Kappa*` | App. A.3 | the refitted calibration constant of every training of Table 1 | the scoring side |
+| `\LcRunsThreeStrictAll`, `\LcMembersStrictAll` | App. A.3 | `p2v3fullstrict_MIX_fac_s<k>.json`, `widths_v2_MIXGEOV3M8S9h400.json`, and for the sentence on more runs, events or steps the other `widths_v2_<tag>{,h400}{,r415}.json` | the scoring side (`strict_closure_lmx.sbatch`, `rescore_v4_lmx.sbatch`) |
+| `\Calib*` | archived null diagnostic, no longer quoted | `p2augfull_{A,C}_fac_s0.json`, `p2aug_B_fac_s0.json` | the scoring side |
 | `\Toy*` | App. B.1 | `toy_final_K<K>_s<k>.json` | `symmetry/rerun/toy_final_lmx.sbatch` |
-| `\Map*`, `\XpNullMean`, `\Single*` | Sec. 3.4, Fig. 4, App. A.2 | `valid_map_C_P2augfullfac0_report.json`, `xp_null.json`, `single_members_C_P2augfullfac0.json` | `symmetry/rerun/stagec_lmx.sbatch` **(data)** |
+| `\Map*`, `\XpNullMean` | Sec. 3.4, Fig. 3 | `valid_map_C_P2augfullfac0_report.json`, `xp_null.json` | `symmetry/rerun/stagec_lmx.sbatch` **(data)** |
+| `\Single*` | archived member comparison, no longer quoted | `single_members_C_P2augfullfac0.json` | `symmetry/rerun/stagec_lmx.sbatch` **(data)** |
 | `\Wide*` | Sec. 3.4 | `p2wb18{single,pool,local9100,...,local9105}_W_fac_s0.json` | the scoring side **(data)**. `figs_r8.py widebox` draws these results, which the paper quotes without a figure |
-| `\Cov*`, `\CovEight*` | Secs. 3.5 and 6, Fig. 5 | `wifi_coverage_MIXGEOV3S9{,s1,s2}.json`, `wifi_coverage_MIXGEOV3M8S9.json` | `symmetry/rerun/wifi_cov_lmx.sbatch` **(data)** |
+| `\Cov*`, `\CovEight*` | Secs. 3.5 and 6, Fig. 4 | `wifi_coverage_MIXGEOV3S9{,s1,s2}.json`, `wifi_coverage_MIXGEOV3M8S9.json` | `symmetry/rerun/wifi_cov_lmx.sbatch` **(data)** |
 | `\SvdRank*` | Sec. 3.6 | `p2trunc_{A,B,C,E,MIX}_cat_s0.json` | the scoring side, `specs/svd.txt` **(data, GPU)** |
 | `\TruncMaxPercent` | App. A.2 | `truncation_fraction.json`, counted on the shapes files of the published run, which count every particle as the network input does | `symmetry/rerun/trunc_lmx.sbatch` **(data)** |
-| `\PfnParams*`, `\PfnAuc*` | App. A.2 | `crosscheck_seeds_summary.json`: the parameter counts of the energyflow PFN and of our event network with one output, and the AUCs | `symmetry/pfn_lmx.sbatch` (`lmx_pfn`) **(data)** |
-| `\Cost*` | Secs. 1, 3.6, 4.2 and 6, Fig. 7 | `bench_final_cpu_4_lin.json`, `bench_final_cuda_12_lin.json` | as Fig. 7. Fig. 7 and `\Cost{Fac,Late,Cat}{Cpu,Gpu}` time both generators' weights and one backward pass (the derivatives of one prediction), `\CostW*` the weights alone, and `\CostVar*` the weights alone at the variations of Sec. 4.3. `\CostRestCpu` is the rest of a step of `bench_cost_final.py`, mostly the maximum-entropy weights of both generators and their derivatives |
-| `\CalcAlphas`, `\CalcAlphaZero` | Sec. 5.2, App. D.2 | `three_bands_MIXGEOV3S9_lin.json` | as Fig. 16, from the fixed point of the calculation below |
+| `\PfnParams*`, `\PfnAuc*` | archived implementation comparison, no longer quoted | `crosscheck_seeds_summary.json`: network parameter counts and AUCs | `symmetry/pfn_lmx.sbatch` (`lmx_pfn`) **(data)** |
+| `\Cost*` | Secs. 1, 3.6, 4.2 and 6, Fig. 6 | `bench_final_cpu_4_lin.json`, `bench_final_cuda_12_lin.json` | as Fig. 6. `\Cost{Fac,Late,Cat}{Cpu,Gpu}` time both generators' log-ratio outputs and a backward pass with supplied output derivatives. `\CostW*` time those outputs alone, before exponentiation and normalization, and `\CostVar*` scale that cost to the variations of Sec. 4.3. `\CostRestCpu` includes the remaining fit calculation, with maximum-entropy weights and the fit statistic and their derivative evaluation |
+| `\CalcAlphas`, `\CalcAlphaZero` | Sec. 5.2, App. D.2 | `three_bands_MIXGEOV3S9_lin.json` | as Fig. 15, from the fixed point of the calculation below |
 | `\CalcShift` | App. D | `calc_bins_nlo_point.json`, `power_correction`: the shift a_tau P of the distribution at the fixed point and central scales | `calc_bins.py` (`lmx_calc_bins`) |
 | `\Tb*` | Secs. 1, 2.3, 5.2 to 5.5 and 6, Apps. D.2, E.2 and F.3 | `three_bands_MIXGEOV3S9{,s1,s2}_lin.{json,npz}`, `theory_variations_MIX_lin.json`, `calc_vs_delphi_MIXGEOV3S9_lin.json`, `band_checks_MIXGEOV3S9_lin.json` | the three bands of Sec. 5 below **(data)** |
 | `\Env*` | Secs. 4.3 and 6, Apps. E and F | `envelope_test_MIXGEOV3S9_<box>_lin.{json,npz}` for the boxes `full`, `tune`, `tune_sherpa`, `tune_herwig`, `full_sherpa` and `full_herwig`; `\EnvNdraw` and `\EnvNref` are the draws of every box and the further draws of the full box | "The comparison with 2000 variations" below **(data)** |
 
-Two statements rest on result files without a macro. The explanation of Table 5 by the reference
-events of the other generator rests on `output/wifi_gensplit_MIXGEOV3S9.json`, which
-`symmetry/rerun/wifi_cov_lmx.sbatch` writes with `TAG=MIXGEOV3S9` **(data)**. And
-`symmetry/rerun/trunc_lmx.sbatch` counts the coefficients of the event network again, from
-`r2_ladder.py` and from the trained Stage A trunks (`output/param_count.json`), against the count
-of App. A.2 that `\PfnParams*` takes from the PFN job.
+The explanation of Table 5 by the reference events of the other generator rests on
+`output/wifi_gensplit_MIXGEOV3S9.json`, which `symmetry/rerun/wifi_cov_lmx.sbatch`
+writes with `TAG=MIXGEOV3S9` **(data)**. The archived parameter-count comparison
+also uses `output/param_count.json`, written by `symmetry/rerun/trunc_lmx.sbatch`.
+Generated macro families for these archived diagnostics remain in the result files;
+they do not add results to the current manuscript.
 
 ## Trained models
 
@@ -212,8 +250,9 @@ The trainings ran before this run, with the commands of this section; the run di
 network again. It scored the trained networks again on the photon-free observables (next
 section), and its results replace the scorings these commands wrote. Every model of Table 1 is
 trained three times, the three ensembles, with seeds 0, 1 and 2 (`LADDER_SEED_OFFSET` 0, 1000 and
-2000). Each training writes its result on the standard test, and the strict test scores the saved
-model again on held-out runs with five times the statistics. These commands run from `analysis/`
+2000). Each training writes its historical 40,000-event comparison result. The separate scoring
+called `strict` evaluates the saved model with 200,000 comparison events per point, the results
+used in Tables 1 and 2. These commands run from `analysis/`
 with `export MAXENT_DIR=$PWD`, submitted with `sbatch --export=ALL`; the batch scripts set the
 training settings of the paper (four bootstrap members, a fifth of each run set aside, SiLU), and
 `K` and `STEPS` must be passed as below. `train_p2.sbatch` requires both, and
@@ -278,7 +317,7 @@ row of 208 runs is `train_p2.sbatch` with `DESIGN_TAG=origfull` on `data_stagePU
 its strict test on the data set of `make_orig_h400.py` and the 48 held-out points of the 720-run
 set on those of `make_orig48.py`.
 
-**The number of terms (Fig. 6) and the wide coupling scan (Sec. 3.4).** `bash kscan_submit.sh`
+**The number of terms (Fig. 5) and the wide coupling scan (Sec. 3.4).** `bash kscan_submit.sh`
 **(data, GPU)** trains Stages A to C and the Sherpa stage at every K of the scan, and
 `mkdir -p ../gen/tasks ../gen/logs && bash widebox_submit.sh` **(data, GPU)** generates the runs of
 the wide coupling scan into `gen/data_widebox` and trains its three references. The paper's
@@ -332,8 +371,9 @@ weeks rather than hours. The jobs, all in `symmetry/rerun/`:
 
 | job | script | what it writes in `output/` |
 |---|---|---|
-| `lmx_stdfac`, `lmx_stdcat` | `score_p2_array_lmx.sbatch` over `specs/std_fac.txt` and `specs/std_cat.txt` | the standard test of every factorized and DCTR model of Tables 1 and 2, the K scan and the wide scan, with the temperature refitted: `p2augfull_*`, `p2aug_*`, `p2v3full_*`, `stage_mixture_MIXGEOV3S9{,s1,s2}.json`, `p2origfull_*`, `p2augK*`, `p2v3K*`, `p2wb18*`; `temperature/<model>.json` |
-| `lmx_strictfac`, `lmx_strictcat`, `lmx_svd` | the same over `specs/strict_fac.txt`, `strict_cat.txt` and `svd.txt` | the strict tests, at the refitted temperatures; `p2trunc_*` |
+| `lmx_stdfac`, `lmx_stdcat` | `score_p2_array_lmx.sbatch` over `specs/std_fac.txt` and `specs/std_cat.txt` | the historical 40,000-event comparison and refitted temperature of every factorized and DCTR model, the K scan and the wide scan: `p2augfull_*`, `p2aug_*`, `p2v3full_*`, `stage_mixture_MIXGEOV3S9{,s1,s2}.json`, `p2origfull_*`, `p2augK*`, `p2v3K*`, `p2wb18*`; `temperature/<model>.json` |
+| `lmx_strictfac`, `lmx_strictcat` | the same over `specs/strict_fac.txt` and `specs/strict_cat.txt` | the 200,000-event comparisons at the refitted temperatures, used for Tables 1 and 2 and Figure 5 |
+| `lmx_svd` | the same over `specs/svd.txt` | `p2trunc_*`, the separate 40,000-event DCTR truncation diagnostic |
 | `lmx_recal` | `recal_lc_lmx.sbatch` | the refits of the learning-curve mixtures without training runs (`recalibrate_T.py`) |
 | `lmx_trunc` | `trunc_lmx.sbatch` | `truncation_fraction.json`, `param_count.json` |
 | `lmx_toy` | `toy_final_lmx.sbatch` | the nine trainings of the toy model |
@@ -341,7 +381,7 @@ weeks rather than hours. The jobs, all in `symmetry/rerun/`:
 | `lmx_widths`, `lmx_rescorev4` | `strict_closure_lmx.sbatch`, `rescore_v4_lmx.sbatch` | `widths_v2_<tag>{,h400}{,r415}.json` of the learning curve |
 | `lmx_stagec` | `stagec_lmx.sbatch` | `valid_map_C_P2augfullfac0_report.json`, `single_members_C_P2augfullfac0.json`, `xp_null.json` |
 | `lmx_wifiS9`, `lmx_wifiS9s1`, `lmx_wifiS9s2`, `lmx_wifiM8` | `wifi_cov_lmx.sbatch` with `TAG` | `wifi_<tag>_basis_rebuilt.npz`, the basis of the learning band with the held-out observables without the beam photons; `wifi_<tag>_fit.{npz,json}`, `wifi_<tag>_diag.json`, `wifi_coverage_<tag>.json`, `wifi_gensplit_MIXGEOV3S9.json` |
-| `lmx_closmix` | `closure_mix_lmx.sbatch` | `fig_closure_mix.npz` |
+| `lmx_closmix` | `closure_mix_lmx.sbatch` | `fig_closure_mix.npz`, retained for the archived illustration, not a current paper figure |
 | `lmx_collect` | `collect_lmx.sbatch` | `rank_scan_final.json`, `widebox_wb18.json`, then `scoring_check.json`; it ends `COLLECT DONE` |
 
 How to submit again after a time-out or a failure, keeping every result that carries the
@@ -432,7 +472,8 @@ env $FIGENV CONV_FACTORS=$CONV_FACTORS NPZ=$RUN/output/three_bands_MIXGEOV3S9_li
 ```
 
 The first wrote `output/thrust_targets_nlo_point.npz` before the run, which takes it as a fixed
-input. The second, the job `lmx_calc_bins`, writes `output/calc_bins_nlo_point.json` for Figs. 12 and 15,
+input. The second, the job `lmx_calc_bins`, writes `output/calc_bins_nlo_point.json` for the shape,
+event-fraction and direct-calculation comparisons in Figs. 8, 9 and 11,
 with the power correction `\CalcShift`; the third, `lmx_calc_vs_delphi`, waits for the three bands
 of `MIXGEOV3S9` and writes `output/calc_vs_delphi_MIXGEOV3S9_lin.json`.
 
@@ -494,7 +535,8 @@ runs 9000 and 9010 of the wide coupling scan. They are the energyflow PFN (Tenso
 architecture, our conditional PFN at K = 1 with ReLU and the sum over particles not scaled, as the
 published run trained it, and the same K = 1 network built as the paper's networks are: SiLU, and
 the sum over particles divided by a scale fixed once, before training, on the first 4096 training
-events. App. A.2 compares this fourth network with the energyflow PFN. The energyflow PFN runs in
+events. This implementation comparison is retained in the result archive; its
+variant AUCs are no longer quoted in the paper. The energyflow PFN runs in
 the venv `EF_VENV`, by default `lmx_runs/pfn_venv`, which has the versions of
 `environment-tf.yml`; the PyTorch networks run in the torch environment, on CPUs. Each training
 records its AUC and its parameter count. Only when all 20 have succeeded does
@@ -505,7 +547,7 @@ network's AUC over its seeds (`\PfnAucSdMax`). The job then ends with `PFN CROSS
 published run read, kept in `laptop_archive_20261017/data_widebox` on Symmetry; the job logs their
 md5.
 
-### The Gaussian reference of Table 1
+### The retained Gaussian null reference
 
 ```bash
 $SB --parsable -p preq -J lmx_gauss -c 1 --mem=4G -t 1:00:00 -o logs/lmx_gauss_%j.out \
@@ -516,6 +558,8 @@ $SB --parsable -p preq -J lmx_gauss -c 1 --mem=4G -t 1:00:00 -o logs/lmx_gauss_%
 density, in 25 bins, with the paper's own estimator (the functions of `r2_ladder.py`), over 20000
 pairs of samples with fixed seeds, and again with their means apart by five percent of the
 standard deviation. It writes `output/gauss_ref_lin.json` and ends with `GAUSS REF DONE`.
+This historical diagnostic remains an input to the macro generator but is no longer displayed
+in Table 1's caption. It is not a new 200,000-event Gaussian calculation.
 
 A note on the null of this estimator. The docstring of `width_of()` in `r2_ladder.py` says that
 the null value is 1. It is not exactly: each pull is divided by its own multinomial standard
@@ -540,8 +584,8 @@ $SB --parsable -p preq -J lmx_figs_prop -c 2 --mem=8G -t 1:00:00 -o logs/lmx_fig
   if [ -n "$bad" ]; then echo "FIGURES FAILED:$bad"; exit 1; fi; echo "FIGURES DONE: bands window obs aleph envelope"'
 $SB --parsable -p preq -J lmx_figs_score -c 2 --mem=8G -t 1:00:00 -o logs/lmx_figs_score_%j.out --dependency=afterok:<...> \
   --wrap 'cd $RUN && export $FIGENV R8_OUT=$RUN/output/figs && bad= &&
-  for n in closure_mix map coverage kscan toy; do $PY -B -u figs_r8.py $n || bad="$bad $n"; done;
-  if [ -n "$bad" ]; then echo "FIGURES FAILED:$bad"; exit 1; fi; echo "FIGURES DONE: closure_mix map coverage kscan toy"'
+  for n in map coverage kscan toy; do $PY -B -u figs_r8.py $n || bad="$bad $n"; done;
+  if [ -n "$bad" ]; then echo "FIGURES FAILED:$bad"; exit 1; fi; echo "FIGURES DONE: map coverage kscan toy"'
 $SB --parsable -p preq -J lmx_figs_cost -c 2 --mem=8G -t 0:30:00 -o logs/lmx_figs_cost_%j.out --dependency=afterok:<...> \
   --wrap 'cd $RUN && export $FIGENV R8_OUT=$RUN/output/figs && bad= &&
   { SUFFIX=_lin INDIR=$RUN/output OUTDIR=$RUN/output/numbers $PY -B -u phase2tools/make_numbers.py || bad="$bad numbers"; };

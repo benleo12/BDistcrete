@@ -5,7 +5,8 @@ Uses only stored evaluations. The nominal predictions are the default-setting
 predictions already evaluated in the local-validation archive. That archive's
 parameter ranges are NOT used for the bands: both rows use Y_theta from the
 full-range archive. No learning or calculated-moment variations enter these
-generator bands.
+generator bands. Ratio panels divide these displayed predictions and bands by
+the fixed nominal prediction before imposing the calculation.
 """
 import argparse
 import hashlib
@@ -66,14 +67,29 @@ def main():
         assert np.isclose(y[indices["thrust"]] @ np.diff(edges["thrust"]), 1, atol=2e-7)
 
     F.style()
-    fig, axs = plt.subplots(2, 2, figsize=(F.TW, 4.55), sharex="col", sharey="col")
-    fig.subplots_adjust(left=.105, right=.985, bottom=.11, top=.88, hspace=.38, wspace=.26)
+    fig = plt.figure(figsize=(F.TW, 6.25))
+    groups = fig.add_gridspec(2, 2, left=.12, right=.955, bottom=.085,
+                             top=.91, hspace=.30, wspace=.30)
     blue, gray, green = F.METHOD, F.BASE_DARK, F.THEORY
     clipped = []
+    ratio_ranges = {}
+    for key in indices:
+        denominator = result["before", key]["nominal"]
+        assert np.all(denominator > 0)
+        curves = []
+        for name in ("before", "after"):
+            values = result[name, key]
+            values["ratio_nominal"] = values["nominal"]/denominator
+            values["ratio_sd"] = values["sd"]/denominator
+            curves.extend((values["ratio_nominal"]-values["ratio_sd"],
+                           values["ratio_nominal"]+values["ratio_sd"]))
+        ratio_ranges[key] = F.nice_range(curves, pad=.06)
     for row, name in enumerate(("before", "after")):
         color = gray if row == 0 else blue
         for col, key in enumerate(("thrust", "nch")):
-            ax = axs[row, col]
+            grid = groups[row, col].subgridspec(2, 1, height_ratios=[2.1, 1], hspace=.055)
+            ax = fig.add_subplot(grid[0])
+            ratio_ax = fig.add_subplot(grid[1], sharex=ax)
             y, sd, e = result[name, key]["nominal"], result[name, key]["sd"], edges[key]
             floor = 1e-5 if key == "thrust" else 0
             lower, upper = y-sd, y+sd
@@ -83,27 +99,36 @@ def main():
             if row == 1:
                 ax.stairs(result["before", key]["nominal"], e, baseline=None,
                           color=gray, linewidth=1, linestyle="--")
-            ax.set_title(("(a)" if col == 0 else "(b)")+" Generators alone" if row == 0
-                         else ("(c)" if col == 0 else "(d)")+" Thrust calculation imposed",
-                         loc="left", pad=8)
+            ax.set_title(f"({chr(97+2*row+col)}) {name.capitalize()}",
+                         loc="left", fontsize=10, pad=7)
             if key == "thrust":
                 ax.set_yscale("log"); ax.set_ylim(1e-5, 35); ax.set_xlim(0, .5)
                 ax.axvspan(.05, 1/3, color=green, alpha=.055, zorder=-1)
                 for bound in (.05, 1/3):
                     ax.axvline(bound, color=green, linewidth=.8, linestyle=":")
                 ax.set_ylabel(r"$(1/\sigma)\,d\sigma/d\tau$")
-                if row == 0:
-                    ax.text(.53, .94, "constraint region", transform=ax.transAxes,
-                            ha="center", va="top", color=green, fontsize=7.5)
+                ratio_ax.axvspan(.05, 1/3, color=green, alpha=.055, zorder=-1)
+                for bound in (.05, 1/3):
+                    ratio_ax.axvline(bound, color=green, linewidth=.8, linestyle=":")
             else:
                 ax.set_xlim(0, 48); ax.set_ylim(0, .175)
                 ax.set_ylabel("Fraction of events")
                 ax.set_yticks([0, .05, .10, .15])
                 ax.set_xticks([0, 10, 20, 30, 40, 47])
                 ax.set_xticklabels(["0", "10", "20", "30", "40", r"$\geq46$"])
+            ratio = result[name, key]["ratio_nominal"]
+            ratio_sd = result[name, key]["ratio_sd"]
+            ratio_ax.stairs(ratio+ratio_sd, e, baseline=ratio-ratio_sd, fill=True,
+                            color=F.GEN, alpha=.22, linewidth=0)
+            ratio_ax.stairs(ratio, e, baseline=None, color=color, linewidth=1.35)
+            ratio_ax.axhline(1, color=gray, linewidth=.75, linestyle="--", zorder=0)
+            ratio_ax.set_ylim(*ratio_ranges[key][0])
+            ratio_ax.set_yticks([0, 1, 2])
+            ratio_ax.set_ylabel("Ratio", fontsize=10)
+            ax.tick_params(axis="x", labelbottom=False)
             if row == 1:
-                ax.set_xlabel(r"Thrust, $\tau=1-T$" if key == "thrust"
-                              else r"Charged multiplicity, $n_{\rm ch}$")
+                ratio_ax.set_xlabel(r"$\tau=1-T$" if key == "thrust" else r"$n_{\rm ch}$")
+            F.trim(ratio_ax)
             F.trim(ax)
             clipped.extend({"row": name, "observable": key, "bin": int(i),
                             "true_lower_edge": float(lower[i]), "plot_floor": floor}
@@ -111,11 +136,11 @@ def main():
     fig.legend(handles=[
         Line2D([], [], color=gray, lw=1.35, label="Before"),
         Line2D([], [], color=blue, lw=1.35, label="After"),
-        Patch(facecolor=F.GEN, alpha=.22, label="Generator uncertainty"),
-    ], loc="upper center", bbox_to_anchor=(.55, 1.0), ncol=3, fontsize=8)
+        Patch(facecolor=F.GEN, alpha=.22, label="Generator"),
+    ], loc="upper center", bbox_to_anchor=(.55, .99), ncol=3, fontsize=10)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(args.output)
-    fig.savefig(args.output.with_suffix(".png"))
+    fig.savefig(args.output, bbox_inches=None)
+    fig.savefig(args.output.with_suffix(".png"), dpi=240, bbox_inches=None)
     plt.close(fig)
 
     record = {
@@ -127,6 +152,7 @@ def main():
         "number_of_generator_variations": len(full["Y_theta"]),
         "same_parameter_draws_before_and_after": True,
         "band": "Nominal prediction plus/minus generator SD. Learning, theory and sample statistics are separate.",
+        "ratio": "Displayed nominal prediction and its plus/minus generator SD divided by the fixed before nominal prediction in each bin. This is not the sampled SD of paired after/before ratios.",
         "final_state": "The common event definition used to impose the calculation; no measurement conversion.",
         "thrust_nominal_matches_published_raw_prediction": True,
         "thrust_sd_matches_published_generator_band": True,

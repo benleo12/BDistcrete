@@ -163,9 +163,9 @@ def env(box, side='before', keys=('thrust', 'nch')):
          plt.Line2D([], [], color=F.METHOD, lw=1.1)] + [plt.Line2D([], [], color=F.METHOD, lw=1.0, ls=ls) for n, _, ls in MODELS[1:]
                                                          if f'C_{n}' in d.files]
     lb = [f'{len(Y)} variations', r'variations, $\pm1\sigma$', r'linear, $\pm1\sigma$'] + [nm for n, nm, _ in MODELS[1:] if f'C_{n}' in d.files]
-    fig.legend(h, lb, loc='upper center', ncol=len(h), fontsize=7.2, bbox_to_anchor=(0.54, 1.0), handlelength=1.8)
+    fig.legend(h, lb, loc='upper center', ncol=len(h), fontsize=10, bbox_to_anchor=(0.54, 1.0), handlelength=1.8)
     fig.text(0.99, 0.905, BOX_TITLE.get(box, box) + ('' if side == 'before' else ', with the calculation'), ha='right', va='bottom',
-             fontsize=7.5, color=F.REF)
+             fontsize=10, color=F.REF)
     F.save(fig, f'env_{box}' if side == 'before' else f'env_after_{box}')
 
 
@@ -183,15 +183,15 @@ def corrfig(box, keys=('thrust', 'nch')):
         e, xl = edges_of(d, key); centres = [e[list(idx[key]).index(i)] for i in ii]
         step = max(1, len(ii)//6); ticks = np.arange(0, len(ii), step)
         fmt = (lambda v: f'{v:.2f}') if key != 'nch' else (lambda v: f'{int(v)}')
-        ax.set_xticks(ticks); ax.set_xticklabels([fmt(centres[t]) for t in ticks], fontsize=6.5)
-        ax.set_yticks(ticks); ax.set_yticklabels([fmt(centres[t]) for t in ticks], fontsize=6.5)
+        ax.set_xticks(ticks); ax.set_xticklabels([fmt(centres[t]) for t in ticks], fontsize=10)
+        ax.set_yticks(ticks); ax.set_yticklabels([fmt(centres[t]) for t in ticks], fontsize=10)
         ax.set_xlabel(xl + ' (lower edge)', labelpad=1.5)
         F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity', 'rho': 'heavy jet mass'}[key])
         bb = dict(fc='white', ec='none', alpha=0.85, pad=1.0)
-        ax.text(0.97, 0.05, 'variations', transform=ax.transAxes, ha='right', fontsize=7, color=F.INK, bbox=bb)
-        ax.text(0.03, 0.95, 'linear', transform=ax.transAxes, ha='left', va='top', fontsize=7, color=F.INK, bbox=bb)
-    cax = fig.add_axes([0.92, 0.2, 0.015, 0.62]); fig.colorbar(im, cax=cax).set_label('correlation', fontsize=7.5)
-    fig.text(0.9, 0.93, BOX_TITLE.get(box, box), ha='right', fontsize=7.5, color=F.REF)
+        ax.text(0.97, 0.05, 'variations', transform=ax.transAxes, ha='right', fontsize=10, color=F.INK, bbox=bb)
+        ax.text(0.03, 0.95, 'linear', transform=ax.transAxes, ha='left', va='top', fontsize=10, color=F.INK, bbox=bb)
+    cax = fig.add_axes([0.92, 0.2, 0.015, 0.62]); fig.colorbar(im, cax=cax).set_label('correlation', fontsize=10)
+    fig.text(0.9, 0.93, BOX_TITLE.get(box, box), ha='right', fontsize=10, color=F.REF)
     F.save(fig, f'corr_{box}')
 
 
@@ -210,7 +210,7 @@ def ratios(boxes, key='thrust'):
         ax.set_xlim(e[0], e[-1]); ax.set_xlabel(xl, labelpad=1.5); F.trim(ax)
         F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity'}[key])
     axs[0].set_ylim(*F.widen(0.3, 1.7, drawn))                      # shared by both panels
-    axs[0].set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm variations}$'); axs[1].legend(fontsize=6.5, loc='upper right')
+    axs[0].set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm variations}$'); axs[1].legend(fontsize=10, loc='upper right')
     F.save(fig, 'env_ratios')
 
 
@@ -239,29 +239,29 @@ def paper_panels(ax, bx, Y, yc, sl, e, sb, mask=None):
 def paper_legend(fig, n, window=False, ncol=3):
     h = [plt.Rectangle((0, 0), 1, 1, color=F.GEN, alpha=0.3, lw=0), plt.Line2D([], [], color=F.METHOD, lw=1.3),
          plt.Rectangle((0, 0), 1, 1, color=F.BASE, alpha=0.25, lw=0)]
-    lb = [f'{n} variations, mean $\\pm1\\sigma$', r'linear covariance, $\pm1\sigma$', r'bootstrap uncertainty of $\sigma_{\rm variations}$']
+    lb = ['Variations', 'Linear', 'Bootstrap']
     if window:
-        h.append(plt.Line2D([], [], color=F.THEORY, lw=0.9, ls=(0, (3, 2)))); lb.append('edges of the window')
-    fig.legend(h, lb, loc='upper center', ncol=ncol, fontsize=7.2, bbox_to_anchor=(0.54, 1.0), handlelength=1.8)
+        h.append(plt.Line2D([], [], color=F.THEORY, lw=0.9, ls=(0, (3, 2)))); lb.append('Window')
+    fig.legend(h, lb, loc='upper center', ncol=ncol, fontsize=10, bbox_to_anchor=(0.54, 0.99), handlelength=1.6)
 
 
 def env_pair(boxes=('tune', 'full'), keys=('thrust', 'nch'), save_as='envelope', short=BOX_SHORT, mask_thin=False):
-    """The paper figure (Fig. 8): paper_panels() for several boxes stacked, prior only."""
-    H = 2.75*len(boxes); fig = plt.figure(figsize=(F.TW, H))
-    outer = GridSpec(len(boxes), 1, figure=fig, hspace=0.32, left=0.09, right=0.99, top=1 - 0.36/H, bottom=0.36/H)
+    """The paper envelope figure: paper_panels() for several boxes stacked, prior only."""
+    H = 3.2*len(boxes); fig = plt.figure(figsize=(F.TW, H))
+    outer = GridSpec(len(boxes), 1, figure=fig, hspace=0.4, left=0.13, right=0.97, top=1 - 0.65/H, bottom=0.48/H)
     rng = np.random.default_rng(1)
     for r, box in enumerate(boxes):
         d, lab, no, idx = load(box)
         Y = d['Y_joint'][:, :no]; yc = d['y_central'][:no]; sb = boot_sd(Y, rng)
         sl = np.sqrt(np.maximum(np.diag(model_cov(d, 'lin_flat', 'before', no)), 0))
-        gs = outer[r].subgridspec(2, len(keys), height_ratios=[1.25, 0.75], hspace=0.07, wspace=0.2)
+        gs = outer[r].subgridspec(2, len(keys), height_ratios=[1.25, 0.75], hspace=0.07, wspace=0.3)
         for c, key in enumerate(keys):
             ii = idx[key]; e, xl = edges_of(d, key)
             ax = fig.add_subplot(gs[0, c]); bx = fig.add_subplot(gs[1, c], sharex=ax)
             mask = np.array([lab[i] in THIN for i in ii]) if mask_thin else None
             paper_panels(ax, bx, Y[:, ii], yc[ii], sl[ii], e, sb[ii], mask)
             ax.set_ylabel('ratio to center' if c == 0 else ''); plt.setp(ax.get_xticklabels(), visible=False)
-            F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity'}[key] + ', ' + short.get(box, box))
+            F.title(ax, {'thrust': 'Thrust', 'nch': 'Charged multiplicity'}[key] + '\n' + short.get(box, box))
             bx.set_xlabel(xl, labelpad=1.5); bx.set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm variations}$' if c == 0 else '')
             for a in (ax, bx):
                 F.trim(a)
@@ -272,8 +272,8 @@ def env_pair(boxes=('tune', 'full'), keys=('thrust', 'nch'), save_as='envelope',
 def corr_pair(boxes=('tune', 'full'), keys=('thrust', 'nch'), save_as='envelope_corr', short=BOX_SHORT):
     """The paper figure: correlation matrices for two boxes, variations below the diagonal, linear above."""
     corr = lambda A: A/np.sqrt(np.outer(np.diag(A), np.diag(A)))
-    fig, axs = plt.subplots(len(boxes), len(keys), figsize=(F.TW, 5.6),
-                            gridspec_kw=dict(wspace=0.28, hspace=0.42, left=0.08, right=0.89, bottom=0.08, top=0.95))
+    fig, axs = plt.subplots(len(boxes), len(keys), figsize=(F.TW, 6.0),
+                            gridspec_kw=dict(wspace=0.36, hspace=0.6, left=0.10, right=0.81, bottom=0.09, top=0.92))
     for r, box in enumerate(boxes):
         d, lab, no, idx = load(box)
         Ce = np.cov(d['Y_joint'][:, :no], rowvar=False); Cm = model_cov(d, 'lin_flat', 'before', no)
@@ -285,16 +285,16 @@ def corr_pair(boxes=('tune', 'full'), keys=('thrust', 'nch'), save_as='envelope_
             im = ax.imshow(M, cmap='RdBu_r', vmin=-1, vmax=1, origin='lower', interpolation='nearest')
             ax.plot([-0.5, len(ii) - 0.5], [-0.5, len(ii) - 0.5], color=F.REF, lw=0.5)
             e, xl = edges_of(d, key); lows = [e[list(idx[key]).index(i)] for i in ii]
-            step = max(1, len(ii)//6); ticks = np.arange(0, len(ii), step)
+            step = max(1, int(np.ceil(len(ii)/4))); ticks = np.arange(0, len(ii), step)
             fmt = (lambda v: f'{v:.2f}') if key != 'nch' else (lambda v: f'{int(v)}')
-            ax.set_xticks(ticks); ax.set_xticklabels([fmt(lows[t]) for t in ticks], fontsize=6.5)
-            ax.set_yticks(ticks); ax.set_yticklabels([fmt(lows[t]) for t in ticks], fontsize=6.5)
-            ax.set_xlabel(xl + ' (lower bin edge)', labelpad=1.5)
-            F.title(ax, {'thrust': 'thrust', 'nch': 'charged multiplicity'}[key] + ', ' + short.get(box, box))
+            ax.set_xticks(ticks); ax.set_xticklabels([fmt(lows[t]) for t in ticks], fontsize=10)
+            ax.set_yticks(ticks); ax.set_yticklabels([fmt(lows[t]) for t in ticks], fontsize=10)
+            ax.set_xlabel(xl + ' (bin edge)', labelpad=1.5)
+            F.title(ax, {'thrust': 'Thrust', 'nch': 'Charged multiplicity'}[key] + '\n' + short.get(box, box))
             bb = dict(fc='white', ec='none', alpha=0.85, pad=1.0)
-            ax.text(0.97, 0.04, 'variations', transform=ax.transAxes, ha='right', fontsize=7, color=F.INK, bbox=bb)
-            ax.text(0.03, 0.96, 'linear', transform=ax.transAxes, ha='left', va='top', fontsize=7, color=F.INK, bbox=bb)
-    cax = fig.add_axes([0.91, 0.25, 0.015, 0.5]); fig.colorbar(im, cax=cax).set_label('correlation', fontsize=7.5)
+            ax.text(0.97, 0.04, 'variations', transform=ax.transAxes, ha='right', fontsize=10, color=F.INK, bbox=bb)
+            ax.text(0.03, 0.96, 'linear', transform=ax.transAxes, ha='left', va='top', fontsize=10, color=F.INK, bbox=bb)
+    cax = fig.add_axes([0.85, 0.28, 0.025, 0.44]); fig.colorbar(im, cax=cax).set_label('Correlation', fontsize=10)
     F.save(fig, save_as)
 
 
@@ -322,7 +322,7 @@ def ratio_summary(boxes=('tune', 'tune_herwig', 'tune_sherpa', 'tune_xifull', 'f
     axs[0].set_ylim(*F.widen(0.25, 1.25, drawn))                    # shared by both panels
     axs[0].set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm variations}$')
     h, l = axs[0].get_legend_handles_labels()
-    fig.legend(h, l, loc='upper center', ncol=3, fontsize=7.2, bbox_to_anchor=(0.54, 1.0), handlelength=2.2)
+    fig.legend(h, l, loc='upper center', ncol=3, fontsize=10, bbox_to_anchor=(0.54, 1.0), handlelength=2.2)
     F.save(fig, 'env_cases_ratio')
 
 
@@ -352,14 +352,14 @@ def coverage_summary(boxes=('tune', 'tune_herwig', 'tune_sherpa', 'tune_xifull',
         axs[r, 0].set_ylabel(r'inside the band [\%]')
     axs[0, 0].set_ylim(*F.widen(35, 95, drawn))                     # shared by all four panels
     h, l = axs[0, 0].get_legend_handles_labels()
-    fig.legend(h, l, loc='upper center', ncol=3, fontsize=7.2, bbox_to_anchor=(0.54, 1.0), handlelength=2.2)
+    fig.legend(h, l, loc='upper center', ncol=3, fontsize=10, bbox_to_anchor=(0.54, 1.0), handlelength=2.2)
     F.save(fig, 'env_cases_coverage')
 
 
 def env_after_pair(boxes=('tune', 'full')):
-    """The application figure (Fig. 10): thrust with the calculation imposed in the window, drawn as Fig. 8."""
-    fig = plt.figure(figsize=(F.TW, 2.75))
-    gs = GridSpec(2, len(boxes), figure=fig, height_ratios=[1.25, 0.75], hspace=0.07, wspace=0.2, left=0.09, right=0.99, top=0.83, bottom=0.14)
+    """The paper envelope figure with the calculation imposed in the thrust window."""
+    fig = plt.figure(figsize=(F.TW, 3.7))
+    gs = GridSpec(2, len(boxes), figure=fig, height_ratios=[1.25, 0.75], hspace=0.07, wspace=0.3, left=0.13, right=0.97, top=0.77, bottom=0.16)
     rng = np.random.default_rng(1)
     for c, box in enumerate(boxes):
         d, lab, no, idx = load(box); s = slice(no, 2*no)
@@ -372,7 +372,7 @@ def env_after_pair(boxes=('tune', 'full')):
                 a.axvline(x, color=F.THEORY, lw=0.9, ls=(0, (3, 2)), zorder=5)
         paper_panels(ax, bx, Y[:, ii], yc[ii], sl[ii], e, sb[ii])
         ax.set_ylabel('ratio to center' if c == 0 else ''); plt.setp(ax.get_xticklabels(), visible=False)
-        F.title(ax, 'thrust with the calculation, ' + {'tune': 'tune-sized ranges', 'full': 'full box'}.get(box, box))
+        F.title(ax, {'tune': 'Tune-sized ranges', 'full': 'Full box'}.get(box, box))
         bx.set_xlabel(xl, labelpad=1.5); bx.set_ylabel(r'$\sigma_{\rm linear}/\sigma_{\rm variations}$' if c == 0 else '')
         for a in (ax, bx):
             F.trim(a)

@@ -77,8 +77,8 @@ def style():
     plt.rcParams.update({
         'text.usetex': True, 'font.family': 'serif', 'font.serif': ['Computer Modern Roman'],
         'text.latex.preamble': r'\usepackage{amsmath}\usepackage{amssymb}',
-        'font.size': 8.5, 'axes.labelsize': 9, 'axes.titlesize': 9,
-        'xtick.labelsize': 8, 'ytick.labelsize': 8, 'legend.fontsize': 7.5,
+        'font.size': 10, 'axes.labelsize': 10, 'axes.titlesize': 10,
+        'xtick.labelsize': 10, 'ytick.labelsize': 10, 'legend.fontsize': 10,
         'axes.linewidth': 0.6, 'axes.edgecolor': INK, 'axes.labelcolor': INK, 'text.color': INK,
         'xtick.color': INK, 'ytick.color': INK, 'xtick.direction': 'in', 'ytick.direction': 'in',
         'xtick.major.size': 3, 'ytick.major.size': 3, 'xtick.minor.size': 1.6, 'ytick.minor.size': 1.6,
@@ -87,7 +87,7 @@ def style():
         'legend.frameon': False, 'legend.handlelength': 1.6, 'legend.handletextpad': 0.5,
         'legend.borderaxespad': 0.3, 'legend.labelspacing': 0.3, 'legend.columnspacing': 1.0,
         'lines.linewidth': 1.1, 'lines.markersize': 3.2, 'errorbar.capsize': 0,
-        'savefig.dpi': 600, 'savefig.bbox': 'tight', 'savefig.pad_inches': 0.015, 'figure.dpi': 150,
+        'savefig.dpi': 600, 'savefig.bbox': None, 'savefig.pad_inches': 0, 'figure.dpi': 150,
     })
 
 
@@ -98,7 +98,7 @@ def trim(ax):
 
 
 def title(ax, s):
-    ax.set_title(s, loc='left', fontsize=9, pad=4)
+    ax.set_title(s, loc='left', fontsize=10, pad=4)
 
 
 def unit_line(ax, y=1.0, **kw):
@@ -106,7 +106,7 @@ def unit_line(ax, y=1.0, **kw):
 
 
 def save(fig, name):
-    path = os.path.join(OUT, f'r8_{name}.pdf'); fig.savefig(path); plt.close(fig); print('wrote', path)
+    path = os.path.join(OUT, f'r8_{name}.pdf'); fig.savefig(path, bbox_inches=None); plt.close(fig); print('wrote', path)
 
 
 def linear_inputs(*pairs):
@@ -192,13 +192,13 @@ def closure():
             axd.set_yscale('log'); axd.set_ylim(max(dt[dt > 0].min()*0.3, 1e-6), None)
         if obs == 'mult_total':
             axd.set_xlim(0, 92); axd.set_ylim(0, 1.3*np.nanmax(dt))
-        axd.set_ylabel(ylab, fontsize=9.5)
+        axd.set_ylabel(ylab, fontsize=10)
         plt.setp(axd.get_xticklabels(), visible=False)
         axd.text(0.97, 0.93, rf'width ${float(p["width"]):.2f}$', transform=axd.transAxes, ha='right', va='top',
-                 fontsize=8, color=REF, bbox=dict(fc='white', ec='none', alpha=0.85, pad=1.0))
+                 fontsize=10, color=REF, bbox=dict(fc='white', ec='none', alpha=0.85, pad=1.0))
         title(axd, ttl); trim(axd)
         if i == 0:
-            axd.legend(loc='lower left', fontsize=7.5)
+            axd.legend(loc='lower left', fontsize=10)
         ok = dt > 0
         nan = lambda v: np.where(ok, v, np.nan)
         rw = nan(dw/np.where(ok, dt, 1)); rwe = nan(ew/np.where(ok, dt, 1)); ru = nan(du/np.where(ok, dt, 1))
@@ -214,7 +214,7 @@ def closure():
         if obs == 'mult_total':
             axr.set_xlim(0, 92)
         axr.set_xlabel(xlab)
-        axr.set_ylabel('ratio to\nindependent run', fontsize=7.5, linespacing=0.95)
+        axr.set_ylabel('ratio to\nindependent run', fontsize=10, linespacing=0.95)
         trim(axr)
     save(fig, 'closure')
 
@@ -254,17 +254,17 @@ def closure_mix():
                 xhi = float(max(80.0, bins[1:][big].max())) if big.any() else 80.0
                 top = max(1.3*np.nanmax(dt), 1.05*np.nanmax(np.r_[du, dw + ew, dt + et]))
                 axd.set_xlim(0, xhi); axd.set_ylim(0, top)
-            axd.set_ylabel(ylab, fontsize=9.5)
+            axd.set_ylabel(ylab, fontsize=10)
             plt.setp(axd.get_xticklabels(), visible=False)
             axd.text(0.97, 0.93, rf'width ${float(g("width")):.2f}$', transform=axd.transAxes, ha='right', va='top',
-                     fontsize=7.5, color=REF, bbox=dict(fc='white', ec='none', alpha=0.85, pad=1.0))
+                     fontsize=10, color=REF, bbox=dict(fc='white', ec='none', alpha=0.85, pad=1.0))
             title(axd, f'({next(tags)}) {name}'); trim(axd)
             if c == 0:
                 fig.text(0.53, outer[r, 0].get_position(fig).y1 + 0.052,
                          f'held-out {GEN[rid // 1000]} point of the seventeen-parameter mixture',
-                         ha='center', va='bottom', fontsize=9)
+                         ha='center', va='bottom', fontsize=10)
             if r == 0 and c == 0:
-                fig.legend(*axd.get_legend_handles_labels(), loc='upper center', bbox_to_anchor=(0.55, 1.0), ncol=3, fontsize=7.5)
+                fig.legend(*axd.get_legend_handles_labels(), loc='upper center', bbox_to_anchor=(0.55, 1.0), ncol=3, fontsize=10)
             ok = dt > 0
             nan = lambda v: np.where(ok, v, np.nan)
             rw = nan(dw/np.where(ok, dt, 1)); rwe = nan(ew/np.where(ok, dt, 1)); ru = nan(du/np.where(ok, dt, 1))
@@ -294,7 +294,7 @@ def closure_mix():
                 axr.set_xlim(0, xhi)
             axr.set_xlabel(xlab)
             if c == 0:
-                axr.set_ylabel('ratio to\nindependent run', fontsize=7.5, linespacing=0.95)
+                axr.set_ylabel('ratio to\nindependent run', fontsize=10, linespacing=0.95)
             trim(axr)
     save(fig, 'closure_mix')
 
@@ -309,26 +309,27 @@ def map_():
     pts = {int(k): v for k, v in d.items() if k != 'summary' and v.get('kind') == 'valid'}
     anc = {int(k): v for k, v in d.items() if k != 'summary' and v.get('kind') == 'anchor'}
     OBS = [('1_minus_thrust', r'$1-T$'), ('B_total', r'$B_{\rm tot}$'), ('rho_heavy', r'$\rho_H$'),
-           ('mult_total', 'mult.'), ('x_p', r'$E_i/E_{\rm vis}$'), ('strange', 'kaons'),
-           ('joint_thrust_mult', 'joint'), ('nbaryon', 'baryons')]
-    fig = plt.figure(figsize=(TW, 2.45))
-    gs = GridSpec(1, 2, figure=fig, width_ratios=[2.35, 1], wspace=0.32, left=0.075, right=0.99, top=0.9, bottom=0.17)
+           ('mult_total', r'$n$'), ('x_p', r'$E_i/E_{\rm vis}$'), ('strange', 'kaons'),
+           ('joint_thrust_mult', 'joint'), ('nbaryon', r'$n_{\rm b}$')]
+    fig = plt.figure(figsize=(TW, 3.1))
+    gs = GridSpec(1, 2, figure=fig, width_ratios=[2.2, 1.2], wspace=0.42, left=0.12, right=0.97, top=0.82, bottom=0.25)
     ax = fig.add_subplot(gs[0, 0]); rng = np.random.default_rng(3)
     for i, (o, lab) in enumerate(OBS):
         va = np.array([p[o] for p in pts.values()]); vb = np.array([p[o] for p in anc.values()])
         ax.scatter(i + rng.uniform(-0.15, 0.15, len(va)), va, s=8, color=METHOD, alpha=0.85, lw=0, zorder=3,
-                   label='twelve further runs' if i == 0 else None)
+                   label='New points' if i == 0 else None)
         ax.scatter(i + rng.uniform(-0.15, 0.15, len(vb)), vb, s=12, marker='D', facecolor='white', edgecolor=METHOD,
-                   lw=0.8, zorder=4, label='five held-out points' if i == 0 else None)
+                   lw=0.8, zorder=4, label='Held-out points' if i == 0 else None)
         ax.plot([i - 0.26, i + 0.26], [np.nanmean(va)]*2, color=METHOD_DARK, lw=1.5, zorder=5,
-                label='mean of the further runs' if i == 0 else None)
+                label='Mean' if i == 0 else None)
         if o == 'x_p' and np.isfinite(xp_null):
             ax.plot([i - 0.3, i + 0.3], [xp_null]*2, color=REF, lw=0.9, ls=(0, (1.2, 1.2)), zorder=2)
     unit_line(ax)
-    ax.set_xticks(range(len(OBS))); ax.set_xticklabels([l for _, l in OBS], fontsize=7.5)
+    ax.set_xticks(range(len(OBS))); ax.set_xticklabels([l for _, l in OBS], fontsize=10, rotation=40, ha='right')
     ax.set_xlim(-0.6, len(OBS) - 0.4)
-    ax.set_ylabel(r'closure width'); ax.legend(loc='upper left', fontsize=7.5)
-    title(ax, '(a) closure width per observable'); trim(ax)
+    ax.set_ylabel('Closure width')
+    fig.legend(*ax.get_legend_handles_labels(), loc='upper center', bbox_to_anchor=(0.55, 0.99), ncol=3, fontsize=10)
+    title(ax, '(a) Closure'); trim(ax)
     bx = fig.add_subplot(gs[0, 1])
     norm = [(0.120, 0.008), (0.475, 0.175), (1.30, 0.50)]
     for coll, mk, fc, lab, s in ((pts, 'o', METHOD, 'further runs', 10), (anc, 'D', 'white', 'held-out points', 13)):
@@ -336,9 +337,9 @@ def map_():
         zz = [abs(p.get('nbaryon_z', np.nan)) for p in coll.values()]
         bx.scatter(dd, zz, s=s, marker=mk, facecolor=fc, edgecolor=METHOD, lw=0.8, zorder=3, label=lab)
     bx.axhline(2, color=REF, lw=0.7, ls=(0, (4, 3)))
-    bx.set_xlabel('distance from the middle', labelpad=1.5); bx.set_ylabel(r'$|$difference$|$ / s.d.')
-    bx.set_ylim(0, None); bx.legend(loc='upper left', fontsize=7.5)
-    title(bx, '(b) mean baryon count'); trim(bx)
+    bx.set_xlabel('Distance from\nbox center', labelpad=1.5); bx.set_ylabel(r'$|\Delta\langle n_{\rm b}\rangle|/\sigma$')
+    bx.set_ylim(0, None)
+    title(bx, '(b) Baryon mean'); trim(bx)
     save(fig, 'map')
 
 
@@ -356,7 +357,7 @@ def widebox():
     unit_line(ax)
     ax.axvline(0.14, color=REF, lw=0.6, ls=(0, (1, 2)), ymax=0.5)
     ax.set_xlabel(r'held-out shower coupling $\alpha_s^{\rm sh}$'); ax.set_ylabel('closure width')
-    ax.legend(loc='upper right', fontsize=7.5); title(ax, '(a) closure width'); trim(ax)
+    ax.legend(loc='upper right', fontsize=10); title(ax, '(a) closure width'); trim(ax)
     bx = fig.add_subplot(gs[0, 1])
     ws = np.load(os.environ.get('WIDEBOX_WS', 'output/wb/W_P2wb18singlefac0_w_9100.npy'))
     wu = np.load(os.environ.get('WIDEBOX_WU', 'output/wb/W_P2wb18local9100fac0_w_9100.npy'))
@@ -375,7 +376,7 @@ def widebox():
     bx.yaxis.set_major_locator(FixedLocator([1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1])); bx.yaxis.set_minor_locator(NullLocator())
     bx.yaxis.set_major_formatter(FixedFormatter([r'$10^{-5}$', r'$10^{-4}$', r'$10^{-3}$', r'$10^{-2}$', r'$10^{-1}$', r'$1$']))
     bx.set_xlabel(r'$\log_{10}$ of the weight (unit mean)'); bx.set_ylabel('fraction of events')
-    bx.legend(loc='upper left', fontsize=7.5, handlelength=1.6); title(bx, r'(b) weights at $\alpha_s^{\rm sh}=0.083$'); trim(bx)
+    bx.legend(loc='upper left', fontsize=10, handlelength=1.6); title(bx, r'(b) weights at $\alpha_s^{\rm sh}=0.083$'); trim(bx)
     save(fig, 'widebox')
 
 
@@ -384,10 +385,10 @@ def kscan():
     """One panel using the saved high-statistics scan, with spread across held-out points."""
     rs = json.load(open(os.environ.get('RANK_IN', 'output/rank_scan_final.json')))
     R4 = ramp(4)
-    SERIES = [('A', R4[0], 'o', 1, 'Stage A, $d=1$'), ('B', R4[1], 's', 2, 'Stage B, $d=2$'),
-              ('C', R4[2], '^', 3, 'Stage C, $d=3$'), ('E', R4[3], 'D', 8, 'Stage D (Sherpa), $d=8$')]
-    fig, ax = plt.subplots(figsize=(TW, 2.75))
-    fig.subplots_adjust(left=0.08, right=0.99, top=0.88, bottom=0.16)
+    SERIES = [('A', R4[0], 'o', 1, 'A, $d=1$'), ('B', R4[1], 's', 2, 'B, $d=2$'),
+              ('C', R4[2], '^', 3, 'C, $d=3$'), ('E', R4[3], 'D', 8, 'D (Sherpa), $d=8$')]
+    fig, ax = plt.subplots(figsize=(TW, 3.1))
+    fig.subplots_adjust(left=0.11, right=0.97, top=0.95, bottom=0.18)
     ends = []
     for st, col, mk, dd, lab in SERIES:
         sc = rs[st]['scan_strict']; KK = sorted(int(k) for k in sc)
@@ -411,10 +412,7 @@ def kscan():
     ax.xaxis.set_major_locator(FixedLocator(tk)); ax.xaxis.set_minor_locator(NullLocator())
     ax.xaxis.set_major_formatter(FixedFormatter([str(t) for t in tk]))
     ax.set_xlabel(r'number of terms per member $K$'); ax.set_ylabel('closure width')
-    ax.legend(loc='upper right', fontsize=7.5)
-    ax.text(0.98, 0.57, 'Bars: standard deviation across held-out points\n'
-            r'Dashed vertical lines: $K_2=1+d+d(d+1)/2$', transform=ax.transAxes,
-            ha='right', va='top', fontsize=7.5, color=REF, linespacing=1.35)
+    ax.legend(loc='upper right', fontsize=10)
     trim(ax)
     save(fig, 'kscan')
 
@@ -430,26 +428,24 @@ def cost():
         assert (d.get('device'), d.get('threads')) == (dev, thr), f'{f} records device {d.get("device")!r} with {d.get("threads")!r} threads'
     nc, ng, rest = c['n_network_step_seconds'], g['n_network_step_seconds'], c['b_tilt_and_chi2_seconds']
     gpu = g.get('gpu', 'GPU').replace('NVIDIA ', '')
-    ROWS = [('factorized', 'Factorized network', METHOD), ('late', 'Parameters after\nparticle sum', BASE),
-            ('concatenation', 'Conventional DCTR', BASE_DARK)]
+    ROWS = [('factorized', 'Factorized', METHOD), ('late', 'After particle sum', BASE),
+            ('concatenation', 'DCTR', BASE_DARK)]
 
     def human(s):
         if s >= 60: return f'{s/60:.0f} min'
         if s >= 1: return f'{s:.2g} s'
         if s >= 0.1: return f'{s:.2f} s'
         return f'{1000*s:.2g} ms'
-    fig, ax = plt.subplots(figsize=(TW, 2.1))
-    fig.subplots_adjust(left=0.30, right=0.99, bottom=0.23, top=0.88)
+    fig, ax = plt.subplots(figsize=(TW, 2.8))
+    fig.subplots_adjust(left=0.25, right=0.97, bottom=0.23, top=0.78)
     y = np.arange(len(ROWS))[::-1].astype(float)
     ax.axvline(rest, color=REF, lw=0.8, ls=(0, (4, 3)), zorder=0)
-    ax.text(rest*1.15, y.max() + 0.42, 'Remaining fit work on CPU\n(network outputs fixed)',
-            fontsize=7.5, color=REF, va='top', ha='left', linespacing=1.1)
     for yi, (k, lab, col) in zip(y, ROWS):
         ax.plot([ng[k], nc[k]], [yi, yi], color=col, lw=1.0, alpha=0.55, zorder=1)
         ax.plot(ng[k], yi, 'o', ms=5, mfc='white', mec=col, mew=1.2, zorder=3)
         ax.plot(nc[k], yi, 'o', ms=5, color=col, zorder=3)
         for xv in (ng[k], nc[k]):
-            ax.text(xv, yi - 0.2, human(xv), ha='center', va='top', fontsize=7.5)
+            ax.text(xv, yi - 0.2, human(xv), ha='center', va='top', fontsize=10)
     tt = [v for k, _, _ in ROWS for v in (ng[k], nc[k])] + [rest]
     # the published range 2 ms to 8000 s, widened by a factor two beyond any time outside it (round B10)
     ax.set_xscale('log'); ax.set_xlim(min(2e-3, min(tt)/2), max(8e3, 2*max(tt)))
@@ -458,12 +454,13 @@ def cost():
     for s in ('top', 'right', 'left'):
         ax.spines[s].set_visible(False)
     ax.tick_params(which='both', top=False)
-    ax.set_xlabel('Log weights and one gradient evaluation [s]')
+    ax.set_xlabel('Time per point [s]')
     from matplotlib.lines import Line2D
     # Above the axes, clear of the vertical line marking the remaining fit work.
-    ax.legend(handles=[Line2D([0], [0], marker='o', lw=0, ms=5, color=REF, label='one CPU process, 4 threads'),
-                       Line2D([0], [0], marker='o', lw=0, ms=5, mfc='white', mec=REF, mew=1.2, label=f'one {gpu}')],
-              loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=2, fontsize=7.5)
+    fig.legend(handles=[Line2D([0], [0], marker='o', lw=0, ms=5, color=REF, label='CPU (4 threads)'),
+                        Line2D([0], [0], marker='o', lw=0, ms=5, mfc='white', mec=REF, mew=1.2, label=gpu),
+                        Line2D([0], [0], color=REF, lw=0.8, ls=(0, (4, 3)), label='Fit work')],
+               loc='upper center', bbox_to_anchor=(0.53, 0.98), ncol=3, fontsize=10)
     save(fig, 'cost' + ('_lin' if lin else ''))
 
 
@@ -495,9 +492,9 @@ def bands():
     c0, cu, cd = cat('comb_hist_before' + CV), cat('comb_hist_up' + CV), cat('comb_hist_down' + CV)
     st = cat('stat_hist' + CV)
     single = {xi: (vcat(V[f'xi{xi}'], 'h_gen_only' + CV), vcat(V[f'xi{xi}'], 'h_imposed' + CV)) for xi in (0, 1)}
-    fig = plt.figure(figsize=(TW, 5.7))
-    gs = GridSpec(3, 3, figure=fig, height_ratios=[1, 1, 1.05], hspace=0.62, wspace=0.12, left=0.085, right=0.99,
-                  top=0.955, bottom=0.065)
+    fig = plt.figure(figsize=(TW, 7.0))
+    gs = GridSpec(3, 3, figure=fig, height_ratios=[1, 1, 1.05], hspace=0.62, wspace=0.18, left=0.13, right=0.97,
+                  top=0.95, bottom=0.075)
     from matplotlib.patches import Patch
     from matplotlib.lines import Line2D
     # the vertical range holds every curve, band and data point drawn (below the window the ratio to DELPHI
@@ -518,26 +515,21 @@ def bands():
         ax.set_xlim(0, edges[-1]); ax.set_ylim(*YL)
         ax.set_yticks(YT)
         ax.set_ylabel(f'ratio to {TEST}')
-        if row == 0:
-            # 4.5 points above the axis, clear of the inward ticks of 3 points (round B21: the tick at 0.2 cut into it)
-            ax.annotate('window of the calculation', xy=(0.5*(WLO + WHI), 0), xycoords=('data', 'axes fraction'), xytext=(0, 4.5),
-                        textcoords='offset points', ha='center', va='bottom', fontsize=7, color=REF)
         hs = [(Patch(color=col, alpha=al, lw=0), Line2D([], [], color=lc, lw=1.2)),
               Line2D([], [], color=lc, lw=1.0, ls=(0, (4, 2))), Line2D([], [], color=lc, lw=1.2, ls=(0, (1, 1))), eb]
-        ls_ = [r'mixture at $\xi=\frac12$ with its band',
-               'Sherpa alone', 'Herwig alone', TEST]
+        ls_ = ['Mixture', 'Sherpa', 'Herwig', TEST]
         # in two columns at the top of the window, the one region that no curve or band reaches
-        ax.legend(hs, ls_, loc='upper left', fontsize=7, ncol=2, handlelength=1.9,
+        ax.legend(hs, ls_, loc='upper left', fontsize=10, ncol=2, handlelength=1.9,
                   bbox_to_anchor=((0.095 if low else 0.0)/edges[-1], 1.0), columnspacing=1.2, frameon=False)
         title(ax, ttl); trim(ax)
         ax.set_xlabel(r'$\tau=1-T$', labelpad=1.5)
     rel = lambda b, p: 100*b/np.maximum(p, 1e-12)
     axes = [fig.add_subplot(gs[2, i]) for i in range(3)]
     curves = [
-        ('(c) generator band', [(rel(g0, h0), BASE, '-', 'generators alone'), (rel(g1, h1), GEN, '-', 'calculation imposed')]),
-        ('(d) theory band', [(rel(thu, h1), THEORY, '-', 'above the prediction'), (rel(thd, h1), THEORY, (0, (3, 1.5)), 'below the prediction')]),
-        ('(e) learning band', [(rel(le0, h0), BASE, '-', 'generators alone'), (rel(le, h1), LEARN, '-', 'calculation imposed'),
-                               (rel(st, h1), METHOD, (0, (1, 1.2)), 'statistical error')])]
+        ('(c) Generator', [(rel(g0, h0), BASE, '-', 'Before'), (rel(g1, h1), GEN, '-', 'After')]),
+        ('(d) Theory', [(rel(thu, h1), THEORY, '-', 'Upper'), (rel(thd, h1), THEORY, (0, (3, 1.5)), 'Lower')]),
+        ('(e) Learning', [(rel(le0, h0), BASE, '-', 'Before'), (rel(le, h1), LEARN, '-', 'After'),
+                         (rel(st, h1), METHOD, (0, (1, 1.2)), 'Statistical')])]
     # the published range 0.003 to 1000 percent for all three panels, widened only if a band leaves it (round B10)
     PL = widen(3e-3, 1e3, [v for _, cs in curves for v, _, _, _ in cs], log=True)
     DEC = [10.0**k for k in range(-12, 13) if 2*PL[0] <= 10.0**k <= PL[1]/5]      # 0.01 to 100 in the published range
@@ -552,8 +544,8 @@ def bands():
         if j:
             plt.setp(a.get_yticklabels(), visible=False)
         a.set_xlabel(r'$\tau$', labelpad=1.5); title(a, ttl); trim(a)
-        a.legend(loc='upper right' if j == 1 else 'upper left', fontsize=7, ncol=1, handlelength=1.4)
-    axes[0].set_ylabel('percent of prediction', fontsize=8.5)
+        a.legend(loc='upper right' if j == 1 else 'upper left', fontsize=10, ncol=1, handlelength=1.4)
+    axes[0].set_ylabel('percent of prediction', fontsize=10)
     save(fig, 'bands' + ('_lin' if lin else ''))
 
 
@@ -688,13 +680,13 @@ def window_split(return_data=False):
     ax0.legend([(Patch(color=BASE, alpha=0.3, lw=0), Line2D([], [], color=BASE_DARK, lw=1.3)),
                 Line2D([], [], color=BASE_DARK, lw=1.0, ls=(0, (4, 2))), Line2D([], [], color=BASE_DARK, lw=1.2, ls=(0, (1, 1))),
                 Line2D([], [], color=THEORY, lw=0.9)],
-               [r'mixture, generator band', 'Sherpa', 'Herwig', 'calculation'], loc='lower right', fontsize=7, ncol=2,
+               [r'mixture, generator band', 'Sherpa', 'Herwig', 'calculation'], loc='lower right', fontsize=10, ncol=2,
                handlelength=1.9, columnspacing=1.0)
     ax1.legend([(Patch(color=THEORY, alpha=BAND_ALPHA, lw=0), Line2D([], [], color=METHOD, lw=1.3)), Patch(color=GEN, alpha=0.55, lw=0),
                 Line2D([], [], color=BASE, lw=0.8), Line2D([], [], color=METHOD, lw=1.0, ls=(0, (4, 2))),
                 Line2D([], [], color=METHOD, lw=1.2, ls=(0, (1, 1)))],
                ['mixture, theory band', 'generator band', 'generator band of (a)', 'Sherpa', 'Herwig'], loc='lower left',
-               fontsize=7, ncol=2, handlelength=1.9, columnspacing=1.0)
+               fontsize=10, ncol=2, handlelength=1.9, columnspacing=1.0)
     # (c) the fraction of events in the window, one row per prediction
     bx = fig.add_subplot(gs[1, :])
     rows = [('DELPHI', None), ('calculation', None), (r'mixture, $\xi=\frac12$', ('mixA', 'mixI')), ('Sherpa', ('SA', 'SI')), ('Herwig', ('HA', 'HI'))]
@@ -720,7 +712,7 @@ def window_split(return_data=False):
                Line2D([], [], ls='', marker='o', ms=3.6, color=METHOD), Line2D([], [], color=GEN, lw=4.5, alpha=0.45),
                Line2D([], [], color=LEARN, lw=1.6), Line2D([], [], color=THEORY, lw=2.2)],
               ['generators alone', 'calculation imposed', 'generator band', 'learning band', 'theory band'],
-              loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=7, handlelength=1.6, frameon=False)
+              loc='upper left', bbox_to_anchor=(1.0, 1.0), fontsize=10, handlelength=1.6, frameon=False)
     save(fig, 'window' + ('_lin' if lin else ''))
 
 
@@ -765,8 +757,8 @@ def aleph():
     ya, ea = np.array(A['y']), np.hypot(A['stat'], A['sys'])
     ld, hd = np.array(Dl['lo']), np.array(Dl['hi']); cd = np.array(Dl['calc']['central'])
     yd, ed = np.array(Dl['y']), np.hypot(Dl['stat'], Dl['sys'])
-    fig = plt.figure(figsize=(TW, 3.9))
-    gs = GridSpec(2, 1, figure=fig, height_ratios=[1.45, 1], hspace=0.08, left=0.085, right=0.99, top=0.975, bottom=0.1)
+    fig = plt.figure(figsize=(TW, 4.7))
+    gs = GridSpec(2, 1, figure=fig, height_ratios=[1.45, 1], hspace=0.08, left=0.13, right=0.97, top=0.96, bottom=0.12)
     ax, ar = fig.add_subplot(gs[0]), fig.add_subplot(gs[1], sharex=None)
     for a in (ax, ar):
         window(a, WLO, WHI)
@@ -791,11 +783,10 @@ def aleph():
     edge_arrows(ax, cdc[~inwd & (cdc < 0.5)], yd[~inwd & (cdc < 0.5)], *UL, log=True, color=DATA)
     ax.set_ylabel(r'$\frac{1}{\sigma}\frac{d\sigma}{d\tau}$')
     plt.setp(ax.get_xticklabels(), visible=False)
-    ax.text(0.5*(WLO + WHI), 22, 'window of the calculation', ha='center', fontsize=7.5, color=REF)
     ax.legend([(Patch(color=THEORY, alpha=BAND_ALPHA, lw=0), Line2D([], [], color=THEORY, lw=1.3)),
                Line2D([], [], color=THEORY, lw=1.0, ls=(0, (3, 2))), ha, hd_],
-              ['calculation and its theory band', 'calculation outside the window',
-               'ALEPH', 'DELPHI'], loc='lower left', fontsize=7.5, handlelength=2.0)
+              ['NNLL+NLO', 'Outside window',
+               'ALEPH', 'DELPHI'], loc='lower left', fontsize=10, handlelength=2.0)
     trim(ax)
     # ratio panel: data over the calculation, inside the window and up to tau = 0.4
     ar.stairs(np.where(inw, 1 + up/cen, np.nan), edges, baseline=np.where(inw, 1 - dn/cen, np.nan), fill=True, color=THEORY, alpha=BAND_ALPHA, lw=0)
@@ -829,8 +820,8 @@ def aleph():
 def toy():
     z = np.load(os.environ.get('TOY_NPZ', 'output/toy_final_K48_s0.npz'))
     J = json.load(open(os.environ.get('TOY_JSON', 'output/toy_final_K48_s0.json')))
-    fig = plt.figure(figsize=(TW, 3.75))
-    gs = GridSpec(2, 2, figure=fig, hspace=0.55, wspace=0.3, left=0.09, right=0.99, top=0.94, bottom=0.11)
+    fig = plt.figure(figsize=(TW, 4.8))
+    gs = GridSpec(2, 2, figure=fig, hspace=0.55, wspace=0.42, left=0.13, right=0.97, top=0.94, bottom=0.11)
 
     def density(ax, xe, xl, xlab, ylab, slope, corr, ttl):
         lo, hi = np.percentile(np.r_[xe, xl], [0.3, 99.7])
@@ -841,23 +832,23 @@ def toy():
         ax.plot([lo, hi], [lo, hi], color=REF, lw=0.7, ls=(0, (4, 3)), zorder=3)
         ax.set_xlim(lo, hi); ax.set_ylim(lo, hi)
         ax.set_xlabel(xlab); ax.set_ylabel(ylab)
-        ax.text(0.97, 0.06, rf'slope ${slope:.3f}$, correlation ${corr:.4f}$', transform=ax.transAxes, ha='right',
-                fontsize=7.5, color=REF)
+        ax.text(0.97, 0.06, rf'$m={slope:.3f},\ r={corr:.4f}$', transform=ax.transAxes, ha='right',
+                fontsize=10, color=REF)
         title(ax, ttl); trim(ax)
     density(fig.add_subplot(gs[0, 0]), z['f_exact'], z['f_learned'], r'exact $f_{\rm exact}$', r'learned $f$',
-            J['slope'], J['corr'], r'(a) log ratio at $\log s=0.21$')
+            J['slope'], J['corr'], '(a) Log ratio')
     density(fig.add_subplot(gs[0, 1]), z['df_exact'], z['df_learned'], r'exact $\Delta f_{\rm exact}$', r'learned $\Delta f$',
-            J['dslope'], J['dcorr'], r'(b) difference between $\log s=\pm0.21$')
+            J['dslope'], J['dcorr'], '(b) Log-ratio difference')
     s, coef, ex = z['s_grid'], z['coef'], z['coef_exact']
-    for j, (ttl, ylab) in enumerate(((r'(c) constant term', r'coefficient of $1$'),
-                                     (r'(d) term in $\sum_i x_i^2$', r'coefficient of $\sum_i x_i^2$'))):
+    for j, (ttl, ylab) in enumerate(((r'(c) Constant', r'coefficient of $1$'),
+                                     (r'(d) Quadratic term', r'coefficient of $\sum_i x_i^2$'))):
         ax = fig.add_subplot(gs[1, j])
         ax.plot(s, ex[:, j], color=DATA, lw=1.0, label='exact')
         ax.plot(s, coef[:, j], 'o', color=METHOD, ms=3.0, label='learned')
         ax.axhline(0, color=REF, lw=0.5); ax.axvline(0, color=REF, lw=0.5, ls=(0, (1, 2)))
         ax.set_xlabel(r'parameter $\log s$'); ax.set_ylabel(ylab)
         if j == 0:
-            ax.legend(loc='upper right', fontsize=7.5)
+            ax.legend(loc='upper right', fontsize=10)
         title(ax, ttl); trim(ax)
     save(fig, 'toy')
 

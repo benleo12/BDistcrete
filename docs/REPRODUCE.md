@@ -116,6 +116,10 @@ The paper's `figs/r8_<name>.pdf` are copies of `output/figs/r8_<name>_lin.pdf`,
 or of `r8_<name>.pdf` where the figure has no `_lin` version. Figure 7 uses
 `before_after_distributions.pdf`.
 
+Data plots use 10-point axis labels, ticks, panel titles and legend text on
+5.95-inch PDF canvases, included at the full paper text width. Legends use short
+keys; definitions and explanations are given in the captions.
+
 | figure | what it shows | drawn from (`output/`) | inputs made by | drawn by |
 |---|---|---|---|---|
 | 1 | overview of the method | | TikZ in `main.tex` | |
@@ -124,7 +128,7 @@ or of `r8_<name>.pdf` where the figure has no `_lin` version. Figure 7 uses
 | 4 | mean residuals with statistical and statistical-plus-learning denominators, separately for Sherpa and Herwig, using 400,000 events per point | `wifi_coverage_MIXGEOV3S9.json`, `..._MIXGEOV3S9s1.json`, `..._MIXGEOV3S9s2.json` | `symmetry/rerun/wifi_cov_lmx.sbatch` with `TAG` each of the three **(data)** | `figs_r8.py coverage` |
 | 5 | closure against the number of terms per member, using 200,000 comparison events per point | `rank_scan_final.json`, `scan_strict` only | the K-scan scorings of the scoring side, then `symmetry/rerun/collect_lmx.sbatch` (`kscan_collect.py`) **(data)** | `figs_r8.py kscan`, one panel for Stages A to D |
 | 6 | the cost at one parameter point | `bench_final_cpu_4_lin.json`, `bench_final_cuda_12_lin.json` | `symmetry/bench_final_cpu.sbatch` on a whole CPU node and `symmetry/bench_final_gpu.sbatch` on one H200 (`bench_cost_final.py`, `BENCH_MIX=linear`) **(data, GPU)** | `figs_r8.py cost` with `COST_SUFFIX=_lin` |
-| 7 | thrust and charged multiplicity before and after imposing the calculation, with the same generator uncertainty prescription | `envelope_test_MIXGEOV3S9_full_lin.npz`, `envelope_test_MIXGEOV3S9_tune_lin.npz`, `three_bands_MIXGEOV3S9_lin.npz` | existing propagation outputs, no new runs | `plot_before_after_distributions.py`, command below |
+| 7 | thrust and charged multiplicity before and after imposing the calculation, with ratio panels and the same generator uncertainty prescription | `envelope_test_MIXGEOV3S9_full_lin.npz`, `envelope_test_MIXGEOV3S9_tune_lin.npz`, `three_bands_MIXGEOV3S9_lin.npz` | existing propagation outputs, no new runs | `plot_before_after_distributions.py`, command below |
 | 8 | conditional thrust shape, before and after imposing the moments | `three_bands_MIXGEOV3S9_lin.npz`, `theory_variations_MIX_lin.json`, `calc_bins_nlo_point.json` | as Fig. 15, and `calc_bins.py` (`lmx_calc_bins`) | `figs_r8.py window` (`r8_window_shape_lin.pdf`) |
 | 9 | event fraction in the same interval, compared with the calculation and DELPHI | as Fig. 8 | as Fig. 8 | `figs_r8.py window` (`r8_window_fraction_lin.pdf`) |
 | 10 | the toy model (App. B) | `toy_final_K48_s0.npz`, `toy_final_K48_s0.json` | `symmetry/rerun/toy_final_lmx.sbatch` (`toy_final.py`, which generates its own events), nine trainings on one H200 **(GPU)** | `figs_r8.py toy` |
@@ -168,12 +172,15 @@ python plot_before_after_distributions.py \
   --record output/figs/before_after_distributions.json
 ```
 
-Both rows use the generator standard deviation from the same 2000 `Y_theta`
+Both before/after groups use the generator standard deviation from the same 2000 `Y_theta`
 variations in the full-range file. The `tune` archive supplies only the
 already-evaluated nominal predictions at the default settings, which the
 script checks against `three_bands`; its narrower parameter ranges are not
 used for these bands. The script also checks the thrust generator bands
 against the published arrays and writes its checks beside the figure.
+Each ratio panel divides the displayed nominal curve and its plus/minus-SD band
+by the fixed nominal prediction before imposing the calculation. These are the
+same uncertainties in relative units, not a separately propagated random ratio.
 No event generation, training or new moment fit is needed.
 
 The archived `fig_closure_mix.npz` was made by

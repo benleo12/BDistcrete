@@ -151,20 +151,23 @@ def draw_window(data=None):
     rows = [("Sherpa", "SA", "SI"), ("Herwig", "HA", "HI"),
             ("Mixture", "mixA", "mixI")]
     fig, ax = plt.subplots(figsize=(F.TW, 2.65))
-    fig.subplots_adjust(left=.19, right=.985, bottom=.30, top=.96)
+    fig.subplots_adjust(left=.19, right=.96, bottom=.30, top=.96)
     y = np.arange(5)[::-1]
     ax.axvspan(d["data_fraction"]-d["data_error"], d["data_fraction"]+d["data_error"],
                color=F.BASE, alpha=.12, lw=0, zorder=0)
     ax.axvline(d["data_fraction"], color=F.REF, lw=.7, ls=(0, (3, 3)), zorder=1)
+    bands = {"SI": d["fraction_generator_bands"]["sherpa"],
+             "HI": d["fraction_generator_bands"]["herwig"],
+             "mixI": {"generator_sd": d["fraction_generator"], "learning_sd": d["fraction_learning"]}}
     for (label, key0, key1), yi in zip(rows, y[:3]):
+        center, band = fractions[key1], bands[key1]
+        ax.plot([center-band["generator_sd"], center+band["generator_sd"]],
+                [yi-.11, yi-.11], color=F.GEN, alpha=.27, lw=7, solid_capstyle="butt", zorder=2)
+        ax.plot([center-band["learning_sd"], center+band["learning_sd"]],
+                [yi-.11, yi-.11], color=F.LEARN, lw=2.2, solid_capstyle="butt", zorder=4)
         ax.plot([fractions[key0], fractions[key1]], [yi+.11, yi-.11], color=F.BASE, lw=.65, zorder=2)
         ax.plot(fractions[key0], yi+.11, "o", ms=4, mfc="white", mec=F.BASE_DARK, mew=.9, zorder=5)
         ax.plot(fractions[key1], yi-.11, "o", ms=4, color=F.METHOD, zorder=6)
-    fy = y[2]-.11
-    ax.plot([fractions["mixI"]-d["fraction_generator"], fractions["mixI"]+d["fraction_generator"]],
-            [fy, fy], color=F.GEN, alpha=.27, lw=7, solid_capstyle="butt", zorder=2)
-    ax.plot([fractions["mixI"]-d["fraction_learning"], fractions["mixI"]+d["fraction_learning"]],
-            [fy, fy], color=F.LEARN, lw=2.2, solid_capstyle="butt", zorder=4)
     ax.errorbar(fractions["calc"], y[3],
                 xerr=[[d["fraction_theory_down"]], [d["fraction_theory_up"]]],
                 fmt="s", ms=4, color=F.THEORY, lw=1.6, capsize=2, zorder=5)
@@ -174,11 +177,14 @@ def draw_window(data=None):
     ax.tick_params(axis="y", length=0)
     ax.set_ylim(-.5, 4.5)
     endpoints = [fractions[k] for k in fractions]
-    endpoints.extend([fractions["mixI"]-d["fraction_generator"], fractions["mixI"]+d["fraction_generator"],
-                      fractions["calc"]-d["fraction_theory_down"], fractions["calc"]+d["fraction_theory_up"],
+    for key, band in bands.items():
+        for component in ("generator_sd", "learning_sd"):
+            endpoints.extend([fractions[key]-band[component], fractions[key]+band[component]])
+    endpoints.extend([fractions["calc"]-d["fraction_theory_down"], fractions["calc"]+d["fraction_theory_up"],
                       d["data_fraction"]-d["data_error"], d["data_fraction"]+d["data_error"]])
     span = max(endpoints)-min(endpoints)
     ax.set_xlim(min(endpoints)-.055*span, max(endpoints)+.055*span)
+    ax.set_xticks(np.arange(np.ceil(ax.get_xlim()[0]/.02)*.02, ax.get_xlim()[1]+1e-12, .02))
     ax.set_xlabel(r"$P(0.05\leq\tau<0.30)$")
     ax.xaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
     ax.spines["left"].set_visible(False); F.trim(ax)
@@ -192,10 +198,12 @@ def draw_window(data=None):
         "interval": [.05, .30], "final_state": "Converted to the DELPHI definition.",
         "nominal_predictions": fractions, "generator_sd_of_mixture": d["fraction_generator"],
         "learning_sd_of_mixture": d["fraction_learning"],
+        "individual_generator_bands": d["fraction_generator_bands"],
+        "learning_covariance_method": d["fraction_learning_method"],
         "theory_up_of_calculation": d["fraction_theory_up"], "theory_down_of_calculation": d["fraction_theory_down"],
         "data_fraction": d["data_fraction"], "data_uncertainty": d["data_error"],
         "data_error_model": d["data_error_model"],
-        "individual_generator_markers": "Nominal predictions, without their parameter-variation bands."})
+        "individual_generator_markers": "Nominal predictions, with post-imposition generator and learning bands."})
 
 
 def draw_budget():

@@ -130,7 +130,7 @@ keys; definitions and explanations are given in the captions.
 | 6 | the cost at one parameter point | `bench_final_cpu_4_lin.json`, `bench_final_cuda_12_lin.json` | `symmetry/bench_final_cpu.sbatch` on a whole CPU node and `symmetry/bench_final_gpu.sbatch` on one H200 (`bench_cost_final.py`, `BENCH_MIX=linear`) **(data, GPU)** | `figs_r8.py cost` with `COST_SUFFIX=_lin` |
 | 7 | thrust and charged multiplicity before and after imposing the calculation, with ratio panels and the same generator uncertainty prescription | `envelope_test_MIXGEOV3S9_full_lin.npz`, `envelope_test_MIXGEOV3S9_tune_lin.npz`, `three_bands_MIXGEOV3S9_lin.npz` | existing propagation outputs, no new runs | `plot_before_after_distributions.py`, command below |
 | 8 | conditional thrust shape, before and after imposing the moments | `three_bands_MIXGEOV3S9_lin.npz`, `theory_variations_MIX_lin.json`, `calc_bins_nlo_point.json` | as Fig. 15, and `calc_bins.py` (`lmx_calc_bins`) | `figs_r8.py window` (`r8_window_shape_lin.pdf`) |
-| 9 | event fraction in the same interval, compared with the calculation and DELPHI | as Fig. 8 | as Fig. 8 | `figs_r8.py window` (`r8_window_fraction_lin.pdf`) |
+| 9 | event fraction in the same interval, with generator and learning intervals for Sherpa, Herwig and their mixture | as Fig. 8, plus `envelope_test_MIXGEOV3S9_{full,tune}_{sherpa,herwig}_lin.npz` and `wifi_MIXGEOV3S9_fit.npz` | existing pure-generator propagation and fitted coefficient covariance, no new runs | `figs_r8.py window` (`r8_window_fraction_lin.pdf`) |
 | 10 | the toy model (App. B) | `toy_final_K48_s0.npz`, `toy_final_K48_s0.json` | `symmetry/rerun/toy_final_lmx.sbatch` (`toy_final.py`, which generates its own events), nine trainings on one H200 **(GPU)** | `figs_r8.py toy` |
 | 11 | the calculation against ALEPH and DELPHI (App. D) | `calc_bins_nlo_point.json` | `calc_bins.py` (`lmx_calc_bins`) | `figs_r8.py aleph` |
 | 12 | thrust and charged multiplicity over 2000 variations, compared with linear propagation (App. F) | `envelope_test_MIXGEOV3S9_tune_lin.npz`, `envelope_test_MIXGEOV3S9_full_lin.npz` | `symmetry/envelope_test.sbatch`, as in "The comparison with 2000 variations" below **(data)** | `plot_envelope.py output/envelope_test_MIXGEOV3S9` with `SUFFIX=_lin` |
@@ -160,6 +160,18 @@ The DELPHI event-fraction error uses the statistical and systematic components
 cached in `calc_bins_nlo_point.json`: statistics in quadrature, systematics fully
 correlated. This avoids dependence on a local YAML reader or a fallback to total
 bin errors. The plot JSON records the error prescription and plotted values.
+
+Figure 9 integrates the twelve complete bins in `0.05 <= tau < 0.30`; the
+separately cached `P_win` extends to `1/3` and is not used here. For each pure
+generator, the generator interval is the sample standard deviation over its
+2000 full-range parameter draws. The learning interval contracts the full
+bin covariance with the bin widths and that generator's fixed DELPHI conversion
+factors. The mixture retains the shared coefficient covariance between generators
+and the analytic average over uniform `xi`. Applying the conversion factors to
+each bin before integration replaces the previous nominal-ratio approximation
+for the mixture learning interval, reducing its width by 0.071%; all nominal
+predictions, the mixture generator interval and the calculated and data fractions
+are unchanged. The figure JSON records the inputs, covariance and previous width.
 
 For Figure 7, run from `analysis/`:
 

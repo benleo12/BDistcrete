@@ -551,31 +551,25 @@ def bands():
 
 # ---- Fig. window: the shape inside the window and the fraction of events there --------------------
 def window_split(return_data=False):
-    r"""Prepare the separate shape and fraction figures, and retain the legacy combined plot.
-    Every bin wholly inside the window is the fraction of
-    events there times the shape there. (a) and (b) the shape, the twelve bins from 0.05 to 0.30 normalized over
-    them, as a ratio to the calculation normalized the same way, on our definition of the final state, where the
-    calculation is imposed: (a) the generators alone, the mixture with its generator band and each generator at its
-    default tune; (b) with the calculation imposed, the mixture with its theory band and its generator band, and, as
-    thin gray lines around it, the generator band of (a) for comparison. (c) the fraction of all events from 0.05 to
-    0.30 at the hadron level of DELPHI, for the generators alone (open) and with the calculation imposed (filled),
-    the mixture with its generator band and learning band, the calculation normalized over all tau with its theory
-    band, and DELPHI.
-    The ratio in (a) and (b) is to the calculation rather than to DELPHI because the calculation is what is imposed,
-    on our final state; the shape against the data is Fig. aleph. Every value reproduces a macro of make_numbers.py:
-    the imposed shape against the calculation (\TbShapeVsCalcMax), Sherpa's and Herwig's imposed shapes apart
-    (\TbShapeApartWin, there in percent of DELPHI's shape), the generator bands of the shape (\TbShapeGen*WinM*),
-    its theory band (Eq. (thband) on the normalized mixture averaged over xi, as make_numbers.py does), the fractions
-    against DELPHI (\TbWinFracBelow*, \TbWinFracCalcApart), the generator band of the fraction (its spread over the
-    \TbNodes draws, H_after_conv; \TbPwinGenAfterPercent for P_win) and its learning band (\TbPwinLearnPercent, the
-    same in percent). DELPHI's error on the fraction adds the statistical errors of the twelve bins in quadrature and
-    takes the systematic error as fully correlated between them (lepcov/lepdata_cov.py, model corr), the larger of
-    the two simple models; without the HEPData split it falls back to the total errors fully correlated."""
-    fn, fv = (os.environ.get(k, d) for k, d in (('BANDS_NPZ', 'output/three_bands_MIXGEOV3S9.npz'),
-                                                ('VARS_JSON', 'output/theory_variations_MIX.json')))
+    r"""Prepare shape and event-fraction figures for the published linear mixture.
+
+    The shape uses the twelve complete bins from 0.05 to 0.30, normalized
+    inside that interval, on the final-state definition where the calculation
+    is imposed. Fractions are integrated after the fixed DELPHI conversion.
+    All three generator rows have post-imposition generator and learning
+    intervals. The former use parameter draws; the latter contract the full
+    covariance after applying each generator's binwise conversion factors,
+    retaining their shared coefficient covariance and averaging over uniform xi.
+    The plot JSON records inputs and values; the old combined plot is also kept.
+    DELPHI statistics add in quadrature and systematics are fully correlated.
+    """
+    fn, fv = (os.environ.get(k, d) for k, d in (('BANDS_NPZ', 'output/three_bands_MIXGEOV3S9_lin.npz'),
+                                                ('VARS_JSON', 'output/theory_variations_MIX_lin.json')))
     fc = os.environ.get('CALC_BINS', 'output/calc_bins_nlo_point.json')
     z, V, CB = np.load(fn), json.load(open(fv)), json.load(open(fc))
     lin = linear_inputs((fn, z), (fv, V))
+    if not lin:
+        raise ValueError('The window figures require the published linear-mixture inputs and pure-generator covariance caches.')
     lo, hi = z['lo'], z['hi']; wd = hi - lo; w12 = (lo >= 0.05 - 1e-9) & (hi <= 1/3 + 1e-9)
     nrm = lambda h: np.asarray(h, float)[..., w12]/np.sum(np.asarray(h, float)[..., w12]*wd[w12], axis=-1, keepdims=True)
     cb = CB['delphi']; off = len(cb['lo']) - len(lo)                   # the calculation also has the bins below 0.05
@@ -611,6 +605,77 @@ def window_split(return_data=False):
     cvl = [str(l) for l in z['cov_labels']]; ix = [cvl.index(f'thr_{a:.3f}_{b:.3f}') for a, b in zip(lo[w12], hi[w12])]
     gv = np.zeros(len(cvl)); gv[ix] = wd[w12]
     f_learn = float(np.sqrt(gv @ z['C_learn'] @ gv))/fr(z['h_central'])*F['mixI']       # in percent as on our final state
+    # Pure-generator fractions use the same twelve complete bins, not the separately
+    # cached P_win observable, whose interval extends to 1/3. Apply each generator's
+    # fixed DELPHI factors before integrating draws or propagating the bin covariance.
+    assert int(w12.sum()) == 12 and np.isclose(hi[w12][-1], .30)
+    fraction_bands = {}
+    source_stem = os.path.splitext(os.path.basename(fn))[0].replace('three_bands_', '', 1)
+    source_tag = source_stem[:-4] if lin and source_stem.endswith('_lin') else source_stem
+    source_suffix = '_lin' if lin else ''
+    wifi_path = os.environ.get('FRACTION_WIFI', os.path.join(os.path.dirname(fn), f'wifi_{source_tag}_fit.npz'))
+    with np.load(wifi_path) as wifi:
+        coefficient_covariance = wifi['C'].copy()
+    learning_slopes, raw_learning_slopes, learning_weights = [], [], []
+    for generator, xg, short, own, nominal_key in (
+            ('sherpa', 0, 'S', slice(0, 8), 'SI'),
+            ('herwig', 1, 'H', slice(8, 16), 'HI')):
+        paths = {kind: os.environ.get(f'FRACTION_{generator.upper()}_{kind.upper()}',
+                    os.path.join(os.path.dirname(fn),
+                                 f'envelope_test_{source_tag}_{box}_{generator}{source_suffix}.npz'))
+                 for kind, box in (('variations', 'full'), ('learning', 'tune'))}
+        draws, learning = (np.load(paths[k]) for k in ('variations', 'learning'))
+        assert str(draws['mix']) == str(learning['mix']) == 'linear'
+        labels = [str(l) for l in draws['labels']]
+        assert labels == [str(l) for l in learning['labels']]
+        columns = len(labels) + np.array([labels.index(f'thr_{a:.3f}_{b:.3f}')
+                                         for a, b in zip(lo[w12], hi[w12])])
+        assert len(draws['Y_theta']) == len(z['H_after_conv']) == 2000
+        assert np.allclose(draws['lo'][own], z['box_lo'][own], rtol=0, atol=1e-12)
+        assert np.allclose(draws['hi'][own], z['box_hi'][own], rtol=0, atol=1e-12)
+        assert draws['lo'][-1] == draws['hi'][-1] == xg
+        assert learning['lo'][-1] == learning['hi'][-1] == xg
+        assert np.allclose(learning['centre'][own], np.asarray(V['central'])[own], rtol=0, atol=1e-12)
+        pure = V[f'xi{xg}']
+        raw = np.asarray(pure['h_imposed'], float)
+        assert np.all(raw > 0)
+        factors = np.asarray(pure['h_imposed_conv'], float)/raw
+        assert np.allclose(factors*np.asarray(pure['h_gen_only']), pure['h_gen_only_conv'], rtol=1e-12, atol=1e-14)
+        weights = wd[w12]*factors[w12]
+        assert np.allclose(learning['y_central'][columns], raw[w12], rtol=2e-8, atol=1e-12)
+        integrated = draws['Y_theta'][:, columns] @ weights
+        generator_sd = float(integrated.std(ddof=1))
+        covariance = learning['C_learn'][np.ix_(columns, columns)]
+        jacobian = learning[f'J_omega_{short}'][columns]
+        assert np.allclose(covariance, jacobian @ coefficient_covariance @ jacobian.T, rtol=1e-9, atol=1e-15)
+        learning_sd = float(np.sqrt(weights @ covariance @ weights))
+        learning_slopes.append(weights @ jacobian)
+        raw_learning_slopes.append(wd[w12] @ jacobian)
+        learning_weights.append(learning['w_at'].copy())
+        fraction_bands[generator] = dict(
+            nominal=F[nominal_key], generator_sd=generator_sd, learning_sd=learning_sd,
+            number_of_generator_variations=len(integrated), source_files=paths,
+            prior_lo=draws['lo'][own].tolist(), prior_hi=draws['hi'][own].tolist(),
+            conversion_factors=factors[w12].tolist(), learning_parameters=learning['centre'].tolist(),
+            generator_definition='SD of the converted integrated fraction over the own-parameter prior.',
+            learning_definition='Full bin covariance at the default parameters, contracted with bin widths times DELPHI factors.')
+        draws.close(); learning.close()
+    assert np.allclose(learning_weights[0], learning_weights[1], rtol=0, atol=1e-14)
+    xi_second_moments = z['xi_E']
+    assert np.allclose(xi_second_moments, [[1/3, 1/6], [1/6, 1/3]], rtol=0, atol=1e-14)
+    mixed_learning_variance = lambda slopes: float(sum(
+        xi_second_moments[a, b]*(slopes[a] @ coefficient_covariance @ slopes[b])
+        for a in range(2) for b in range(2)))
+    assert np.isclose(mixed_learning_variance(raw_learning_slopes), gv @ z['C_learn'] @ gv, rtol=2e-8, atol=1e-16)
+    previous_f_learn = f_learn
+    f_learn = float(np.sqrt(mixed_learning_variance(learning_slopes)))
+    fraction_learning_method = dict(
+        definition='Each generator bin slope is multiplied by its own DELPHI factor before integrating. The shared coefficient covariance is averaged analytically over uniform xi.',
+        coefficient_covariance_file=wifi_path, xi_second_moments=xi_second_moments.tolist(),
+        generator_slopes={g: slope.tolist() for g, slope in zip(('sherpa', 'herwig'), learning_slopes)},
+        generator_covariance=[[float(a @ coefficient_covariance @ b) for b in learning_slopes] for a in learning_slopes],
+        previous_nominal_ratio_rescaling_sd=previous_f_learn,
+        change_in_sd=f_learn-previous_f_learn, relative_change_in_sd=f_learn/previous_f_learn-1)
     dc = {k: fr(v) - F['calc'] for k, v in calc.items() if k != 'central'}
     c_up, c_dn = float(thb(dc, True)), float(thb(dc, False))
     try:
@@ -641,6 +706,8 @@ def window_split(return_data=False):
                 generator_before=gb0, generator_after=gb1,
                 theory_up=th_up, theory_down=th_dn, fractions=F,
                 fraction_generator=f_gen, fraction_learning=f_learn,
+                fraction_generator_bands=fraction_bands,
+                fraction_learning_method=fraction_learning_method,
                 fraction_theory_up=c_up, fraction_theory_down=c_dn,
                 data_fraction=fD, data_error=f_err, data_error_model=how)
     if return_data:

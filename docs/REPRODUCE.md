@@ -108,110 +108,85 @@ and command remain available below.
 
 ## Figures
 
-Figure numbers below follow the November 14 manuscript. The existing propagation
-plots (Figs. 8, 9 and 11 to 16) come from `lmx_figs_prop`, the scoring plots
-(Figs. 3 to 5 and 10) from `lmx_figs_score`, and Fig. 6 from `lmx_figs_cost`.
-Figure 7 is drawn directly from those existing outputs with the command below.
-The paper's `figs/r8_<name>.pdf` are copies of `output/figs/r8_<name>_lin.pdf`,
-or of `r8_<name>.pdf` where the figure has no `_lin` version. Figure 7 uses
-`before_after_distributions.pdf`.
+The current paper uses **rate-and-shape matching** for the QCD application.
+Its outputs are in `analysis/output/rate_shape/`; the earlier shape-only
+outputs are retained as archives and are not the current post-matching figures.
+The reference events, classifiers, parameter priors and input QCD calculation
+are unchanged. The calculation has been reevaluated on the same 2000 parameter
+points, with the full statistical and learning response of the rate correction.
 
-Data plots use 10-point axis labels, ticks, panel titles and legend text on
-5.95-inch PDF canvases, included at the full paper text width. Legends use short
-keys; definitions and explanations are given in the captions.
+Data plots use 10-point labels, ticks, panel titles and legends on 5.95-inch
+canvases, included at full paper width. Explanations are in captions.
 
-| figure | what it shows | drawn from (`output/`) | inputs made by | drawn by |
-|---|---|---|---|---|
-| 1 | overview of the method | | TikZ in `main.tex` | |
-| 2 | the factorized network | | TikZ in `main.tex` | |
-| 3 | Stage C across its box, with 40,000 comparison events per point | `valid_map_C_P2augfullfac0_report.json`, `xp_null.json` | `symmetry/rerun/stagec_lmx.sbatch` (`eval_valid.py`, `xp_null.py`) **(data)** | `figs_r8.py map`, which reads the `mean` of `xp_null.json` for the dotted tick |
-| 4 | mean residuals with statistical and statistical-plus-learning denominators, separately for Sherpa and Herwig, using 400,000 events per point | `wifi_coverage_MIXGEOV3S9.json`, `..._MIXGEOV3S9s1.json`, `..._MIXGEOV3S9s2.json` | `symmetry/rerun/wifi_cov_lmx.sbatch` with `TAG` each of the three **(data)** | `figs_r8.py coverage` |
-| 5 | closure against the number of terms per member, using 200,000 comparison events per point | `rank_scan_final.json`, `scan_strict` only | the K-scan scorings of the scoring side, then `symmetry/rerun/collect_lmx.sbatch` (`kscan_collect.py`) **(data)** | `figs_r8.py kscan`, one panel for Stages A to D |
-| 6 | the cost at one parameter point | `bench_final_cpu_4_lin.json`, `bench_final_cuda_12_lin.json` | `symmetry/bench_final_cpu.sbatch` on a whole CPU node and `symmetry/bench_final_gpu.sbatch` on one H200 (`bench_cost_final.py`, `BENCH_MIX=linear`) **(data, GPU)** | `figs_r8.py cost` with `COST_SUFFIX=_lin` |
-| 7 | thrust and charged multiplicity before and after imposing the calculation, with ratio panels and the same generator uncertainty prescription | `envelope_test_MIXGEOV3S9_full_lin.npz`, `envelope_test_MIXGEOV3S9_tune_lin.npz`, `three_bands_MIXGEOV3S9_lin.npz` | existing propagation outputs, no new runs | `plot_before_after_distributions.py`, command below |
-| 8 | conditional thrust shape, before and after imposing the moments | `three_bands_MIXGEOV3S9_lin.npz`, `theory_variations_MIX_lin.json`, `calc_bins_nlo_point.json` | as Fig. 15, and `calc_bins.py` (`lmx_calc_bins`) | `figs_r8.py window` (`r8_window_shape_lin.pdf`) |
-| 9 | event fraction in the same interval, with generator, theory and learning intervals for Sherpa, Herwig and their mixture | as Fig. 8, plus `envelope_test_MIXGEOV3S9_{full,tune}_{sherpa,herwig}_lin.npz` and `wifi_MIXGEOV3S9_fit.npz` | existing pure-generator propagation, signed theory variations and fitted coefficient covariance, no new runs | `figs_r8.py window` (`r8_window_fraction_lin.pdf`) |
-| 10 | the toy model (App. B) | `toy_final_K48_s0.npz`, `toy_final_K48_s0.json` | `symmetry/rerun/toy_final_lmx.sbatch` (`toy_final.py`, which generates its own events), nine trainings on one H200 **(GPU)** | `figs_r8.py toy` |
-| 11 | the calculation against ALEPH and DELPHI (App. D) | `calc_bins_nlo_point.json` | `calc_bins.py` (`lmx_calc_bins`) | `figs_r8.py aleph` |
-| 12 | thrust and charged multiplicity over 2000 variations, compared with linear propagation (App. F) | `envelope_test_MIXGEOV3S9_tune_lin.npz`, `envelope_test_MIXGEOV3S9_full_lin.npz` | `symmetry/envelope_test.sbatch`, as in "The comparison with 2000 variations" below **(data)** | `plot_envelope.py output/envelope_test_MIXGEOV3S9` with `SUFFIX=_lin` |
-| 13 | bin correlations compared with linear propagation (App. F) | as Fig. 12 | as Fig. 12 | as Fig. 12 |
-| 14 | thrust propagation with the calculation imposed (App. F) | as Fig. 12 | as Fig. 12 | as Fig. 12 |
-| 15 | full-range DELPHI comparison and uncertainty components (App. F) | `three_bands_MIXGEOV3S9_lin.npz`, `three_bands_MIXGEOV3S9_lin.json`, `theory_variations_MIX_lin.json` | `symmetry/three_bands.sbatch` with `TAG=MIXGEOV3S9 BOX=full`, and `symmetry/theory_variations.sbatch` **(data)** | `figs_r8.py bands` |
-| 16 | uncertainty components of the seven integrated quantities (App. F.4) | `three_bands_MIXGEOV3S9_lin.json` | as Fig. 15 | `figs_r8.py obs` |
+| Figure | Content | Inputs and command |
+|---:|---|---|
+| 1 | overview | TikZ in `main.tex` |
+| 2 | factorized network | TikZ in `main.tex` |
+| 3 | Stage C closure map | `figs_r8.py map`, `valid_map_C_P2augfullfac0_report.json`, `xp_null.json` |
+| 4 | learning residuals, split by generator | `figs_r8.py coverage`, the three `wifi_coverage_MIXGEOV3S9*.json` files |
+| 5 | rank scan at 200,000 comparison events | `figs_r8.py kscan`, `rank_scan_final.json`, `scan_strict` |
+| 6 | computational cost | `figs_r8.py cost`, the CPU/GPU `_lin` benchmark files |
+| 7 | thrust and multiplicity, before and after QCD matching | `rate_matching_paper.py`, `rate_matching_outputs.py`, then `plot_before_after_distributions.py` below |
+| 8 | absolute thrust-bin rates against DELPHI in the window | `rate_matching_outputs.py`, `output/rate_shape/rate_shape.npz` |
+| 9 | Gaussian toy | `figs_r8.py toy`, `toy_final_K48_s0.npz/json` |
+| 10 | calculation against ALEPH and DELPHI | `figs_r8.py aleph`, `calc_bins_nlo_point.json` |
+| 11 | propagation before imposing QCD | `plot_envelope.py`, original full/tune `envelope_test_MIXGEOV3S9_*_lin.npz` |
+| 12 | correlations before imposing QCD | same inputs and command as Figure 11 |
+| 13 | full-range thrust and uncertainty components | `rate_matching_outputs.py`, rate-matched `three_bands_MIXGEOV3S9_lin.npz/json` and `theory_variations_MIX_lin.json` |
+| 14 | integrated uncertainty budget | `rate_matching_outputs.py`, rate-matched `three_bands_MIXGEOV3S9_lin.json` |
 
-The November 13 and 14 presentation changes use the existing result files. The helpers in
-`polish_paper_figures.py` separate the learning checks by generator, split the shape
-and event-fraction comparisons, and draw the full uncertainty budget with every
-positive component visible. No network, event sample or fitted moment is changed.
-To reproduce these plots from `analysis/`:
+The standalone event-fraction figure and the old shape-only post-matching
+Gaussian-propagation figure are retired. Neither is an active manuscript input.
+
+From `analysis/`, the current calculation is:
 
 ```bash
-R8_OUT=output/figs \
-BANDS_NPZ=output/three_bands_MIXGEOV3S9_lin.npz \
-BANDS_JSON=output/three_bands_MIXGEOV3S9_lin.json \
-VARS_JSON=output/theory_variations_MIX_lin.json \
-CALC_BINS=output/calc_bins_nlo_point.json \
-python figs_r8.py coverage kscan window obs
-```
+# The release target file includes the central rate and every paired rate variation.
+# The original target file remains available for the conditional shape fit alone.
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 \
+python rate_matching_paper.py --workers 4
 
-The `window` command also retains the old combined `r8_window_lin.pdf` for
-compatibility. The two new figures state their distinct particle definitions.
-The DELPHI event-fraction error uses the statistical and systematic components
-cached in `calc_bins_nlo_point.json`: statistics in quadrature, systematics fully
-correlated. This avoids dependence on a local YAML reader or a fallback to total
-bin errors. The plot JSON records the error prescription and plotted values.
+python rate_matching_outputs.py \
+  --figures output/figs \
+  --numbers /path/to/paper/rate_numbers.tex
 
-Figure 9 integrates the twelve complete bins in `0.05 <= tau < 0.30`; the
-separately cached `P_win` extends to `1/3` and is not used here. For each pure
-generator, the generator interval is the sample standard deviation over its
-2000 full-range parameter draws. The learning interval contracts the full
-bin covariance with the bin widths and that generator's fixed DELPHI conversion
-factors. The mixture retains the shared coefficient covariance between generators
-and the analytic average over uniform `xi`. Applying the conversion factors to
-each bin before integration replaces the previous nominal-ratio approximation
-for the mixture learning interval, reducing its width by 0.071%; all nominal
-predictions, the mixture generator interval and the calculated and data fractions
-are unchanged. The figure JSON records the inputs, covariance and previous width.
-
-The theory intervals on the three generator rows propagate variations of the
-imposed conditional moments. Integrate each cached signed histogram displacement
-with its generator's binwise DELPHI factors before applying Eq. (thband); do not
-add the individual bin errors. The mixture averages the signed variances over
-uniform `xi`, integrated exactly between sign changes and scale-pair crossings.
-Its induced theory interval is +0.11795/-0.02888 percentage points. These intervals
-are distinct from the much larger theory interval of the **Calculation alone**
-row, which varies the fraction from the independently normalized calculated
-spectrum. That fraction is not imposed on the events. The plot now shows only
-the reweighted generator points, with all three components on the same baseline;
-the artificial vertical offsets and before markers are removed.
-
-For Figure 7, run from `analysis/`:
-
-```bash
 python plot_before_after_distributions.py \
-  --variations output/envelope_test_MIXGEOV3S9_full_lin.npz \
-  --nominal output/envelope_test_MIXGEOV3S9_tune_lin.npz \
-  --published-check output/three_bands_MIXGEOV3S9_lin.npz \
+  --variations output/rate_shape/distribution_variations.npz \
+  --nominal output/rate_shape/distribution_nominal.npz \
+  --published-check output/rate_shape/three_bands_MIXGEOV3S9_lin.npz \
   --output output/figs/before_after_distributions.pdf \
-  --record output/figs/before_after_distributions.json
+  --record output/rate_shape/before_after_distributions.json
+
+python check_rate_matching.py --output output/rate_shape/independent_checks.json
 ```
 
-Both before/after groups use the generator standard deviation from the same 2000 `Y_theta`
-variations in the full-range file. The `tune` archive supplies only the
-already-evaluated nominal predictions at the default settings, which the
-script checks against `three_bands`; its narrower parameter ranges are not
-used for these bands. The script also checks the thrust generator bands
-against the published arrays and writes its checks beside the figure.
-Each ratio panel divides the displayed nominal curve and its plus/minus-SD band
-by the fixed nominal prediction before imposing the calculation. These are the
-same uncertainties in relative units, not a separately propagated random ratio.
-No event generation, training or new moment fit is needed.
+The generator evaluations checkpoint into `output/rate_shape/generator_draws.npz`.
+Rerunning resumes unfinished points. A `--limit` run is explicitly incomplete
+and cannot produce the final paper results. The same reference weights are
+recomputed; no training or generator events are required.
 
-The archived `fig_closure_mix.npz` was made by
-`symmetry/rerun/closure_mix_lmx.sbatch` (`lmx_closmix`, **data**) at the point of
-median 40,000-event closure width for each generator. `figs_r8.py closure_mix`
-still draws it as `r8_closure_mix.pdf`, but it is neither a paper figure nor part
-of the default `figs_r8.py` command list.
+`rate_matching_targets.py --output <trial.json>` independently reconstructs
+both conditional moments and window rates from the local ARES/EERAD cumulants.
+The central and perturbative rates match the original target cache, and its
+nonperturbative rates fill the previously unstored part. The released
+`targets_thrust_rate_shape.npz` stores these paired inputs. Its `rate` field
+activates the sequential correction in `gentune.maxent.Targets.impose`.
+
+The full constraint window is `0.05 <= tau < 1/3` on the common generator
+final state. The displayed DELPHI comparison ends at 0.30 and applies each
+generator's fixed final-state factors after matching. Its integrated fraction
+therefore need not equal the raw full-window target. Rates and conditional
+moments use the **same theory variation**; their errors are not added as
+independent sources. The reference-sample statistical response includes the
+initial-window-probability factor in the shape penalty, as well as the final
+rate normalization. The full-window fraction has exactly zero generator,
+learning and reference-sample components at fixed theory input. The integrated
+budget displays zero explicitly with a linear segment at the origin.
+
+`numbers.tex` retains the validation and pre-matching numbers. The current
+QCD-application numbers are generated in `rate_numbers.tex` by the output
+builder, rather than copied from the archived shape-only macros. The calculation
+itself remains NNLL+NLO; this update changes which of its information is imposed.
 
 ## Tables
 
@@ -230,8 +205,11 @@ without the former example in Table 1's caption.
 
 ## Quoted numbers
 
-Every quoted number of the paper is a macro of `numbers.tex`, which `phase2tools/make_numbers.py`
-writes from the result files of the run:
+The current rate-and-shape application uses `rate_numbers.tex`, generated by
+`analysis/rate_matching_outputs.py` from `output/rate_shape/rate_shape.npz`.
+These `\Rate*` macros supersede the old post-imposition `\Tb*` macros.
+The validation and pre-imposition numbers remain in `numbers.tex`, which
+`phase2tools/make_numbers.py` writes from the original run:
 
 ```bash
 SUFFIX=_lin INDIR=$RUN/output OUTDIR=$RUN/output/numbers python -B -u phase2tools/make_numbers.py
@@ -263,9 +241,10 @@ into `output/published_copies`, and any macro of its list that it did not write.
 | `\TruncMaxPercent` | App. A.2 | `truncation_fraction.json`, counted on the shapes files of the published run, which count every particle as the network input does | `symmetry/rerun/trunc_lmx.sbatch` **(data)** |
 | `\PfnParams*`, `\PfnAuc*` | archived implementation comparison, no longer quoted | `crosscheck_seeds_summary.json`: network parameter counts and AUCs | `symmetry/pfn_lmx.sbatch` (`lmx_pfn`) **(data)** |
 | `\Cost*` | Secs. 1, 3.6, 4.2 and 6, Fig. 6 | `bench_final_cpu_4_lin.json`, `bench_final_cuda_12_lin.json` | as Fig. 6. `\Cost{Fac,Late,Cat}{Cpu,Gpu}` time both generators' log-ratio outputs and a backward pass with supplied output derivatives. `\CostW*` time those outputs alone, before exponentiation and normalization, and `\CostVar*` scale that cost to the variations of Sec. 4.3. `\CostRestCpu` includes the remaining fit calculation, with maximum-entropy weights and the fit statistic and their derivative evaluation |
-| `\CalcAlphas`, `\CalcAlphaZero` | Sec. 5.2, App. D.2 | `three_bands_MIXGEOV3S9_lin.json` | as Fig. 15, from the fixed point of the calculation below |
+| `\CalcAlphas`, `\CalcAlphaZero` | Sec. 5.2, App. D.2 | `three_bands_MIXGEOV3S9_lin.json` | from the fixed point of the calculation below |
 | `\CalcShift` | App. D | `calc_bins_nlo_point.json`, `power_correction`: the shift a_tau P of the distribution at the fixed point and central scales | `calc_bins.py` (`lmx_calc_bins`) |
-| `\Tb*` | Secs. 1, 2.3, 5.2 to 5.5 and 6, Apps. D.2, E.2 and F.3 | `three_bands_MIXGEOV3S9{,s1,s2}_lin.{json,npz}`, `theory_variations_MIX_lin.json`, `calc_vs_delphi_MIXGEOV3S9_lin.json`, `band_checks_MIXGEOV3S9_lin.json` | the three bands of Sec. 5 below **(data)** |
+| `\Rate*` | Sec. 5 and conclusions | `rate_shape/rate_shape.npz`, `rate_shape/manuscript_numbers.json` | `rate_matching_outputs.py` |
+| `\Tb*` | retained calculation inputs and archived shape-only results | `three_bands_MIXGEOV3S9{,s1,s2}_lin.{json,npz}`, `theory_variations_MIX_lin.json`, `calc_vs_delphi_MIXGEOV3S9_lin.json`, `band_checks_MIXGEOV3S9_lin.json` | the three bands of Sec. 5 below **(data)** |
 | `\Env*` | Secs. 4.3 and 6, Apps. E and F | `envelope_test_MIXGEOV3S9_<box>_lin.{json,npz}` for the boxes `full`, `tune`, `tune_sherpa`, `tune_herwig`, `full_sherpa` and `full_herwig`; `\EnvNdraw` and `\EnvNref` are the draws of every box and the further draws of the full box | "The comparison with 2000 variations" below **(data)** |
 
 The explanation of Table 5 by the reference events of the other generator rests on
@@ -419,6 +398,12 @@ How to submit again after a time-out or a failure, keeping every result that car
 fingerprint of the run (`RESUME=1`), is in the header of `submit_scoring_lmx.sh`.
 
 ## The propagation side
+
+The cluster recipes in this section reconstruct the archived shape-only
+application and the unchanged pre-QCD propagation checks. Use the rate-and-shape
+commands in **Figures** for the current post-matching results. The old scoring,
+training and closure inputs remain unchanged.
+
 
 Everything below runs in RUN, in bash, with this environment. Every job takes the environment of
 the shell that submits it, so the block first clears every variable a script would read as a test
@@ -660,9 +645,13 @@ of the earlier deposit; `analysis/release/REFERENCE.md` says what it checks. It 
 `build_reference.json`, the record of the build, and `SHA256SUMS`, which the repository's `deposit/`
 holds with the two data files (`docs/DATA.md`). The other files were then copied into
 `analysis/release/`. `models/MIX17_wifi.npz` is a copy of the run's
-`output/wifi_MIXGEOV3S9_fit.npz`. The targets file of the deposit did not change; when only the
-calculation changes, `python release/tools_build_targets.py output/thrust_targets_nlo_point.npz
+`output/wifi_MIXGEOV3S9_fit.npz`. The legacy shape-only targets file is unchanged; when only the
+conditional calculation changes, `python release/tools_build_targets.py output/thrust_targets_nlo_point.npz
 targets_thrust_nlo.npz` rebuilds it and leaves the reference sample alone.
+The current rate-and-shape file is built with
+`python rate_matching_targets.py --output output/rate_shape/theory_targets.json
+--release-targets release/targets_thrust_rate_shape.npz`. This adds paired rate
+variations while retaining the same conditional moments and covariance.
 
 ## Earlier drafts (not in the paper)
 

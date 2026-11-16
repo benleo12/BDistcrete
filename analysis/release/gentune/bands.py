@@ -235,7 +235,7 @@ def _stat_error(ws, coefs, means, cols, ncols, mask=None, responses=None, factor
             mg = np.asarray(means[g], np.float64)[j0:j1]
             r = X - mg if m is None else np.where(m[:, None], X - mg, 0.0)/w[m].sum()
             if responses is not None and responses[g] is not None:
-                r = responses[g].remove(r)[0]
+                r = responses[g].remove(r, prefactor_response=responses[g].rate_matched)[0]
             f = 1.0 if factors is None else \
                 np.broadcast_to(np.asarray(factors[g], np.float64), (ncols,))[j0:j1]
             u = u + (a*f)*w[:, None]*r

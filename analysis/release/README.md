@@ -36,13 +36,14 @@ The self-test takes 3 seconds on a MacBook Pro with an Apple M3 Max (14 cores, 3
 `gentune` from the folder next to them, so nothing else needs installing. If the self-test does not
 print PASS for the stage you intend to use, stop.
 
-Two tests check the rest of `gentune` with numpy alone: the mixture, the bands and the beam-photon
-rule on the events of the self-test, and the maximum-entropy step on made-up events. Each prints
-PASS or FAIL for every check, and `all checks pass` when none fails:
+Three tests check the rest of `gentune` with numpy alone: the mixture, the bands and the beam-photon
+rule on the self-test events, the maximum-entropy shape step, and rate matching
+with finite-difference response checks on synthetic events:
 
 ```
 python tests/test_mixture.py
 python tests/test_maxent.py
+python tests/test_rate_matching.py
 ```
 
 Then weight a sample, here the Herwig example file, from the default tune to a larger diquark
@@ -296,13 +297,13 @@ compared with data as they are:
 
 ```
 python examples/generator_band.py --stage MIX17 --reference-file reference_MIX17.npz --bins paper
-python examples/generator_band.py --stage MIX17 --reference-file reference_MIX17.npz --bins paper --targets targets_thrust_nlo.npz
+python examples/generator_band.py --stage MIX17 --reference-file reference_MIX17.npz --bins paper --targets targets_thrust_rate_shape.npz
 python examples/learning_band.py  --stage MIX17 --reference-file reference_MIX17.npz --bins paper
-python examples/learning_band.py  --stage MIX17 --reference-file reference_MIX17.npz --bins paper --targets targets_thrust_nlo.npz
+python examples/learning_band.py  --stage MIX17 --reference-file reference_MIX17.npz --bins paper --targets targets_thrust_rate_shape.npz
 ```
 
-On the same machine (Start here, above), the generator band takes 5 minutes, and 22 minutes with
-`--targets`, with at most 3.1 GB of memory; the learning band takes 5 seconds and 4.7 GB. On the
+Runtime grows with the reference size and number of parameter points. The timings below
+for the small self-test samples concern generator-only weights. On the
 2000 reference events that ship with the networks, without the full sample, the generator band
 takes 1.7 seconds and the learning band 0.14 seconds, with statistical errors 24 times larger:
 
@@ -419,18 +420,19 @@ The paper's central point is both generators at their own defaults with a fracti
 this on the two deposited files, the central predictions before and after the calculation with
 their statistical errors, learning bands and theory band, and the generator band over the 2000
 points before and after, and compares every number with the paper's (`examples/paper_numbers.json`,
-copied from the output of `analysis/three_bands.py`):
+generated from `analysis/output/rate_shape/`):
 
 ```
-python examples/reproduce_paper.py --reference reference_MIX17.npz --targets targets_thrust_nlo.npz
+python examples/reproduce_paper.py --reference reference_MIX17.npz --targets targets_thrust_rate_shape.npz
 ```
 
 It prints the largest relative difference of each comparison and PASS or FAIL against `--tol`, 1e-6
-by default. On the same machine (Start here, above), the largest difference was 3.6e-8, and the run
-took 18 minutes and 4.1 GB of memory; with `--points 0`, the central point alone, 14 seconds. What
-is left comes from the head, which the paper's code evaluates in float32 and gentune in float64. In
-the statistical errors and learning bands with the calculation imposed, it also comes from the
-paper's code, which inverts the matrix of the Newton step without rescaling it.
+by default. `--points 0` checks the central predictions and their learning,
+statistical and theory components; the complete generator band requires all 2000
+points. The current targets impose conditional moments first, then set the window
+fraction to the calculated rate. Every theory variation changes both together.
+The old `targets_thrust_nlo.npz` remains available for the archived shape-only
+prescription; it does not reproduce the current post-imposition numbers.
 
 **Comparing with a measurement.** A measurement defines its own hadron level. DELPHI, for one,
 decays K0S, Lambda and the other hyperons (c*tau between 10 and 300 mm), which these samples keep.
@@ -675,26 +677,27 @@ In this folder, a few megabytes per stage:
 | `STAGES.md`, `closure_<stage>.csv`, `closure_summary.json`, `accuracy_law.json`, `accuracy_law_points.csv` | the closure of every stage at its held-out points, and the fit of the accuracy law (Accuracy, below) |
 | `IMPOSE.md`, `REFERENCE.md` | imposing a calculation in numpy, and the reference sample of `MIX17` with the paper's calculation |
 | `head_direction_response.py` | a check of each head: does it respond more along the parameter directions its training design explored least? Its docstring says how to read the answer. `whitened=0` in its output means that the training fed the parameters to the network without rescaling them by the spread of the design, an option that no released head uses |
-| `tools_build_reference.py`, `tools_build_targets.py` | the scripts that built the two deposited files (`REFERENCE.md`). `python tools_build_targets.py SRC OUT` rebuilds the targets file from a calculation, for example `SRC` = `../output/thrust_targets_nlo_point.npz` in a full checkout |
+| `tools_build_reference.py`, `tools_build_targets.py` | the scripts that built the reference and legacy conditional targets (`REFERENCE.md`). `python tools_build_targets.py SRC OUT` rebuilds the targets file from a calculation, for example `SRC` = `../output/thrust_targets_nlo_point.npz` in a full checkout |
+| `../rate_matching_targets.py` | reconstructs paired theory rates and writes the current rate-and-shape targets (`REFERENCE.md`) |
 | `generators/` | the generator scripts and parameter designs that produced the training samples |
 
 The full reference sample, which is what the weights of the reference act on and what the paper's
 own figures use, is hundreds of megabytes to a few gigabytes per stage. That of `MIX17`, 865 MB,
-and the targets file of the paper's thrust calculation are in `deposit/` at the top of the
+and the targets files of the thrust calculation are in `deposit/` at the top of the
 repository, with `build_reference.json`, the record of the build of the reference sample, and
-`SHA256SUMS`, the sha256 of the three files. GitHub refuses files over 100 MB, so the reference
+`SHA256SUMS`, their sha256 checksums. GitHub refuses files over 100 MB, so the reference
 sample is stored there in 19 parts. `REFERENCE.md` says what the files hold and how they were built
-and checked. From `analysis/release`, join the parts, copy the targets file and check both:
+and checked. From `analysis/release`, join the parts, copy the targets file and check all files:
 
 ```
 cat ../../deposit/reference_MIX17.npz.part-* > reference_MIX17.npz
-cp ../../deposit/targets_thrust_nlo.npz .
+cp ../../deposit/targets_thrust_*.npz .
 grep -v build_reference ../../deposit/SHA256SUMS | shasum -a 256 -c
 ```
 
-`shasum` must print OK for both files (on Linux, write `sha256sum -c` in place of
+`shasum` must print OK for every listed file (on Linux, write `sha256sum -c` in place of
 `shasum -a 256 -c`). `SHA256SUMS` also lists `build_reference.json`, which stays in `deposit/`, so
-`grep -v` leaves its line out. The two files are then in `analysis/release`, where the commands
+`grep -v` leaves its line out. The files are then in `analysis/release`, where the commands
 above look for them, and git ignores them. The joined file takes another 865 MB of disk. If a line
 says FAILED, do not use that file: run the three lines again, and if it fails again, clone the
 repository again.

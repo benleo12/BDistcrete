@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Physical before/after distributions with the same generator uncertainty prescription.
 
-Uses only stored evaluations. The nominal predictions are the default-setting
-predictions already evaluated in the local-validation archive. That archive's
-parameter ranges are NOT used for the bands: both rows use Y_theta from the
-full-range archive. No learning or calculated-moment variations enter these
-generator bands. Ratio panels divide these displayed predictions and bands by
+Uses stored nominal predictions at the default settings and 2000 predictions
+from the declared full parameter ranges. Both rows use the same parameter
+prior. No learning or theory variations enter these generator bands. Ratio panels divide these displayed predictions and bands by
 the fixed nominal prediction before imposing the calculation.
 """
 import argparse

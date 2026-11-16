@@ -237,16 +237,26 @@ def draw_budget():
     ys = np.arange(7)[::-1]
     all_values = []
     for name, values, color, marker, offset in series:
-        assert np.all(values > 0)
+        assert np.all(np.isfinite(values) & (values >= 0))
         ax.scatter(values, ys+offset, color=color, marker=marker, s=13, linewidths=.8, label=name, zorder=3)
         all_values.extend(values)
     for boundary in (5.5, 4.5, 1.5):
         ax.axhline(boundary, color=F.BASE, lw=.55, alpha=.25)
     ax.set_yticks(ys, labels, fontsize=10)
     ax.tick_params(axis="y", length=0); ax.spines["left"].set_visible(False)
-    ax.set_xscale("log")
-    ax.set_xlim(10**np.floor(np.log10(min(all_values)*.6)), max(all_values)*1.7)
-    ax.xaxis.set_major_locator(LogLocator(base=10, numticks=7))
+    positive = np.asarray(all_values)[np.asarray(all_values)>0]
+    if np.any(np.asarray(all_values)==0):
+        threshold = 10**np.floor(np.log10(positive.min()))/2
+        ax.set_xscale("symlog", linthresh=threshold, linscale=.4)
+        ax.set_xlim(-.4*threshold, max(all_values)*1.7)
+        exponents = np.arange(np.ceil(np.log10(threshold)), np.ceil(np.log10(max(all_values)*1.7)))
+        if len(exponents)>6:
+            exponents=exponents[::2]
+        ax.set_xticks(np.r_[0., 10.**exponents])
+    else:
+        ax.set_xscale("log")
+        ax.set_xlim(10**np.floor(np.log10(min(all_values)*.6)), max(all_values)*1.7)
+        ax.xaxis.set_major_locator(LogLocator(base=10, numticks=7))
     ax.xaxis.set_minor_locator(NullLocator())
     ax.grid(axis="x", color=F.BASE, alpha=.16, linewidth=.6)
     ax.set_xlabel(r"Relative uncertainty [\%]", fontsize=10)

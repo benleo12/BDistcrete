@@ -1,0 +1,22 @@
+{
+  "RateWindowFraction": "44.86",
+  "RateDataFraction": "44.36",
+  "RatePredictionFraction": "44.96",
+  "RateFractionExcess": "1.36",
+  "RatePeakRatio": "2.20",
+  "RateLastInternalDeficit": "5",
+  "RateBinGenMin": "0.065",
+  "RateBinGenMax": "0.54",
+  "RateTheoryRateUp": "4",
+  "RateTheoryRateDown": "7.2",
+  "RateStatMeansMax": "0.096",
+  "RateThrust": "0.06583",
+  "RateThrustUp": "0.00149",
+  "RateThrustDown": "0.00390",
+  "RateNch": "18.04",
+  "RateNchGen": "0.6",
+  "RateNchDataPull": "0.95",
+  "RateMaxWeightSherpa": "3.3",
+  "RateMaxWeightHerwig": "6.3",
+  "RateMaxWeightMid": "3.1"
+}

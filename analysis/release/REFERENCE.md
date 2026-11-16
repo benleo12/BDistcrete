@@ -8,25 +8,26 @@ calculation the paper imposes on them. This file describes the deposit that hold
 |---|---|---|
 | `reference_MIX17.npz` | 865,346,461 | `3a1ff95851ebc078e77e373381457e2e0dcd4d5c05885c8c305029ca264b6fc6` |
 | `targets_thrust_nlo.npz` | 30,098 | `7e125ae4e03da92255f0f2ae92b91553a86cd016b334eaf11b01ea3873a835ca` |
+| `targets_thrust_rate_shape.npz` | 11,080 | `71375b04bf9a33ce5dac0edffa4f0f5b72251556575010212899bad39958fc28` |
 
-Both are in `deposit/` at the top of the repository, with `build_reference.json`, the record of
-the build (last section), and `SHA256SUMS`, the sha256 of the three files. GitHub refuses files over
+All are in `deposit/` at the top of the repository, with `build_reference.json`, the record of
+the build (last section), and `SHA256SUMS`, their checksums. GitHub refuses files over
 100 MB, so the reference sample is stored there in 19 parts. The commands below run in
-`analysis/release` of a checkout. From there, join the parts, copy the targets file and check both:
+`analysis/release` of a checkout. From there, join the parts, copy both targets files and check all files:
 
 ```bash
 cat ../../deposit/reference_MIX17.npz.part-* > reference_MIX17.npz
-cp ../../deposit/targets_thrust_nlo.npz .
+cp ../../deposit/targets_thrust_*.npz .
 grep -v build_reference ../../deposit/SHA256SUMS | shasum -a 256 -c
 ```
 
-`shasum` must print OK for both files (on Linux, write `sha256sum -c` in place of
+`shasum` must print OK for every listed file (on Linux, write `sha256sum -c` in place of
 `shasum -a 256 -c`). `SHA256SUMS` also lists `build_reference.json`, which stays in `deposit/`, so
-`grep -v` leaves its line out. The two files are then in `analysis/release`, and git ignores them.
+`grep -v` leaves its line out. The files are then in `analysis/release`, and git ignores them.
 If a line says FAILED, do not use that file: run the three lines again, and if it fails again,
 clone the repository again.
 
-Both files are plain numpy archives. `np.load(path)` opens them, with no `allow_pickle`, no torch
+These files are plain numpy archives. `np.load(path)` opens them, with no `allow_pickle`, no torch
 and no other package.
 
 The deposit of an earlier draft had the same events and the same `AE`, but its observables kept
@@ -99,17 +100,27 @@ calculated moments, normalized inside the window. The multipliers solve
 
 with Pw the window fraction under w0. `Sigma = sigma_pert + diag((floor_rel |c|)^2)` makes the
 constraint soft. `gentune.maxent` solves this in numpy, `gentune.mixture.impose` does it for each
-generator, and `targets_thrust_nlo.npz` is a targets file it reads:
+generator, and `targets_thrust_rate_shape.npz` is the current targets file:
 
 ```python
 from gentune.maxent import load_targets
 
-t = load_targets('targets_thrust_nlo.npz')
+t = load_targets('targets_thrust_rate_shape.npz')
 inwin, F = t.functions(tau)                      # the window and the moment functions
 wc, info = mixture.impose(w, inwin, F, t)        # the paper's c, sigma_pert and floor, each generator alone
-print(mixture.mean(wc, tau, theta))              # the paper's imposed <1 - T>: 0.0626911
+print(mixture.mean(wc, tau, theta))              # the paper's imposed <1 - T>: 0.0658609
 wv, _ = mixture.impose(w, inwin, F, t, which="(2.0, 1.0, 'logR', 1.0)")   # one variation
 ```
+
+
+The current prescription then multiplies the shape-fitted weights inside the
+window by `t.rate / P_shape` and those outside by
+`(1-t.rate) / (1-P_shape)`. This fixes the window fraction to
+0.44858922375303223 while preserving both conditional distributions. Each
+variation carries its own paired rate in `t.rate_variations`. This sequential
+update is a relative-entropy projection of the shape-fitted distribution onto
+the rate constraint; it is not a joint soft fit of fifteen constraints.
+`targets_thrust_nlo.npz` retains the earlier shape-only prescription.
 
 For a calculation of your own, pass your window means and covariance as the pair `(c, Sigma)`,
 `mixture.impose(w, inwin, F, (c, Sigma), floor_rel=...)`, or build a `gentune.maxent.Targets` and
@@ -123,9 +134,9 @@ calculation, and why `c` has to be the moments of one distribution.
 With numpy and `gentune` alone, from `analysis/release`:
 
 ```bash
-python examples/reproduce_paper.py --reference reference_MIX17.npz --targets targets_thrust_nlo.npz
-python examples/generator_band.py --stage MIX17 --reference-file reference_MIX17.npz --bins paper --targets targets_thrust_nlo.npz
-python examples/learning_band.py  --stage MIX17 --reference-file reference_MIX17.npz --bins paper --targets targets_thrust_nlo.npz
+python examples/reproduce_paper.py --reference reference_MIX17.npz --targets targets_thrust_rate_shape.npz
+python examples/generator_band.py --stage MIX17 --reference-file reference_MIX17.npz --bins paper --targets targets_thrust_rate_shape.npz
+python examples/learning_band.py  --stage MIX17 --reference-file reference_MIX17.npz --bins paper --targets targets_thrust_rate_shape.npz
 ```
 
 The first reproduces the paper's central predictions before and after the calculation, with
@@ -222,9 +233,33 @@ To check a file, compare its sha256 with the table above. To check one array, co
 `hashlib.sha256(np.ascontiguousarray(r[key]).tobytes()).hexdigest()` with
 `json.loads(str(r['meta']))['arrays'][key]['sha256']`.
 
+## targets_thrust_rate_shape.npz
+
+This is the current target file. Its moment values, covariance, window and
+floor equal those of the legacy file below. It adds an explicit `rate`,
+`rate_variation_names` and `rate_variation_values`, paired with the conditional
+moment variations. The central rate is 0.44858922375303223. The generic
+`Targets.save` format stores the covariance as `sigma` and the moments of
+variations as `variation_names`/`variation_c`.
+
+`analysis/rate_matching_targets.py` reconstructs the rates from the same
+inclusive-normalized NNLL+NLO cumulants and dispersive shifts. It verifies the
+cached conditional moments and perturbative rates before writing anything:
+
+```bash
+# From analysis/, after reconstructing the legacy release target file:
+python rate_matching_targets.py --output output/rate_shape/theory_targets.json \
+    --release-targets release/targets_thrust_rate_shape.npz
+```
+
+The diagnostic JSON records input hashes, interpolation and endpoint checks,
+and all twelve rates. The released file's metadata identifies the diagnostic
+JSON used for it by SHA256. A fresh build records its own source hashes; its
+numerical target arrays must agree with the deposited file.
+
 ## targets_thrust_nlo.npz
 
-This is the paper's NNLL+NLO thrust calculation, with a dispersive power correction. It is
+This legacy file holds the conditional moments of the NNLL+NLO thrust calculation, with a dispersive power correction. It is
 evaluated at the published pair (alpha_s, alpha_0) of Gehrmann, Luisoni and Monni (Eur. Phys. J. C 73
 (2013) 2265, log-R), with their renormalon subtraction to order alpha_s^3. Every
 number is copied unchanged from `output/thrust_targets_nlo_point.npz`, and the build checks this
@@ -239,7 +274,7 @@ bitwise.
 | `window` | (2,) float64 | [0.05, 1/3), in tau |
 | `floor_rel` | () float64 | 0.002, the paper's diagonal floor: Sigma = sigma_pert + diag((floor_rel \|c\|)^2) |
 | `alpha_s`, `alpha_0` | () float64 | 0.1137 and 0.524, the point |
-| `pwin` | () float64 | the calculated window fraction, 0.4486, which the paper does not impose |
+| `pwin` | () float64 | the calculated window fraction, 0.4486, retained as metadata; not imposed by this legacy target file |
 | `scale_variations` | (9, 14) float64 | the moments for each scale and scheme variation, at the same point |
 | `scale_labels` | (9,) str | (x_muR, x_V, matching scheme, x_NNLO) of each row |
 | `scale_pwin` | (9,) float64 | the window fraction of each row |

@@ -1,0 +1,66 @@
+{
+  "prescription": "Sequential conditional-moment fit followed by exact QCD window-rate matching.",
+  "calculation": {
+    "window": [
+      0.05,
+      0.3333333333333333
+    ],
+    "pwin": 0.44858922375303223,
+    "alpha_s": 0.1137,
+    "alpha_0": 0.524
+  },
+  "n_events": 1149840,
+  "nodes": 2000,
+  "central": {
+    "sherpa": {
+      "predictions": {
+        "tau_win": 0.11186380236813234,
+        "pwin": 0.4485892237530319,
+        "thrust": 0.06633377750592022,
+        "B_total": 0.10822751399171404,
+        "rho_heavy": 0.05287708384895093,
+        "nch": 18.258761568937494,
+        "nbaryon": 1.6406990121976142
+      },
+      "shape_fraction": 0.43845577420633697,
+      "n_eff": 664869.22127819,
+      "max_weight_over_mean": 3.3386700205280455,
+      "residual": 6.527376550669868e-16
+    },
+    "herwig": {
+      "predictions": {
+        "tau_win": 0.11185949578340593,
+        "pwin": 0.4485892237530318,
+        "thrust": 0.06538809111768512,
+        "B_total": 0.10550571775349057,
+        "rho_heavy": 0.05248286288658395,
+        "nch": 17.823087192503415,
+        "nbaryon": 1.59597257602016
+      },
+      "shape_fraction": 0.38329334634699447,
+      "n_eff": 617763.5548688674,
+      "max_weight_over_mean": 6.253178842171224,
+      "residual": 5.997878981463682e-16
+    },
+    "mixture": {
+      "predictions": {
+        "tau_win": 0.11186164907576913,
+        "pwin": 0.44858922375303184,
+        "thrust": 0.06586093431180268,
+        "B_total": 0.10686661587260231,
+        "rho_heavy": 0.05267997336776744,
+        "nch": 18.040924380720455,
+        "nbaryon": 1.6183357941088872
+      },
+      "n_eff": 1073734.189473773,
+      "max_weight_over_mean": 3.1265894212746166
+    }
+  },
+  "uncertainty": {
+    "generator": "Same 2000 paired parameter draws; correction applied per generator before mixing.",
+    "theory": "Same varied conditional moments and window fraction at each variation; uniform-xi variance average.",
+    "learning": "Full sequential response including the shape penalty prefactor, shared WiFi covariance.",
+    "statistical": "Shared-event influence functions, including the shape fit and exact rate correction."
+  },
+  "seconds": 23.973525792
+}

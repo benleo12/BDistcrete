@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 """The paper's predictions and bands, from the deposited reference sample.
 
-    python examples/reproduce_paper.py --reference reference_MIX17.npz --targets targets_thrust_nlo.npz --points 0
-    python examples/reproduce_paper.py --reference reference_MIX17.npz --targets targets_thrust_nlo.npz
+    python examples/reproduce_paper.py --reference reference_MIX17.npz --targets targets_thrust_rate_shape.npz --points 0
+    python examples/reproduce_paper.py --reference reference_MIX17.npz --targets targets_thrust_rate_shape.npz
 
 The first command checks the central point alone. The second adds the generator band, the paper's
-2000 points. Both need numpy alone, and the two files of the deposit (REFERENCE.md says where they
+2000 points. Both need numpy alone, and the reference and targets files in the deposit (REFERENCE.md says where they
 are).
 
 This is the end-to-end check of the release. It reweights the events of reference_MIX17.npz with
-the MIX17 head, imposes the NNLL+NLO thrust moments of targets_thrust_nlo.npz with gentune.maxent,
-and compares every prediction and band with the paper's, which analysis/three_bands.py computed
-with the paper's torch code.
+the MIX17 head, imposes the NNLL+NLO thrust moments and window rate of targets_thrust_rate_shape.npz,
+and compares every prediction and band with the paper's, stored in analysis/output/rate_shape/.
 
 A prediction at a point theta = (theta_S, theta_H, xi) is the paper's mixture of the generators,
 (1 - xi) <O>_S + xi <O>_H. Sherpa's weights come from the head at xi = 0 and theta_S, Herwig's
@@ -47,7 +46,7 @@ analysis/conventions/factors.json, which analysis/conventions/make_factors.py wr
 gives <1-T> and DELPHI's distribution with these factors too, with all their bands, and compares
 them with the paper's.
 
-The paper's numbers are in examples/paper_numbers.json, copied from the output of three_bands.py.
+The paper's numbers are in examples/paper_numbers.json, generated from the rate-and-shape outputs.
 --paper <three_bands_MIXGEOV3S9_lin.npz> compares with that output instead (it reads the .json next
 to it too), which adds the prediction at each point, the percentiles of each band, and each
 generator alone at the central point. It refuses an output made with another factors file. The
@@ -55,9 +54,9 @@ paper's numbers with the factors hold for the shipped file alone, so when --fact
 factors and --paper is not used, the predictions with those factors are printed and not compared.
 
 The check fails when a number differs from the paper's by more than --tol, relative, 1e-6 by
-default. What is left comes from the head, which the paper's code evaluates in float32 and gentune
-in float64. In the statistical errors and learning bands with the calculation imposed, it also comes
-from the paper's code, which inverts the matrix of the Newton step without rescaling it. The script
+default. The current post-imposition outputs use the same numpy implementation.
+The unchanged pre-imposition outputs retain the original float32 evaluations,
+so small differences from float64 head evaluation remain possible. The script
 prints the largest difference of each comparison and its own run time.
 
 --points N evaluates only the first N of the 2000 points. With --paper their predictions are
@@ -392,7 +391,7 @@ def main():
     ap = argparse.ArgumentParser(description=head_line, epilog=rest,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--reference', required=True, help='reference_MIX17.npz, the deposit')
-    ap.add_argument('--targets', required=True, help='targets_thrust_nlo.npz, the deposit')
+    ap.add_argument('--targets', required=True, help='targets_thrust_rate_shape.npz, the deposit')
     ap.add_argument('--head', default=os.path.join(ROOT, 'models', 'MIX17_head.npz'),
                     help='the MIX17 head (default models/MIX17_head.npz)')
     ap.add_argument('--wifi', default=os.path.join(ROOT, 'models', 'MIX17_wifi.npz'),

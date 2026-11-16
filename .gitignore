@@ -35,3 +35,5 @@ analysis/release/targets_thrust_nlo.npz
 analysis/release/SHA256SUMS
 analysis/output/r8_*.pdf
 analysis/output/thrust_anchor_targets_nlo.npz
+analysis/release/targets_thrust_rate_shape.npz
+analysis/output/rate_shape/generator_draws.npz

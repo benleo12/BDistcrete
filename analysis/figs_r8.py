@@ -4,11 +4,12 @@
     python figs_r8.py coverage window obs   # replot existing result files
 
 Current manuscript mapping: map (Fig. 3), coverage (4), kscan (5), cost (6),
-window (normalized shape, 8, and event fraction, 9), toy (10, App. B),
-aleph (11, App. D), bands (15, App. F) and obs (16, App. F). The window command
-also retains the legacy combined plot. Coverage, window and obs use the rendering
-helpers in polish_paper_figures.py. Figure 7 is made by
-plot_before_after_distributions.py; Figures 12--14 by plot_envelope.py.
+toy (9, App. B), aleph (10, App. D), bands (13, App. F) and obs (14, App. F).
+rate_matching_outputs.py makes the current rate-and-shape data comparison
+(Fig. 8), bands and budget, reusing the renderers here. Figure 7 is made by
+plot_before_after_distributions.py; Figures 11--12 by plot_envelope.py.
+The old window command retains the archived conditional-shape and fraction
+plots; neither is a current manuscript figure.
 The kscan panel uses scan_strict, with 200,000 comparison events per parameter
 point. The map uses its distinct 40,000-event off-grid tests, and coverage uses
 all 400,000 events per held-out point for observable means.
@@ -19,8 +20,7 @@ the reference tick of Fig. 3 (default the mean of output/xp_null.json).
 
 For the arithmetic mixture, set BANDS_NPZ, BANDS_JSON and VARS_JSON to the _lin
 result files; COST_SUFFIX=_lin selects the benchmark in BENCH_DIR (default
-output). Each input must record mix = linear. The budget displays every positive
-component, including the learning uncertainty of the constrained window mean.
+output). Each input must record mix = linear. The budget displays every component, including zeros after exact rate matching.
 The shape and event-fraction plots state their separate normalization and
 final-state definitions. Window data errors use the cached statistical and
 systematic components, with statistics added in quadrature and systematics

@@ -12,32 +12,33 @@ and what reads each one. Paths are relative to `analysis/`, except those that st
 | file | bytes | what | read by |
 |---|---|---|---|
 | `reference_MIX17.npz` | 865,346,461 | the 1,149,840 reference events of the seventeen-parameter mixture, released as `MIX17`: the event vectors its head reads, the per-event observables without the photons radiated by the beams, and the run and the generator of every event | in `analysis/release`: `examples/reproduce_paper.py` with `--reference`, `generator_band.py` and `learning_band.py` with `--reference-file`, `tests/test_mixture.py`, `tests/compare_directlib.py`, and the code of `IMPOSE.md` and `REFERENCE.md` |
-| `targets_thrust_nlo.npz` | 30,098 | the NNLL+NLO thrust calculation the paper imposes: its 14 moments in the window 0.05 ≤ τ < 1/3, their covariance and its variations | `gentune.maxent.load_targets` |
+| `targets_thrust_nlo.npz` | 30,098 | the archived conditional part of the NNLL+NLO thrust calculation: its 14 moments in the window 0.05 ≤ τ < 1/3, their covariance and its variations | `gentune.maxent.load_targets` |
+| `targets_thrust_rate_shape.npz` | 11,080 | the current conditional moments, covariance and paired window-rate variations | `gentune.maxent.load_targets` |
 
-Both are in `deposit/`, with `build_reference.json`, the record of the build of the reference
-sample, and `SHA256SUMS`, the sha256 of the three files. With the reference sample, a clone of the
+All are in `deposit/`, with `build_reference.json`, the record of the build of the reference
+sample, and `SHA256SUMS`, their checksums. With the reference sample, a clone of the
 repository downloads about 1 GB. GitHub refuses files over 100 MB, so the sample is stored in 19
 parts. `analysis/release/REFERENCE.md` describes the files. With numpy alone, and without any of
 the files below, they reproduce the paper's central predictions with their bands
-(`analysis/release/README.md`). To join the parts, copy the targets file and check both, from the
+(`analysis/release/README.md`). To join the parts, copy the targets files and check all checksums, from the
 top of a checkout:
 
 ```bash
 cd analysis/release
 cat ../../deposit/reference_MIX17.npz.part-* > reference_MIX17.npz
-cp ../../deposit/targets_thrust_nlo.npz .
+cp ../../deposit/targets_thrust_*.npz .
 grep -v build_reference ../../deposit/SHA256SUMS | shasum -a 256 -c
 ```
 
-`shasum` must print OK for both files (on Linux, write `sha256sum -c` in place of
+`shasum` must print OK for every listed file (on Linux, write `sha256sum -c` in place of
 `shasum -a 256 -c`). `SHA256SUMS` also lists `build_reference.json`, which stays in `deposit/`, so
-`grep -v` leaves its line out. The two files are then in `analysis/release`, where the commands
+`grep -v` leaves its line out. The files are then in `analysis/release`, where the commands
 look for them, and git ignores them. The joined file takes another 865 MB of disk. If a line says
 FAILED, do not use that file: run the last three lines again, and if it fails again, clone the
 repository again. Then, still in `analysis/release`:
 
 ```bash
-python examples/reproduce_paper.py --reference reference_MIX17.npz --targets targets_thrust_nlo.npz
+python examples/reproduce_paper.py --reference reference_MIX17.npz --targets targets_thrust_rate_shape.npz
 ```
 
 ## On request: the network exports and event samples

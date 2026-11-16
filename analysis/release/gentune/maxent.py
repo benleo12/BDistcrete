@@ -47,13 +47,20 @@ observable are formed the same way. For functions of any other form, compute the
 values on the reference events yourself and pass them to impose() as F; nothing in impose() is
 specific to thrust.
 
-    targets = load_targets('targets_thrust_nlo.npz')
+    targets = load_targets('targets_thrust_rate_shape.npz')
     inwin, F = targets.functions(tau)                 # tau of the reference events
     logw, lam, info = targets.impose(logw0, inwin, F)
 
 For MIX17 the paper imposes the calculation on each generator's weights alone, the head at the
 fraction 0 for Sherpa and 1 for Herwig, and then mixes the imposed predictions with (1 - xi, xi):
 gentune.mixture.impose() does this with impose() below.
+
+The current Targets also carries a calculated window rate. After the soft
+shape fit above, match_rate() rescales the inside and outside weights to that
+rate, preserving both conditional distributions. This is a sequential update,
+not a joint soft fifteen-constraint optimum. Each named variation supplies
+both its conditional moments and its rate. Legacy targets without an explicit
+rate retain their shape-only behavior.
 """
 import json
 import re
@@ -275,6 +282,33 @@ def impose(logw0, inwin, F, c, Sigma, floor_rel=FLOOR_REL, lam0=None, tol=1e-10,
     return logw, lam, info
 
 
+def match_rate(logw, inwin, target, info=None):
+    """Match a window fraction after a shape fit, preserving both conditional distributions.
+
+    Returns normalized log weights and an info dictionary. With the info of
+    impose(), the returned info also supports the statistical and learning
+    response of this sequential shape-then-rate prescription.
+    """
+    target = float(target)
+    if not 0 < target < 1:
+        raise ValueError('the calculated window fraction must lie strictly between zero and one')
+    z = np.asarray(logw, np.float64).ravel().copy()
+    z -= logsumexp(z)
+    mask = np.zeros(len(z), bool)
+    mask[np.asarray(inwin) if np.asarray(inwin).dtype == bool else np.asarray(inwin, int)] = True
+    if not mask.any() or mask.all():
+        raise ValueError('rate matching needs reference events inside and outside the window')
+    lp, lq = logsumexp(z[mask]), logsumexp(z[~mask])
+    p = float(np.exp(lp))
+    z[mask] += np.log(target)-lp
+    z[~mask] += np.log1p(-target)-lq
+    out = dict(info or {})
+    out.update(rate_target=target, pwin_shape=p, pwin_after=target,
+               rate_factor_inside=target/p, rate_factor_outside=(1-target)/(1-p),
+               n_eff=float(1/np.sum(np.exp(2*z))), prescription='shape_then_rate')
+    return z, out
+
+
 # -- an imposed calculation at linear order -----------------------------------------------------
 def _window_rows(inwin, F, N, k):
     """The window as event indices and F as its rows (n_window, k), as impose() reads them."""
@@ -329,6 +363,19 @@ class _Response:
         w = np.asarray(w, np.float64)
         self.w = w/w.sum()
         self.iw, self.Fw, info = _imposed_parts(imposed, len(self.w))
+        self.rate_matched = 'rate_target' in info
+        if self.rate_matched:
+            target, shape_p = float(info['rate_target']), float(info['pwin_shape'])
+            if not np.isclose(self.w[self.iw].sum(), target, rtol=0, atol=1e-10):
+                raise ValueError('the weights do not have the rate described by imposed')
+            shape_w = self.w*((1-shape_p)/(1-target))
+            shape_w[self.iw] = self.w[self.iw]*(shape_p/target)
+            shape_info = {k: v for k, v in info.items() if k != 'rate_target'}
+            self._shape = _Response(shape_w, (imposed[0], imposed[1], shape_info))
+            self.P, self.S, self.lam = self._shape.P, self._shape.S, self._shape.lam
+            self._mask = np.zeros(len(self.w), bool)
+            self._mask[self.iw] = True
+            return
         self.P = float(info['pwin_before'])
         self.S = np.asarray(info['sigma_used'], np.float64)
         self.lam = np.asarray(info['lam'], np.float64).ravel()
@@ -351,14 +398,38 @@ class _Response:
         d = self._d if b.ndim == 1 else self._d[:, None]
         return d*np.linalg.solve(self._J, d*b)
 
-    def remove(self, O):
+    def remove(self, O, prefactor_response=False):
         """(r, v): r = O - (Theta F - E_w[Theta F]) . v with v = J^-1 Cov_w(Theta F, O), for the
         per-event functions O, shape (N, n), each centred under w."""
         O = np.asarray(O, np.float64)
+        if self.rate_matched:
+            shape_w = self._shape.w
+            p = shape_w[self._mask].sum()
+            inside_mean = shape_w[self._mask] @ O[self._mask]/p
+            outside_mean = shape_w[~self._mask] @ O[~self._mask]/(1-p)
+            target = self.w[self._mask].sum()
+            U = (1-target)/(1-p)*(O-outside_mean)
+            U[self._mask] = target/p*(O[self._mask]-inside_mean)
+            r, v = self._shape.remove(U, prefactor_response=prefactor_response)
+            ratio = np.divide(shape_w, self.w, out=np.zeros_like(self.w), where=self.w>0)
+            return ratio[:, None]*r, v
         cov = self.Fw.T @ (self.w[self.iw, None]*O[self.iw]) - np.outer(self.fbar, self.w @ O)
         v = self.solve(cov)
         r = O + self.fbar @ v                     # Theta F - E_w[Theta F] is -E_w[Theta F] outside
         r[self.iw] -= self.Fw @ v
+        if prefactor_response:
+            # The shape penalty is P0^2 Sigma. On a resample P0 changes as
+            # well as the fitted multipliers, so retain that derivative.
+            if not hasattr(self, '_w0'):
+                with np.errstate(divide='ignore'):
+                    z = np.log(self.w)
+                z[self.iw] -= self.Fw @ self.lam
+                self._w0 = np.exp(z-logsumexp(z))
+            indicator = np.zeros(len(self.w))
+            indicator[self.iw] = 1
+            dP = self._w0*(indicator-self.P)
+            ratio = np.divide(dP, self.w, out=np.zeros_like(self.w), where=self.w>0)
+            r -= ratio[:, None]*(2*self.P*(v.T @ (self.S @ self.lam)))
         return r, v
 
 
@@ -369,7 +440,10 @@ def _tilted(lw0, imposed):
     iw, Fw, info = _imposed_parts(imposed, len(lw0))
     z = lw0 - logsumexp(lw0)
     z[iw] += Fw @ np.asarray(info['lam'], np.float64).ravel()
-    return z - logsumexp(z)
+    z -= logsumexp(z)
+    if 'rate_target' in info:
+        z, _ = match_rate(z, iw, info['rate_target'])
+    return z
 
 
 # -- targets ----------------------------------------------------------------------------------
@@ -381,10 +455,12 @@ class Targets:
 
     names label the functions. Unless powers are given, every name must be of the tau^a ln^b tau
     pattern of moment_powers and the powers are read from it; with powers given, the names are
-    free labels. See load_targets for the file format and save() to write one."""
+    free labels. An optional rate activates exact window-rate matching after
+    the shape fit; rate_variations must then pair every moment variation with
+    its own rate. See load_targets for the file format and save() to write one."""
 
     def __init__(self, names, c, sigma, window, variations=None, floor_rel=FLOOR_REL, powers=None,
-                 meta=None):
+                 meta=None, rate=None, rate_variations=None):
         self.names = [str(n) for n in np.atleast_1d(names)]
         k = len(self.names)
         if powers is None:
@@ -416,6 +492,13 @@ class Targets:
             assert v.shape == (k,), f'variation {name!r} has {v.shape[0]} values for {k} functions'
             self.variations[str(name)] = v
         self.meta = dict(meta or {})
+        self.rate = None if rate is None else float(rate)
+        self.rate_variations = {str(k): float(v) for k, v in (rate_variations or {}).items()}
+        if self.rate is not None:
+            if not 0 < self.rate < 1 or any(not 0 < v < 1 for v in self.rate_variations.values()):
+                raise ValueError('calculated window fractions must lie strictly between zero and one')
+            if set(self.variations) != set(self.rate_variations):
+                raise ValueError('each shape variation must have its corresponding rate variation')
 
     def __repr__(self):
         return (f'Targets({len(self.names)} moments, window [{self.window[0]:.4g}, '
@@ -431,7 +514,14 @@ class Targets:
 
     def impose(self, logw0, inwin, F, which='central', **kw):
         """impose() with this calculation's c (or a variation's, by name), sigma and floor."""
-        return impose(logw0, inwin, F, self[which], self.sigma, floor_rel=self.floor_rel, **kw)
+        lw, lam, info = impose(logw0, inwin, F, self[which], self.sigma, floor_rel=self.floor_rel, **kw)
+        if self.rate is not None:
+            rate = self.rate if which == 'central' else self.rate_variations[which]
+            lw, info = match_rate(lw, inwin, rate, info)
+            w = np.exp(lw)
+            base = np.asarray(logw0, np.float64)-logsumexp(logw0)
+            info['kl'] = float(w @ (lw-base))
+        return lw, lam, info
 
     def save(self, path):
         """Write the targets in the format of load_targets, as .json or .npz by the extension."""
@@ -439,15 +529,21 @@ class Targets:
             d = dict(moment_names=self.names, moment_powers=[list(p) for p in self.powers],
                      window=list(self.window), central=self.c.tolist(), sigma=self.sigma.tolist(),
                      floor_rel=self.floor_rel,
-                     variations={n: v.tolist() for n, v in self.variations.items()})
+                     variations={n: v.tolist() for n, v in self.variations.items()}, meta=self.meta)
+            if self.rate is not None:
+                d.update(rate=self.rate, rate_variations=self.rate_variations)
             with open(path, 'w') as f:
                 json.dump(d, f, indent=1)
             return
         vn = list(self.variations)
+        rates = {} if self.rate is None else dict(rate=np.float64(self.rate),
+            rate_variation_names=np.array(vn, dtype=str),
+            rate_variation_values=np.array([self.rate_variations[n] for n in vn]))
         np.savez(path, moment_names=np.array(self.names), moment_powers=np.array(self.powers, np.int64),
                  window=np.array(self.window), central=self.c, sigma=self.sigma,
                  floor_rel=np.float64(self.floor_rel), variation_names=np.array(vn, dtype=str),
-                 variation_c=np.array([self.variations[n] for n in vn]).reshape(len(vn), len(self.c)))
+                 variation_c=np.array([self.variations[n] for n in vn]).reshape(len(vn), len(self.c)),
+                 meta=np.array(json.dumps(self.meta)), **rates)
 
 
 def _pick(d, *keys):
@@ -498,7 +594,8 @@ def load_targets(path, point=(0, 0)):
         if labels in d:
             vals = at(_pick(d, *values))
             var.update({str(lab): vals[v] for v, lab in enumerate(d[labels])})
-    meta = {}
+    stored_meta = d.get('meta', {})
+    meta = dict(stored_meta) if isinstance(stored_meta, dict) else json.loads(str(np.asarray(stored_meta)))
     for out, keys in (('alpha_s', ('alpha_s', 'alphas')), ('alpha_0', ('alpha_0', 'alpha0'))):
         for k in keys:
             if k in d:
@@ -507,6 +604,10 @@ def load_targets(path, point=(0, 0)):
                 break
     if 'pwin' in d:
         meta['pwin'] = float(at(d['pwin'])) if grid else float(np.ravel(d['pwin'])[0])
+    rate_var = d.get('rate_variations', {})
+    if 'rate_variation_names' in d:
+        rate_var = dict(zip(map(str, d['rate_variation_names']), map(float, d['rate_variation_values'])))
     return Targets(names, at(c), at(sigma), d['window'], var,
                    floor_rel=float(np.ravel(d['floor_rel'])[0]) if 'floor_rel' in d else FLOOR_REL,
-                   powers=d.get('moment_powers'), meta=meta)
+                   powers=d.get('moment_powers'), meta=meta,
+                   rate=d.get('rate'), rate_variations=rate_var)

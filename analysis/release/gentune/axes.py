@@ -92,8 +92,7 @@ NOTES = {
                  'never to electron-positron annihilation, and is not varied here',
     'pwtdiquark': 'the diquark weight, which is what sets baryon production in the cluster model',
     'clsmr': 'ClusterDecayer:ClSmrLight, the smearing of the hadron directions in a light '
-             'cluster decay. Never fitted by a published Herwig tune, so it is varied wide here '
-             'and turns out to be weak',
+             'cluster decay, scanned over 0.40 to 1.20 in this study',
     'fraction': 'xi, the probability that an event comes from Herwig, 0 for Sherpa alone and 1 '
                 'for Herwig alone: the paper predicts (1 - xi) <O>_S + xi <O>_H (gentune.mixture)',
 }

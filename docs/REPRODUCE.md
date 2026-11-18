@@ -232,20 +232,20 @@ into `output/published_copies`, and any macro of its list that it did not write.
 | `\Kappa*` | App. A.3 | the refitted calibration constant of every training of Table 1 | the scoring side |
 | `\LcRunsThreeStrictAll`, `\LcMembersStrictAll` | App. A.3 | `p2v3fullstrict_MIX_fac_s<k>.json`, `widths_v2_MIXGEOV3M8S9h400.json`, and for the sentence on more runs, events or steps the other `widths_v2_<tag>{,h400}{,r415}.json` | the scoring side (`strict_closure_lmx.sbatch`, `rescore_v4_lmx.sbatch`) |
 | `\Calib*` | archived null diagnostic, no longer quoted | `p2augfull_{A,C}_fac_s0.json`, `p2aug_B_fac_s0.json` | the scoring side |
-| `\Toy*` | App. B.1 | `toy_final_K<K>_s<k>.json` | `symmetry/rerun/toy_final_lmx.sbatch` |
+| `\Toy*` | App. A.4.1 | `toy_final_K<K>_s<k>.json` | `symmetry/rerun/toy_final_lmx.sbatch` |
 | `\Map*`, `\XpNullMean` | Sec. 3.4, Fig. 3 | `valid_map_C_P2augfullfac0_report.json`, `xp_null.json` | `symmetry/rerun/stagec_lmx.sbatch` **(data)** |
 | `\Single*` | archived member comparison, no longer quoted | `single_members_C_P2augfullfac0.json` | `symmetry/rerun/stagec_lmx.sbatch` **(data)** |
 | `\Wide*` | Sec. 3.4 | `p2wb18{single,pool,local9100,...,local9105}_W_fac_s0.json` | the scoring side **(data)**. `figs_r8.py widebox` draws these results, which the paper quotes without a figure |
 | `\Cov*`, `\CovEight*` | Secs. 3.5 and 6, Fig. 4 | `wifi_coverage_MIXGEOV3S9{,s1,s2}.json`, `wifi_coverage_MIXGEOV3M8S9.json` | `symmetry/rerun/wifi_cov_lmx.sbatch` **(data)** |
 | `\SvdRank*` | Sec. 3.6 | `p2trunc_{A,B,C,E,MIX}_cat_s0.json` | the scoring side, `specs/svd.txt` **(data, GPU)** |
-| `\TruncMaxPercent` | App. A.2 | `truncation_fraction.json`, counted on the shapes files of the published run, which count every particle as the network input does | `symmetry/rerun/trunc_lmx.sbatch` **(data)** |
+| `\TruncMaxPercent` | App. A.3 | `truncation_fraction.json`, counted on the shapes files of the published run, which count every particle as the network input does | `symmetry/rerun/trunc_lmx.sbatch` **(data)** |
 | `\PfnParams*`, `\PfnAuc*` | archived implementation comparison, no longer quoted | `crosscheck_seeds_summary.json`: network parameter counts and AUCs | `symmetry/pfn_lmx.sbatch` (`lmx_pfn`) **(data)** |
 | `\Cost*` | Secs. 1, 3.6, 4.2 and 6, Fig. 6 | `bench_final_cpu_4_lin.json`, `bench_final_cuda_12_lin.json` | as Fig. 6. `\Cost{Fac,Late,Cat}{Cpu,Gpu}` time both generators' log-ratio outputs and a backward pass with supplied output derivatives. `\CostW*` time those outputs alone, before exponentiation and normalization, and `\CostVar*` scale that cost to the variations of Sec. 4.3. `\CostRestCpu` includes the remaining fit calculation, with maximum-entropy weights and the fit statistic and their derivative evaluation |
-| `\CalcAlphas`, `\CalcAlphaZero` | Sec. 5.2, App. D.2 | `three_bands_MIXGEOV3S9_lin.json` | from the fixed point of the calculation below |
-| `\CalcShift` | App. D | `calc_bins_nlo_point.json`, `power_correction`: the shift a_tau P of the distribution at the fixed point and central scales | `calc_bins.py` (`lmx_calc_bins`) |
+| `\CalcAlphas`, `\CalcAlphaZero` | Sec. 5.2, App. B.1.2 | `three_bands_MIXGEOV3S9_lin.json` | from the fixed point of the calculation below |
+| `\CalcShift` | App. B.1 | `calc_bins_nlo_point.json`, `power_correction`: the shift a_tau P of the distribution at the fixed point and central scales | `calc_bins.py` (`lmx_calc_bins`) |
 | `\Rate*` | Sec. 5 and conclusions | `rate_shape/rate_shape.npz`, `rate_shape/manuscript_numbers.json` | `rate_matching_outputs.py` |
 | `\Tb*` | retained calculation inputs and archived shape-only results | `three_bands_MIXGEOV3S9{,s1,s2}_lin.{json,npz}`, `theory_variations_MIX_lin.json`, `calc_vs_delphi_MIXGEOV3S9_lin.json`, `band_checks_MIXGEOV3S9_lin.json` | the three bands of Sec. 5 below **(data)** |
-| `\Env*` | Secs. 4.3 and 6, Apps. E and F | `envelope_test_MIXGEOV3S9_<box>_lin.{json,npz}` for the boxes `full`, `tune`, `tune_sherpa`, `tune_herwig`, `full_sherpa` and `full_herwig`; `\EnvNdraw` and `\EnvNref` are the draws of every box and the further draws of the full box | "The comparison with 2000 variations" below **(data)** |
+| `\Env*` | Sec. 4.3, App. C.1 | `envelope_test_MIXGEOV3S9_<box>_lin.{json,npz}` for the boxes `full`, `tune`, `tune_sherpa`, `tune_herwig`, `full_sherpa` and `full_herwig`; `\EnvNdraw` and `\EnvNref` are the draws of every box and the further draws of the full box | "The comparison with 2000 variations" below **(data)** |
 
 The explanation of Table 5 by the reference events of the other generator rests on
 `output/wifi_gensplit_MIXGEOV3S9.json`, which `symmetry/rerun/wifi_cov_lmx.sbatch`
@@ -538,7 +538,7 @@ on the command line, as here; the script stops when it sees no GPU. Both write
 the default). The benchmark reads the particles of the published reference bundle, since the
 network inputs keep every particle.
 
-### The PFN cross-check of App. A.2
+### The archived PFN implementation cross-check
 
 ```bash
 CROSSCHECK_DATA=/mnt/beegfs/bassi/reweighting/laptop_archive_20261017/data_widebox \
@@ -581,7 +581,7 @@ A note on the null of this estimator. The docstring of `width_of()` in `r2_ladde
 the null value is 1. It is not exactly: each pull is divided by its own multinomial standard
 deviation, so with B bins the sum of the squared pulls has expectation B and the square of the
 closure width B/(B−1). The width itself lies near 1.01 for 25 bins and near 1.05 for the five
-bins of the baryon count. The paper (Sec. 3.2 and App. A.2) states this. `r2_ladder.py` is left
+bins of the baryon count. The paper (Sec. 3.2 and App. A.3) states this. `r2_ladder.py` is left
 byte for byte as it was, since its checksum identifies the code that produced the stored results.
 
 ### The macros and the figures
